@@ -253,6 +253,9 @@ End-to-End Implementation: From the initial SQL scripts to the final React compo
 
 ---
 
-## 📄 License
+## 📄 License & Intellectual Property
+This project is for portfolio demonstration purposes only.
 
-This project was developed as a real-world solution for a small business. All rights reserved.
+**Copyright © 2026 Luis Alejandro Esquivel Rojas. All rights reserved.**
+
+The source code, database schema (`sweetland_db_v1.sql`), and architectural design are the exclusive intellectual property of the author. Unauthorized copying, modification, or distribution of this software is strictly prohibited.
