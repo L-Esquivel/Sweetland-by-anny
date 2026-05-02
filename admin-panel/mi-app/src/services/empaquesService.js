@@ -1,28 +1,22 @@
-import api from './api';
+// src/services/empaquesService.js
+import fetchAPI from './api';
 
 export const empaquesService = {
 
   // Catálogo completo de empaques
-  getEmpaques: async () => {
-    const response = await api.get('/empaques/');
-    return response.data;
-  },
+  getEmpaques: () => fetchAPI('/empaques/'),
 
   // Empaques asignados a un producto
-  getEmpaquesProducto: async (productoId) => {
-    const response = await api.get(`/empaques/producto/${productoId}`);
-    return response.data;
-  },
+  getEmpaquesProducto: (productoId) => fetchAPI(`/empaques/producto/${productoId}`),
 
   // Asignar empaque a un producto
-  addEmpaque: async (productoId, data) => {
-    const response = await api.post(`/empaques/producto/${productoId}`, data);
-    return response.data;
-  },
+  addEmpaque: (productoId, data) => fetchAPI(`/empaques/producto/${productoId}`, {
+    method: 'POST',
+    body: data
+  }),
 
   // Eliminar empaque de un producto
-  deleteEmpaque: async (id) => {
-    const response = await api.delete(`/empaques/producto/item/${id}`);
-    return response.data;
-  }
+  deleteEmpaque: (id) => fetchAPI(`/empaques/producto/item/${id}`, {
+    method: 'DELETE'
+  })
 };

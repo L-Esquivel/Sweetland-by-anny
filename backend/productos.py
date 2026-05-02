@@ -4,6 +4,9 @@ from db import get_db_connection
 import os
 from werkzeug.utils import secure_filename
 
+# Importamos la función de cálculo desde recetas
+from recetas import calcular_costo_completo
+
 productos_bp = Blueprint("productos_bp", __name__, url_prefix="/productos")
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
@@ -15,7 +18,6 @@ def get_images_dir():
     return os.path.join(os.path.dirname(os.path.dirname(__file__)), 'shared-assets', 'images')
 
 # ==================== PREFLIGHT CORS ====================
-
 @productos_bp.route("/", methods=["OPTIONS"])
 @productos_bp.route("/<int:id>", methods=["OPTIONS"])
 @productos_bp.route("/public", methods=["OPTIONS"])
@@ -24,7 +26,6 @@ def handle_options(id=None):
     return jsonify({"status": "ok"}), 200
 
 # ==================== SUBIDA DE IMAGEN ====================
-
 @productos_bp.route("/upload-image", methods=["POST"])
 @login_required
 def upload_image():
@@ -56,7 +57,7 @@ def upload_image():
 def get_productos():
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT id_producto, nombre, categoria, descripcion, precio, imagen FROM productos")
+    cursor.execute("SELECT id_producto, nombre, categoria, descripcion, precio, imagen, pax, utilidad_porcentaje, costo_produccion, precio_sugerido FROM productos")
     rows = cursor.fetchall()
     cursor.close()
     conn.close()
@@ -67,7 +68,7 @@ def get_productos():
 def get_producto(id):
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT id_producto, nombre, categoria, descripcion, precio, imagen FROM productos WHERE id_producto=%s", (id,))
+    cursor.execute("SELECT id_producto, nombre, categoria, descripcion, precio, imagen, pax, utilidad_porcentaje, costo_produccion, precio_sugerido FROM productos WHERE id_producto=%s", (id,))
     row = cursor.fetchone()
     cursor.close()
     conn.close()
@@ -108,17 +109,24 @@ def update_producto(id):
     descripcion = data.get("descripcion")
     precio = data.get("precio")
     imagen = data.get("imagen")
+    pax = data.get("pax")
+    utilidad_porcentaje = data.get("utilidad_porcentaje")
 
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("""
         UPDATE productos
-        SET nombre=%s, categoria=%s, descripcion=%s, precio=%s, imagen=%s
+        SET nombre=%s, categoria=%s, descripcion=%s, precio=%s, imagen=%s,
+            pax=%s, utilidad_porcentaje=%s
         WHERE id_producto=%s
-    """, (nombre, categoria, descripcion, precio, imagen, id))
+    """, (nombre, categoria, descripcion, precio, imagen, pax, utilidad_porcentaje, id))
     conn.commit()
     cursor.close()
     conn.close()
+
+    # ←←← ESTO ES LO QUE FALTABA: recalcular después de cambiar PAX o Utilidad
+    calcular_costo_completo(id)
+
     return jsonify({"mensaje": "Producto actualizado"})
 
 @productos_bp.route("/<int:id>", methods=["DELETE"])
