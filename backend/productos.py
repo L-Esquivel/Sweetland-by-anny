@@ -1,16 +1,53 @@
 from flask import Blueprint, request, jsonify
 from flask_login import login_required
 from db import get_db_connection
+import os
+from werkzeug.utils import secure_filename
 
 productos_bp = Blueprint("productos_bp", __name__, url_prefix="/productos")
+
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def get_images_dir():
+    return os.path.join(os.path.dirname(os.path.dirname(__file__)), 'shared-assets', 'images')
 
 # ==================== PREFLIGHT CORS ====================
 
 @productos_bp.route("/", methods=["OPTIONS"])
 @productos_bp.route("/<int:id>", methods=["OPTIONS"])
 @productos_bp.route("/public", methods=["OPTIONS"])
+@productos_bp.route("/upload-image", methods=["OPTIONS"])
 def handle_options(id=None):
     return jsonify({"status": "ok"}), 200
+
+# ==================== SUBIDA DE IMAGEN ====================
+
+@productos_bp.route("/upload-image", methods=["POST"])
+@login_required
+def upload_image():
+    if 'imagen' not in request.files:
+        return jsonify({"error": "No se envió ningún archivo"}), 400
+
+    file = request.files['imagen']
+
+    if file.filename == '':
+        return jsonify({"error": "Nombre de archivo vacío"}), 400
+
+    if not allowed_file(file.filename):
+        return jsonify({"error": "Formato no permitido. Usa PNG, JPG, JPEG, GIF o WEBP"}), 400
+
+    filename = secure_filename(file.filename)
+    images_dir = get_images_dir()
+    os.makedirs(images_dir, exist_ok=True)
+    file.save(os.path.join(images_dir, filename))
+
+    return jsonify({
+        "mensaje": "Imagen subida correctamente",
+        "filename": filename
+    }), 201
 
 # ==================== RUTAS PRIVADAS (Panel Admin) ====================
 
@@ -60,7 +97,6 @@ def add_producto():
     conn.commit()
     cursor.close()
     conn.close()
-
     return jsonify({"mensaje": "Producto agregado"}), 201
 
 @productos_bp.route("/<int:id>", methods=["PUT"])
@@ -83,7 +119,6 @@ def update_producto(id):
     conn.commit()
     cursor.close()
     conn.close()
-
     return jsonify({"mensaje": "Producto actualizado"})
 
 @productos_bp.route("/<int:id>", methods=["DELETE"])
@@ -101,7 +136,6 @@ def delete_producto(id):
 
 @productos_bp.route("/public", methods=["GET"])
 def get_productos_public():
-    """Endpoint público para la página web de clientes"""
     try:
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
@@ -113,10 +147,6 @@ def get_productos_public():
         productos = cursor.fetchall()
         cursor.close()
         conn.close()
-
-        return jsonify({
-            "success": True,
-            "productos": productos
-        })
+        return jsonify({"success": True, "productos": productos})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500

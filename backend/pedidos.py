@@ -495,3 +495,195 @@ def agregar_detalle_pedido(pedido_id):
     except Exception as e:
         logger.error(f"Error en agregar_detalle_pedido: {str(e)}")
         return jsonify({"error": f"Error del servidor: {str(e)}"}), 500
+# ==================== ENDPOINTS PÚBLICOS (Landing Page) ====================
+
+@pedidos_bp.route("/public", methods=["OPTIONS"])
+@pedidos_bp.route("/public/mis-pedidos", methods=["OPTIONS"])
+@pedidos_bp.route("/public/login", methods=["OPTIONS"])
+@pedidos_bp.route("/public/registro", methods=["OPTIONS"])
+@pedidos_bp.route("/public/logout", methods=["OPTIONS"])
+def handle_public_options():
+    return jsonify({"status": "ok"}), 200
+
+
+@pedidos_bp.route("/public", methods=["POST"])
+def create_pedido_public():
+    """
+    Guarda un pedido desde la landing page.
+    Acepta usuario anónimo (usuario_id = None) o autenticado por token de sesión.
+    Body: { usuario_id, telefono, direccion, total, items: [{id_producto, nombre, cantidad, precio, subtotal}] }
+    """
+    try:
+        data = request.get_json()
+        usuario_id = data.get("usuario_id")   # None si es anónimo
+        telefono   = data.get("telefono", "")
+        direccion  = data.get("direccion", "")
+        total      = data.get("total", 0)
+        items      = data.get("items", [])
+
+        if not items:
+            return jsonify({"error": "El carrito está vacío"}), 400
+
+        cursor = mysql.connection.cursor()
+
+        # Insertar pedido
+        cursor.execute("""
+            INSERT INTO pedidos (usuario_id, telefono, direccion, total, estado, fecha_pedido)
+            VALUES (%s, %s, %s, %s, 'pendiente', NOW())
+        """, (usuario_id, telefono, direccion, total))
+
+        pedido_id = cursor.lastrowid
+
+        # Insertar detalle por cada item del carrito
+        for item in items:
+            producto_id = item.get("id_producto")
+            cantidad    = item.get("cantidad", 1)
+            precio      = item.get("precio", 0)
+            subtotal    = item.get("subtotal", precio * cantidad)
+
+            if not producto_id:
+                continue
+
+            cursor.execute("""
+                INSERT INTO detalle_pedidos (pedido_id, producto_id, cantidad, precio_unitario, subtotal)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (pedido_id, producto_id, cantidad, precio, subtotal))
+
+        mysql.connection.commit()
+        cursor.close()
+
+        logger.info(f"Pedido público creado: ID {pedido_id}")
+        return jsonify({
+            "mensaje": "Pedido registrado correctamente",
+            "id_pedido": pedido_id
+        }), 201
+
+    except Exception as e:
+        logger.error(f"Error en create_pedido_public: {str(e)}")
+        return jsonify({"error": f"Error del servidor: {str(e)}"}), 500
+
+
+@pedidos_bp.route("/public/login", methods=["POST"])
+def login_cliente():
+    """Login de clientes desde la landing page."""
+    from models import User
+    from flask_login import login_user
+    data = request.get_json()
+    email    = data.get("email")
+    password = data.get("password")
+
+    if not email or not password:
+        return jsonify({"error": "Email y contraseña son requeridos"}), 400
+
+    user = User.get_by_email(email)
+    if user and user.check_password(password):
+        if user.rol != 'cliente':
+            return jsonify({"error": "Acceso no permitido"}), 403
+        login_user(user)
+        return jsonify({
+            "mensaje": "Login exitoso",
+            "usuario": {
+                "id": user.id,
+                "nombre": user.nombre,
+                "email": user.email,
+                "telefono": user.telefono,
+                "direccion": user.direccion
+            }
+        })
+    return jsonify({"error": "Credenciales inválidas"}), 401
+
+
+@pedidos_bp.route("/public/registro", methods=["POST"])
+def registro_cliente():
+    """Registro de nuevos clientes desde la landing page."""
+    from werkzeug.security import generate_password_hash
+    data = request.get_json()
+
+    nombre    = data.get("nombre")
+    email     = data.get("email")
+    password  = data.get("password")
+    telefono  = data.get("telefono", "")
+    direccion = data.get("direccion", "")
+
+    if not nombre or not email or not password:
+        return jsonify({"error": "Nombre, email y contraseña son requeridos"}), 400
+
+    cursor = mysql.connection.cursor()
+    cursor.execute("SELECT id_usuario FROM usuarios WHERE email = %s", (email,))
+    if cursor.fetchone():
+        cursor.close()
+        return jsonify({"error": "El email ya está registrado"}), 400
+
+    hashed = generate_password_hash(password)
+    cursor.execute("""
+        INSERT INTO usuarios (nombre, email, password, telefono, direccion, rol, fecha_registro)
+        VALUES (%s, %s, %s, %s, %s, 'cliente', NOW())
+    """, (nombre, email, hashed, telefono, direccion))
+
+    mysql.connection.commit()
+    cursor.close()
+
+    return jsonify({"mensaje": "Registro exitoso. Ya puedes iniciar sesión."}), 201
+
+
+@pedidos_bp.route("/public/logout", methods=["POST"])
+def logout_cliente():
+    from flask_login import logout_user
+    logout_user()
+    return jsonify({"mensaje": "Sesión cerrada"})
+
+
+@pedidos_bp.route("/public/mis-pedidos", methods=["GET"])
+def mis_pedidos():
+    """Devuelve el historial de pedidos del cliente logueado."""
+    from flask_login import current_user
+    if not current_user.is_authenticated:
+        return jsonify({"error": "No autenticado"}), 401
+
+    try:
+        cursor = mysql.connection.cursor()
+        cursor.execute("""
+            SELECT p.id_pedido, p.fecha_pedido, p.total, p.estado,
+                   COUNT(dp.id_detalle) as total_productos
+            FROM pedidos p
+            LEFT JOIN detalle_pedidos dp ON p.id_pedido = dp.pedido_id
+            WHERE p.usuario_id = %s
+            GROUP BY p.id_pedido
+            ORDER BY p.fecha_pedido DESC
+        """, (current_user.id,))
+        filas = cursor.fetchall()
+
+        pedidos = []
+        for f in filas:
+            # Obtener detalle de cada pedido
+            cursor.execute("""
+                SELECT dp.cantidad, dp.precio_unitario, dp.subtotal,
+                       pr.nombre, pr.imagen
+                FROM detalle_pedidos dp
+                LEFT JOIN productos pr ON dp.producto_id = pr.id_producto
+                WHERE dp.pedido_id = %s
+            """, (f[0],))
+            detalles_raw = cursor.fetchall()
+            detalles = [{
+                "cantidad": d[0],
+                "precio_unitario": float(d[1]) if d[1] else 0,
+                "subtotal": float(d[2]) if d[2] else 0,
+                "nombre": d[3],
+                "imagen": d[4]
+            } for d in detalles_raw]
+
+            pedidos.append({
+                "id_pedido": f[0],
+                "fecha_pedido": f[1].strftime('%Y-%m-%d %H:%M') if f[1] else None,
+                "total": float(f[2]) if f[2] else 0,
+                "estado": f[3] or "pendiente",
+                "total_productos": f[4],
+                "detalles": detalles
+            })
+
+        cursor.close()
+        return jsonify({"pedidos": pedidos})
+
+    except Exception as e:
+        logger.error(f"Error en mis_pedidos: {str(e)}")
+        return jsonify({"error": str(e)}), 500
