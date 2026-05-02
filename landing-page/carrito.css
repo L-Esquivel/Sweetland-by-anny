@@ -1,121 +1,329 @@
-/* carrito.css - Versión mejorada */
+/* ========================================
+   carrito.css - Sweetland by Anny
+   Paleta: rosa #f7d5d8, azul #55b7e5,
+           fucsia #aa1d80, violeta #791e7c
+   ======================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Nunito:wght@400;600;700&display=swap');
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
 
 body {
-  font-family: 'Noto Serif', serif;
-  background: linear-gradient(135deg, #fff0f5, #f0f8ff);
-  margin: 0;
-  padding: 20px;
+  font-family: 'Nunito', sans-serif;
+  background: #55b7e5;
   min-height: 100vh;
 }
 
-header {
-  text-align: center;
-  margin-bottom: 30px;
+/* ---- HEADER ---- */
+header#home {
+  background: linear-gradient(160deg, #f7d5d8 60%, #eabfc8 100%);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 30px 20px 40px;
+  position: relative;
+  overflow: hidden;
+}
+
+header#home::before {
+  content: '🍰';
+  position: absolute;
+  font-size: 120px;
+  opacity: 0.07;
+  top: -10px;
+  left: -20px;
+  transform: rotate(-15deg);
+}
+
+header#home::after {
+  content: '🧁';
+  position: absolute;
+  font-size: 100px;
+  opacity: 0.07;
+  bottom: -10px;
+  right: 20px;
+  transform: rotate(10deg);
 }
 
 .logo {
-  width: 180px;
+  width: 160px;
   border-radius: 50%;
-  box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+  box-shadow: 0 10px 30px rgba(121, 30, 124, 0.25);
+  transition: transform 0.3s ease;
+  position: relative;
+  z-index: 1;
 }
 
+.logo:hover {
+  transform: translateY(-6px) scale(1.04);
+}
+
+/* ---- TÍTULO ---- */
 h1 {
-  color: #d87c9e;
+  font-family: 'Playfair Display', serif;
+  color: #fff;
   text-align: center;
-  margin: 30px 0 20px;
-  font-size: 2.2em;
+  font-size: 2.4em;
+  margin: 40px 20px 30px;
+  text-shadow: 0 2px 10px rgba(121, 30, 124, 0.3);
+  letter-spacing: 0.5px;
 }
 
+/* ---- CONTENEDOR PRINCIPAL ---- */
+.carrito-wrapper {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 0 20px 60px;
+}
+
+/* ---- CARRITO VACÍO ---- */
+.carrito-vacio {
+  background: white;
+  border-radius: 24px;
+  padding: 60px 30px;
+  text-align: center;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.1);
+  margin-bottom: 30px;
+}
+
+.carrito-vacio p {
+  color: #999;
+  font-size: 1.2em;
+  margin-top: 16px;
+}
+
+/* ---- LISTA DE ITEMS ---- */
 #cart-list {
   list-style: none;
   padding: 0;
-  max-width: 900px;
-  margin: 0 auto 40px;
+  margin-bottom: 20px;
 }
 
 #cart-list li {
   background: white;
-  padding: 18px 25px;
-  margin-bottom: 15px;
-  border-radius: 16px;
-  box-shadow: 0 6px 15px rgba(0,0,0,0.08);
-  display: flex;
-  justify-content: space-between;
+  border-radius: 20px;
+  padding: 18px 24px;
+  margin-bottom: 14px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
   align-items: center;
-  font-size: 1.15em;
-  transition: transform 0.2s;
+  gap: 16px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  animation: slideIn 0.3s ease both;
 }
 
 #cart-list li:hover {
-  transform: translateY(-4px);
+  transform: translateY(-3px);
+  box-shadow: 0 12px 28px rgba(0,0,0,0.12);
 }
 
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Imagen del producto */
+.item-img {
+  width: 64px;
+  height: 64px;
+  border-radius: 14px;
+  object-fit: cover;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.12);
+}
+
+.item-img-placeholder {
+  width: 64px;
+  height: 64px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #f7d5d8, #eabfc8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+}
+
+/* Info del producto */
+.item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.item-nombre {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.1em;
+  color: #791e7c;
+  font-weight: 600;
+}
+
+.item-qty {
+  font-size: 0.88em;
+  color: #aaa;
+}
+
+/* Precio */
+.item-precio {
+  font-weight: 700;
+  font-size: 1.15em;
+  color: #aa1d80;
+  white-space: nowrap;
+}
+
+/* Botón eliminar */
+.btn-eliminar {
+  background: none;
+  border: 2px solid #ffb3c6;
+  color: #e05a7a;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 0.95em;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.btn-eliminar:hover {
+  background: #e05a7a;
+  border-color: #e05a7a;
+  color: white;
+  transform: scale(1.1);
+}
+
+/* ---- RESUMEN TOTAL ---- */
+.resumen {
+  background: white;
+  border-radius: 20px;
+  padding: 24px 28px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+  margin-bottom: 30px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.resumen-label {
+  font-size: 1.1em;
+  color: #666;
+  font-weight: 600;
+}
+
+#total {
+  font-family: 'Playfair Display', serif;
+  font-size: 2em;
+  color: #aa1d80;
+  font-weight: 700;
+}
+
+/* ---- BOTONES DE ACCIÓN ---- */
 .acciones {
-  text-align: center;
-  margin: 40px 0;
+  display: flex;
+  gap: 14px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 30px;
 }
 
 .btn {
   padding: 16px 32px;
-  margin: 0 12px;
   border: none;
   border-radius: 50px;
-  font-size: 1.1em;
-  font-weight: bold;
+  font-family: 'Nunito', sans-serif;
+  font-size: 1em;
+  font-weight: 700;
   cursor: pointer;
   transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  letter-spacing: 0.3px;
 }
 
 .btn-whatsapp {
-  background: #25D366;
+  background: linear-gradient(135deg, #25D366, #1da851);
   color: white;
+  box-shadow: 0 6px 20px rgba(37, 211, 102, 0.35);
+}
+
+.btn-whatsapp:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 28px rgba(37, 211, 102, 0.45);
 }
 
 .btn-vaciar {
-  background: #e74c3c;
+  background: white;
+  color: #e05a7a;
+  border: 2px solid #ffb3c6;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.07);
+}
+
+.btn-vaciar:hover {
+  background: #e05a7a;
   color: white;
+  border-color: #e05a7a;
+  transform: translateY(-4px);
+  box-shadow: 0 10px 24px rgba(224, 90, 122, 0.35);
 }
 
-.btn:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 10px 20px rgba(0,0,0,0.2);
-}
-
-#total {
-  font-size: 2em;
-  text-align: center;
-  color: #d87c9e;
-  font-weight: bold;
-  margin: 30px 0;
-}
-
+/* ---- VOLVER ---- */
 .volver {
   display: block;
   text-align: center;
-  margin: 40px auto;
-  color: #d87c9e;
-  font-size: 1.2em;
+  color: white;
+  font-size: 1em;
+  font-weight: 600;
   text-decoration: none;
+  opacity: 0.85;
+  transition: opacity 0.2s;
+  margin-bottom: 20px;
 }
 
-.loader-container {
-  position: fixed;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  background: rgba(255, 240, 245, 0.95);
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  z-index: 9999;
+.volver:hover {
+  opacity: 1;
+  text-decoration: underline;
 }
 
-.loader-cupcake {
-  width: 110px;
-  animation: bounce 1.2s infinite;
-}
+/* ---- RESPONSIVE ---- */
+@media (max-width: 600px) {
+  h1 { font-size: 1.8em; }
 
-@keyframes bounce {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-20px); }
+  #cart-list li {
+    grid-template-columns: auto 1fr auto;
+    grid-template-rows: auto auto;
+  }
+
+  .item-precio {
+    grid-column: 2;
+    font-size: 1em;
+  }
+
+  .btn-eliminar {
+    grid-row: 1 / 3;
+    grid-column: 3;
+  }
+
+  .resumen {
+    flex-direction: column;
+    gap: 8px;
+    text-align: center;
+  }
+
+  .acciones {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .btn {
+    width: 100%;
+    max-width: 320px;
+    justify-content: center;
+  }
 }

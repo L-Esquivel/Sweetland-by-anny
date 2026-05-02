@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 from flask_login import LoginManager
 from dotenv import load_dotenv
@@ -9,15 +9,27 @@ load_dotenv()
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'super_clave_secreta_sweetland_2026')
 
-# CORS mejorado para ambos proyectos
-# CORS mejorado
-CORS(app, 
-     origins=["http://localhost:5173", "http://127.0.0.1:5173", 
-              "http://localhost:5500", "http://127.0.0.1:5500", "*"],
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['SESSION_COOKIE_SECURE'] = False
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['REMEMBER_COOKIE_SAMESITE'] = 'Lax'
+
+CORS(app,
+     origins=[
+         "http://localhost:5173",
+         "http://127.0.0.1:5173",
+         "http://localhost:5500",
+         "http://127.0.0.1:5500"
+     ],
      supports_credentials=True,
      methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
      allow_headers=["Content-Type", "Authorization"],
      expose_headers=["Content-Type", "Authorization"])
+
+@app.before_request
+def handle_preflight():
+    if request.method == "OPTIONS":
+        return jsonify({"status": "ok"}), 200
 
 # Importar blueprints
 from login import auth_bp
@@ -28,7 +40,7 @@ from detalle_pedidos import detalle_pedidos_bp
 from ingredientes import ingredientes_bp
 from recetas import recetas_bp
 
-# Configuración MySQL (usando .env)
+# Configuración MySQL
 app.config['MYSQL_HOST'] = 'localhost'
 app.config['MYSQL_USER'] = 'root'
 app.config['MYSQL_PASSWORD'] = 'Root1234'
@@ -46,6 +58,11 @@ def load_user(user_id):
     from models import User
     return User.get_by_id(user_id)
 
+# Respuesta JSON en vez de redirect cuando no hay sesión
+@login_manager.unauthorized_handler
+def unauthorized():
+    return jsonify({"error": "No autorizado"}), 401
+
 # Registrar blueprints
 app.register_blueprint(auth_bp)
 app.register_blueprint(usuarios_bp)
@@ -59,10 +76,7 @@ app.register_blueprint(recetas_bp)
 def index():
     return jsonify({"mensaje": "Backend Sweetland funcionando correctamente"})
 
-# Servir imágenes estáticas
-import os
-from flask import send_from_directory
-
+# Servir imágenes desde shared-assets
 @app.route('/static/images/<filename>')
 def serve_image(filename):
     image_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'shared-assets', 'images')

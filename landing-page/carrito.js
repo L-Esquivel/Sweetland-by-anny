@@ -9,11 +9,11 @@ function addToCart(name, price, image = null) {
   if (existing) {
     existing.qty += 1;
   } else {
-    cart.push({ 
-      name, 
-      price: parseFloat(price), 
+    cart.push({
+      name,
+      price: parseFloat(price),
       qty: 1,
-      image: image 
+      image: image
     });
   }
 
@@ -35,18 +35,13 @@ function showNotification(productName, imageSrc = null) {
   if (!notification) return;
 
   const messageEl = notification.querySelector("p");
-  messageEl.textContent = `¡${productName} añadido!`;
+  if (messageEl) messageEl.textContent = `¡${productName} añadido!`;
 
   const imgEl = notification.querySelector("img");
-  if (imgEl && imageSrc) {
-    imgEl.src = imageSrc;
-  }
+  if (imgEl && imageSrc) imgEl.src = imageSrc;
 
   notification.classList.remove("hidden");
-
-  setTimeout(() => {
-    notification.classList.add("hidden");
-  }, 2500);
+  setTimeout(() => notification.classList.add("hidden"), 2500);
 }
 
 function closeNotification() {
@@ -65,24 +60,39 @@ function renderCart() {
   let total = 0;
 
   if (cart.length === 0) {
-    cartList.innerHTML = "<li style='text-align:center; padding:20px;'>Tu carrito está vacío.</li>";
-    totalDisplay.textContent = "$0";
+    cartList.innerHTML = `
+      <li class="carrito-vacio">
+        <div style="font-size:60px;">🛒</div>
+        <p>Tu carrito está vacío.</p>
+      </li>`;
+    if (totalDisplay) totalDisplay.textContent = "$0";
     return;
   }
 
   cart.forEach((item, index) => {
     const li = document.createElement("li");
-    li.style.marginBottom = "10px";
+    const subtotal = item.price * item.qty;
+    total += subtotal;
+
+    const imgHTML = item.image
+      ? `<img class="item-img" src="${item.image}" alt="${item.name}" onerror="this.style.display='none'">`
+      : `<div class="item-img-placeholder">🍰</div>`;
+
     li.innerHTML = `
-      ${item.qty} x ${item.name} 
-      <strong>$${(item.price * item.qty).toLocaleString()}</strong>
-      <button onclick="removeFromCart(${index})" style="color:red; margin-left:15px; font-size:0.9em;">Eliminar</button>
+      ${imgHTML}
+      <div class="item-info">
+        <span class="item-nombre">${item.name}</span>
+        <span class="item-qty">Cantidad: ${item.qty}</span>
+      </div>
+      <span class="item-precio">$${subtotal.toLocaleString()}</span>
+      <button class="btn-eliminar" onclick="removeFromCart(${index})" title="Eliminar">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
     `;
     cartList.appendChild(li);
-    total += item.price * item.qty;
   });
 
-  totalDisplay.textContent = `$${total.toLocaleString()}`;
+  if (totalDisplay) totalDisplay.textContent = `$${total.toLocaleString()}`;
 }
 
 // Eliminar producto del carrito

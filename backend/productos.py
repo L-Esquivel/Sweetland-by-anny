@@ -4,9 +4,16 @@ from db import get_db_connection
 
 productos_bp = Blueprint("productos_bp", __name__, url_prefix="/productos")
 
+# ==================== PREFLIGHT CORS ====================
+
+@productos_bp.route("/", methods=["OPTIONS"])
+@productos_bp.route("/<int:id>", methods=["OPTIONS"])
+@productos_bp.route("/public", methods=["OPTIONS"])
+def handle_options(id=None):
+    return jsonify({"status": "ok"}), 200
+
 # ==================== RUTAS PRIVADAS (Panel Admin) ====================
 
-# Obtener todos los productos (para admin)
 @productos_bp.route("/", methods=["GET"])
 @login_required
 def get_productos():
@@ -18,7 +25,6 @@ def get_productos():
     conn.close()
     return jsonify(rows)
 
-# Obtener producto por id
 @productos_bp.route("/<int:id>", methods=["GET"])
 @login_required
 def get_producto(id):
@@ -32,7 +38,6 @@ def get_producto(id):
         return jsonify(row)
     return jsonify({"error": "Producto no encontrado"}), 404
 
-# Agregar producto
 @productos_bp.route("/", methods=["POST"])
 @login_required
 def add_producto():
@@ -58,7 +63,6 @@ def add_producto():
 
     return jsonify({"mensaje": "Producto agregado"}), 201
 
-# Actualizar producto
 @productos_bp.route("/<int:id>", methods=["PUT"])
 @login_required
 def update_producto(id):
@@ -82,7 +86,6 @@ def update_producto(id):
 
     return jsonify({"mensaje": "Producto actualizado"})
 
-# Eliminar producto
 @productos_bp.route("/<int:id>", methods=["DELETE"])
 @login_required
 def delete_producto(id):
@@ -103,14 +106,14 @@ def get_productos_public():
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
         cursor.execute("""
-            SELECT id_producto, nombre, categoria, descripcion, precio, imagen 
-            FROM productos 
+            SELECT id_producto, nombre, categoria, descripcion, precio, imagen
+            FROM productos
             ORDER BY categoria, nombre
         """)
         productos = cursor.fetchall()
         cursor.close()
         conn.close()
-        
+
         return jsonify({
             "success": True,
             "productos": productos
