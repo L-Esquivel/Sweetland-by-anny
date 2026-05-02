@@ -137,7 +137,10 @@ mysql -u root -p < database/scripts/sweetland_db_v1.sql
 
 ```bash
 cd backend
+python -m venv venv
+venv\Scripts\activate
 pip install -r requirements.txt
+python app.py
 ```
 
 Create a `.env` file in `/backend`:
