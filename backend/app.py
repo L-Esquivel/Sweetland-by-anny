@@ -23,6 +23,8 @@ app.config['MYSQL_PASSWORD'] = os.getenv('MYSQL_PASSWORD', 'Root1234')
 app.config['MYSQL_DB'] = os.getenv('MYSQL_DB', 'sweetland_by_anny')
 app.config['MYSQL_PORT'] = int(os.getenv('MYSQL_PORT', 3306))
 
+import pymysql
+pymysql.install_as_MySQLdb()
 from extensions import mysql
 mysql.init_app(app)
 
