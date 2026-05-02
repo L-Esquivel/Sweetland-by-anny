@@ -10,14 +10,34 @@ load_dotenv()
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'super_clave_secreta_sweetland_2026')
 
+# Configuración de cookies de sesión
+app.config['SESSION_COOKIE_SAMESITE'] = 'None'
+app.config['SESSION_COOKIE_SECURE'] = True
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['REMEMBER_COOKIE_SAMESITE'] = 'None'
+app.config['REMEMBER_COOKIE_SECURE'] = True
+
 # ───────────────────────────────────────────────
-# CORS: en producción restringe a tu dominio real
+# CORS
 # ───────────────────────────────────────────────
 allowed_origins = os.getenv('ALLOWED_ORIGINS', '*')
 if allowed_origins != '*':
     allowed_origins = [o.strip() for o in allowed_origins.split(',')]
 
-CORS(app, origins=allowed_origins, supports_credentials=True)
+CORS(app,
+     origins=allowed_origins,
+     supports_credentials=True,
+     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+     allow_headers=["Content-Type", "Authorization"],
+     expose_headers=["Content-Type", "Authorization"])
+
+# ───────────────────────────────────────────────
+# Preflight CORS global
+# ───────────────────────────────────────────────
+@app.before_request
+def handle_preflight():
+    if request.method == "OPTIONS":
+        return jsonify({"status": "ok"}), 200
 
 # ───────────────────────────────────────────────
 # Flask-Login
@@ -31,8 +51,12 @@ def load_user(user_id):
     from models import User
     return User.get_by_id(user_id)
 
+@login_manager.unauthorized_handler
+def unauthorized():
+    return jsonify({"error": "No autorizado"}), 401
+
 # ───────────────────────────────────────────────
-# Inicializar extensiones (cierra conexiones automáticamente)
+# Extensiones
 # ───────────────────────────────────────────────
 from extensions import mysql
 mysql.init_app(app)
@@ -67,19 +91,15 @@ def index():
 
 @app.route('/static/images/<filename>')
 def serve_image(filename):
-    """Sirve imágenes de productos desde shared-assets."""
     image_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'shared-assets', 'images')
     return send_from_directory(image_dir, filename)
 
-# ───────────────────────────────────────────────
-# Health check para Railway
-# ───────────────────────────────────────────────
 @app.route("/health")
 def health():
     return jsonify({"status": "ok"}), 200
 
 # ───────────────────────────────────────────────
-# Entry point (solo para desarrollo local)
+# Entry point
 # ───────────────────────────────────────────────
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", 5000)), debug=False)
