@@ -2,4 +2,4 @@
 builder = "NIXPACKS"
 
 [deploy]
-startCommand = "gunicorn -w 2 -k gevent -b 0.0.0.0:$PORT app:app"
+startCommand = "gunicorn -w 2 -k sync -b 0.0.0.0:$PORT app:app"
