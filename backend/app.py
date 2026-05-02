@@ -39,6 +39,8 @@ from pedidos import pedidos_bp
 from detalle_pedidos import detalle_pedidos_bp
 from ingredientes import ingredientes_bp
 from recetas import recetas_bp
+from empaques import empaques_bp
+app.register_blueprint(empaques_bp)
 
 # Configuración MySQL
 app.config['MYSQL_HOST'] = 'localhost'
