@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:5000/productos';
+import API_URL from './api.js';
 
 export const productosService = {
   // Obtener todos los productos

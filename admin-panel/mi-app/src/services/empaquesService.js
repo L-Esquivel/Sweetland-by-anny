@@ -1,5 +1,5 @@
 // src/services/empaquesService.js
-import fetchAPI from './api';
+import API_URL from './api.js';
 
 export const empaquesService = {
 

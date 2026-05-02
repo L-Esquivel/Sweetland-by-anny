@@ -1,0 +1,55 @@
+# ====================================
+# Root .gitignore - Sweetland Project
+# ====================================
+
+# Node.js / React / Vite
+admin-panel/mi-app/node_modules/
+admin-panel/mi-app/dist/
+admin-panel/mi-app/.vite/
+landing-page/node_modules/
+landing-page/dist/
+
+# Python / Flask
+backend/__pycache__/
+backend/*.pyc
+backend/*.pyo
+backend/*.pyd
+backend/.venv/
+backend/venv/
+backend/env/
+
+# Archivos de entorno (¡MUY IMPORTANTE!)
+.env
+backend/.env
+admin-panel/mi-app/.env
+landing-page/.env
+
+# Logs
+*.log
+logs/
+
+# Base de datos local (por si acaso)
+*.sql
+database/*.sql
+
+# Carpetas de IDEs y editores
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+# Carpetas temporales de build
+build/
+dist/
+*.egg-info/
+
+# Evidence (solo si no quieres subir capturas grandes)
+# Evidence/
+
+# Railway / Vercel
+.railway/
+.vercel/

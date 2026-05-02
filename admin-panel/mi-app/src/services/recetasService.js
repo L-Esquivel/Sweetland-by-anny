@@ -1,5 +1,5 @@
 // src/services/recetasService.js
-const API_URL = 'http://localhost:5000';
+import API_URL from './api.js';
 
 export const recetasService = {
   // Obtener todas las recetas
