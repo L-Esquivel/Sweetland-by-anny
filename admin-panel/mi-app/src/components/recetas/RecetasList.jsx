@@ -57,22 +57,16 @@ const RecetasList = () => {
   const actualizarCampoProducto = async (campo, valor) => {
     if (!productoSeleccionado) return;
 
-    console.log(`Actualizando ${campo} = ${valor}`);
-
-    // Creamos un nuevo objeto para forzar re-render
     const productoActualizado = { ...productoSeleccionado, [campo]: valor };
     setProductoSeleccionado(productoActualizado);
 
     try {
       await productosService.updateProducto(productoSeleccionado.id_producto, productoActualizado);
-      console.log(`✅ ${campo} guardado en BD`);
-
-      // Recargamos el cálculo completo
+      // Refrescamos los costos después de actualizar pax o utilidad
       const data = await recetasService.getRecetasPorProducto(productoSeleccionado.id_producto);
       setCostos(data.costos || null);
     } catch (error) {
       console.error('Error actualizando:', error);
-      alert('Error al guardar el cambio');
     }
   };
 
@@ -168,7 +162,7 @@ const RecetasList = () => {
                     type="number" 
                     className="form-control d-inline-block ms-2" 
                     style={{width: '100px'}}
-                    value={productoSeleccionado.pax ?? 1}
+                    value={productoSeleccionado.pax || 1}
                     onChange={(e) => actualizarCampoProducto('pax', parseInt(e.target.value) || 1)}
                   />
                 </div>
@@ -179,7 +173,7 @@ const RecetasList = () => {
                     type="number" 
                     className="form-control d-inline-block ms-2" 
                     style={{width: '100px'}}
-                    value={productoSeleccionado.utilidad_porcentaje ?? 40}
+                    value={productoSeleccionado.utilidad_porcentaje || 40}
                     onChange={(e) => actualizarCampoProducto('utilidad_porcentaje', parseFloat(e.target.value) || 40)}
                   />
                 </div>
@@ -188,22 +182,59 @@ const RecetasList = () => {
               <div className="col-md-5">
                 <div className="bg-light p-3 rounded">
                   <h6 className="text-center mb-3">Desglose según Excel</h6>
-                  <div className="d-flex justify-content-between mb-1"><span>Costo Base</span><strong>{formatearMoneda(costos.costo_base)}</strong></div>
-                  <div className="d-flex justify-content-between mb-1"><span>+ 35% Gastos Operativos</span><strong>{formatearMoneda(costos.total2 - costos.costo_base)}</strong></div>
-                  <div className="d-flex justify-content-between mb-1"><span>+ 5% Depreciación Equipos</span><strong>{formatearMoneda(costos.total3 - costos.total2)}</strong></div>
-                  <div className="d-flex justify-content-between mb-1"><span>+ 10% Depreciación Mercado</span><strong>{formatearMoneda(costos.total4 - costos.total3)}</strong></div>
+                  
+                  {/* === DESGLOSE CORREGIDO SEGÚN TUS AJUSTES === */}
+                  <div className="d-flex justify-content-between mb-1">
+                    <span>Costo Base</span>
+                    <strong>{formatearMoneda(costos.costo_base)}</strong>
+                  </div>
+                  <div className="d-flex justify-content-between mb-1">
+                    <span>+ 35% Gastos Operativos</span>
+                    <strong>{formatearMoneda(costos.gastos_operativos)}</strong>
+                  </div>
+                  <div className="d-flex justify-content-between mb-1">
+                    <span>+ 5% Depreciación Equipos</span>
+                    <strong>{formatearMoneda(costos.dep_equipos)}</strong>
+                  </div>
+                  <div className="d-flex justify-content-between mb-1">
+                    <span>+ 10% Depreciación Mercado</span>
+                    <strong>{formatearMoneda(costos.dep_mercado)}</strong>
+                  </div>
+                  <div className="d-flex justify-content-between mb-1">
+                    <span>+ Empaques</span>
+                    <strong>{formatearMoneda(costos.costo_empaques)}</strong>
+                  </div>
+                  
                   <hr />
-                  <div className="d-flex justify-content-between mb-1"><strong>Total antes de Utilidad</strong><strong>{formatearMoneda(costos.total4)}</strong></div>
-                  <div className="d-flex justify-content-between mb-1"><span>+ {costos.utilidad_porcentaje}% Utilidad</span><strong>{formatearMoneda(costos.precio_final - costos.total4)}</strong></div>
+                  <div className="d-flex justify-content-between mb-1">
+                    <strong>Total antes de Utilidad</strong>
+                    <strong>{formatearMoneda(costos.total3)}</strong>
+                  </div>
+                  
+                  <div className="d-flex justify-content-between mb-1">
+                    <span>+ {costos.utilidad_porcentaje}% Utilidad</span>
+                    <strong>{formatearMoneda(costos.utilidad)}</strong>
+                  </div>
+                  
                   <hr />
-                  <div className="d-flex justify-content-between mb-1"><strong>Total con Utilidad</strong><strong>{formatearMoneda(costos.precio_final)}</strong></div>
-                  <div className="d-flex justify-content-between mb-1"><span>+ 8% I.C.</span><strong>{formatearMoneda(costos.precio_final * 0.08)}</strong></div>
+                  <div className="d-flex justify-content-between mb-1">
+                    <strong>Total con Utilidad</strong>
+                    <strong>{formatearMoneda(costos.total4)}</strong>
+                  </div>
+                  
+                  <div className="d-flex justify-content-between mb-1">
+                    <span>+ 8% I.C.</span>
+                    <strong>{formatearMoneda(costos.ic)}</strong>
+                  </div>
+                  
                   <hr className="border-primary" />
                   <div className="d-flex justify-content-between fs-5">
                     <strong>Precio Sugerido Final</strong>
                     <strong className="text-success">{formatearMoneda(costos.precio_sugerido)}</strong>
                   </div>
-                  <small className="text-muted d-block text-end">por unidad (PAX = {costos.pax})</small>
+                  <small className="text-muted d-block text-end">
+                    por unidad (PAX = {costos.pax})
+                  </small>
                 </div>
               </div>
             </div>
