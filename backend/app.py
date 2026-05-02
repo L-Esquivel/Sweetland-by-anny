@@ -3,27 +3,25 @@ from flask_cors import CORS
 from flask_login import LoginManager
 from dotenv import load_dotenv
 import os
-import pymysql
 
+# Cargar variables de entorno
 load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'super_clave_secreta_sweetland_2026')
 
-# Conexión simple con PyMySQL
-def get_db():
-    return pymysql.connect(
-        host=os.getenv('MYSQL_HOST', 'localhost'),
-        user=os.getenv('MYSQL_USER', 'root'),
-        password=os.getenv('MYSQL_PASSWORD', 'Root1234'),
-        db=os.getenv('MYSQL_DB', 'sweetland_by_anny'),
-        port=int(os.getenv('MYSQL_PORT', 3306)),
-        cursorclass=pymysql.cursors.DictCursor
-    )
+# ───────────────────────────────────────────────
+# CORS: en producción restringe a tu dominio real
+# ───────────────────────────────────────────────
+allowed_origins = os.getenv('ALLOWED_ORIGINS', '*')
+if allowed_origins != '*':
+    allowed_origins = [o.strip() for o in allowed_origins.split(',')]
 
-CORS(app, origins=["*"], supports_credentials=True)
+CORS(app, origins=allowed_origins, supports_credentials=True)
 
-# Flask-Login (mantengo lo que tenías)
+# ───────────────────────────────────────────────
+# Flask-Login
+# ───────────────────────────────────────────────
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = "auth_bp.login"
@@ -33,7 +31,15 @@ def load_user(user_id):
     from models import User
     return User.get_by_id(user_id)
 
-# Blueprints (ajusta si es necesario los que usan mysql.connection)
+# ───────────────────────────────────────────────
+# Inicializar extensiones (cierra conexiones automáticamente)
+# ───────────────────────────────────────────────
+from extensions import mysql
+mysql.init_app(app)
+
+# ───────────────────────────────────────────────
+# Blueprints
+# ───────────────────────────────────────────────
 from login import auth_bp
 from usuarios import usuarios_bp
 from productos import productos_bp
@@ -52,14 +58,28 @@ app.register_blueprint(ingredientes_bp)
 app.register_blueprint(recetas_bp)
 app.register_blueprint(empaques_bp)
 
+# ───────────────────────────────────────────────
+# Rutas base
+# ───────────────────────────────────────────────
 @app.route("/")
 def index():
     return jsonify({"mensaje": "Backend Sweetland funcionando correctamente ✅"})
 
 @app.route('/static/images/<filename>')
 def serve_image(filename):
+    """Sirve imágenes de productos desde shared-assets."""
     image_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'shared-assets', 'images')
     return send_from_directory(image_dir, filename)
 
+# ───────────────────────────────────────────────
+# Health check para Railway
+# ───────────────────────────────────────────────
+@app.route("/health")
+def health():
+    return jsonify({"status": "ok"}), 200
+
+# ───────────────────────────────────────────────
+# Entry point (solo para desarrollo local)
+# ───────────────────────────────────────────────
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", 5000)), debug=False)
