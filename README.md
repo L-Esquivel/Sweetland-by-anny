@@ -216,13 +216,12 @@ Open `landing-page/index.html` with **Live Server** (VS Code extension) to serve
 
 ---
 
-## 📸 Screenshots
+### 📸 Screenshots
 
-| Landing Page | Admin Panel |
-|---|---|
-| Product catalog with dynamic images | Full CRUD for products, orders, ingredients |
-| Shopping cart with WhatsApp checkout | Order status management |
-| Client login & order history | Recipe & production cost tracking |
+| 🛒 Customer Storefront (Landing Page) | ⚙️ Admin Management Panel (React) |
+| :---: | :---: |
+| ![Landing Page](evidence/landing-page-products.png) | ![Admin Panel](evidence/admin-panel-products.png) |
+| *Dynamic product catalog connected to Flask API.* | *Inventory, order tracking, and production cost management.* ||
 
 ---
 
@@ -235,6 +234,17 @@ Open `landing-page/index.html` with **Live Server** (VS Code extension) to serve
 - [ ] Mobile-responsive admin panel
 
 ---
+
+
+🔨 Development & Authorship
+This project is 90% custom-developed, showcasing my ability to architect and implement a full-stack solution from the ground up.
+
+Original Architecture: Designed the entire database schema and the communication flow between the Flask API and multiple frontends.
+
+Handcrafted Logic: Developed all backend routes, authentication systems, and the custom recipe/cost engine.
+
+End-to-End Implementation: From the initial SQL scripts to the final React components and Vanilla JS integration.
+
 
 ## 👨‍💻 Author
 
