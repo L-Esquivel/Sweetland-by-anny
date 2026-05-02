@@ -220,7 +220,7 @@ Open `landing-page/index.html` with **Live Server** (VS Code extension) to serve
 
 | 🛒 Customer Storefront (Landing Page) | ⚙️ Admin Management Panel (React) |
 | :---: | :---: |
-| ![Landing Page](evidence/landing-page-products.png) | ![Admin Panel](evidence/admin-panel-products.png) |
+| ![Landing Page](Evidence/landing-page-products.png) | ![Admin Panel](Evidence/admin-panel-products.png) |
 | *Dynamic product catalog connected to Flask API.* | *Inventory, order tracking, and production cost management.* ||
 
 ---
