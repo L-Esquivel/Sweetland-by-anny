@@ -220,7 +220,7 @@ Open `landing-page/index.html` with **Live Server** (VS Code extension) to serve
 
 | 🛒 Customer Storefront | ⚙️ Admin Control Panel |
 | :---: | :---: |
-| ![Landing Page](Evidence/page-products.png) | ![Admin Panel](Evidence/admin-panel-products.png) |
+| ![Landing Page](Evidence/landing-page-products.png) | ![Admin Panel](Evidence/admin-panel-products.png) |
 | *Showcasing dynamic product catalog and shopping cart.* | *Managing inventory, orders, and production costs.* |
 
 ---
