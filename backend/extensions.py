@@ -1,8 +1,11 @@
 import pymysql
 pymysql.install_as_MySQLdb()
 
-# No usamos Flask-MySQLdb, solo la compatibilidad
-# El objeto mysql se usa en el código como extensión
-from flask_mysqldb import MySQL
+class MySQL:
+    def __init__(self):
+        self.connection = None
+
+    def init_app(self, app):
+        pass  # Flask-MySQLdb compatibility
 
 mysql = MySQL()
