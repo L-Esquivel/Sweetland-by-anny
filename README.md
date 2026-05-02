@@ -242,18 +242,6 @@ Open `landing-page/index.html` with **Live Server** (VS Code extension) to serve
 
 ---
 
-## 📄 License
-
-This project was developed as a real-world solution for a small business. All rights reserved.
-
-
-## 👨‍💻 Author
-
-**Luis Esquivel**
-[GitHub](https://github.com/L-Esquivel)
-
----
-
 ## 📄 License & Intellectual Property
 This project is for portfolio demonstration purposes only.
 
