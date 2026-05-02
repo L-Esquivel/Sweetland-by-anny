@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 
-const API_BASE = 'http://localhost:5000';
+const API_BASE = import.meta.env.VITE_API_URL || 'https://sweetland-by-anny-production.up.railway.app';
 
 const ProductoForm = ({ producto, onSubmit, onClose }) => {
   const [formData, setFormData] = useState({
