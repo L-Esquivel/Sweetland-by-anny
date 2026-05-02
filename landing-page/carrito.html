@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Carrito de Compras - Sweetland</title>
+  <link rel="stylesheet" href="estilos.css">
+  <link rel="stylesheet" href="carrito.css" />  
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+
+<header id="home">
+  <img src="logo-fotor-2025071492551.png" alt="Logo" class="logo"/>
+</header>
+
+  <h1>Tu Carrito de Compras</h1>
+
+  <ul id="cart-list"></ul>
+
+  <p><strong>Total:</strong> <span id="total">$0</span></p>
+
+  <div class="acciones">
+    <button class="btn btn-whatsapp" onclick="finalizeOrder()">Enviar pedido por WhatsApp</button>
+    <button class="btn btn-vaciar" onclick="clearCartAndReload()">Vaciar carrito</button>
+  </div>
+
+  <a href="#" onclick="history.back();" class="volver">← Volver a la tienda</a>
+
+  <script src="carrito.js"></script>
+  <script>
+    window.addEventListener('load', function () {
+      renderCart();
+      updateCartCount();
+    });
+  </script>
+</body>
+</html>

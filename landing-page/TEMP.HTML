@@ -1,0 +1,24 @@
+ <!-- Loader -->
+ <div id="loader" class="loader-container">
+    <img src="cupcake-rosa.png>" class="loader-cupcake" alt="Cargando...">
+    <p class="loader-text">Cargando ...</p>
+  </div>
+  
+  <!-- Contenido Torta -->
+  <div id="contenido-torta" style="display: none;">
+  </div>
+    
+
+  // Mostrar pantalla de carga antes de mostrar el contenido torta
+window.addEventListener("load", function () {
+  const loader = document.getElementById("loader");
+  const contenido = document.getElementById("contenido-torta");
+
+  if (loader && contenido) {
+    // Oculta el loader después de 1.5 segundos (ajustable)
+    setTimeout(() => {
+      loader.style.display = "none";
+      contenido.style.display = "block";
+    }, 1500);
+  }
+});

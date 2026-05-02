@@ -1,0 +1,320 @@
+.pedidos-container {
+  padding: 0;
+  height: 100%;
+}
+
+.pedidos-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #e9ecef;
+}
+
+.pedidos-header h2 {
+  color: #2c3e50;
+  margin: 0;
+}
+
+.btn-nuevo-pedido {
+  background: linear-gradient(135deg, #27ae60, #2ecc71);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.btn-nuevo-pedido:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(39, 174, 96, 0.3);
+}
+
+.pedidos-content {
+  display: flex;
+  gap: 2rem;
+  height: calc(100vh - 200px);
+}
+
+.pedidos-content {
+  display: flex;
+  gap: 2rem;
+  height: calc(100vh - 200px);
+}
+
+.pedidos-list {
+  flex: 1;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+  overflow: hidden;
+}
+
+.pedidos-list.with-details {
+  flex: 0 0 60%;
+}
+
+.table-container {
+  height: 100%;
+  overflow-y: auto;
+}
+
+.pedidos-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.pedidos-table th {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 1rem;
+  text-align: left;
+  font-weight: 600;
+  position: sticky;
+  top: 0;
+}
+
+.pedidos-table td {
+  padding: 1rem;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.pedidos-table tr:hover {
+  background-color: #f8f9fa;
+}
+
+.pedidos-table tr.selected {
+  background-color: #e3f2fd;
+  border-left: 4px solid #2196f3;
+}
+
+.pedido-id {
+  font-weight: 700;
+  color: #2c3e50;
+}
+
+.cliente-info .cliente-nombre {
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.cliente-info .cliente-telefono {
+  font-size: 0.85rem;
+  color: #7f8c8d;
+}
+
+.estado-badge {
+  padding: 0.4rem 0.8rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.estado-pendiente {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.estado-confirmado {
+  background: #d1ecf1;
+  color: #0c5460;
+}
+
+.estado-preparacion {
+  background: #d4edda;
+  color: #155724;
+}
+
+.estado-entregado {
+  background: #e2e3e5;
+  color: #383d41;
+}
+
+.estado-cancelado {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.total {
+  font-weight: 700;
+  color: #27ae60;
+}
+
+.acciones {
+  white-space: nowrap;
+}
+
+.btn-ver-detalles {
+  background: #3498db;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: all 0.3s ease;
+}
+
+.btn-ver-detalles:hover {
+  background: #2980b9;
+  transform: translateY(-1px);
+}
+
+/* Panel de Detalles */
+.detalles-panel {
+  flex: 0 0 38%;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+}
+
+.detalles-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  border-bottom: 2px solid #e9ecef;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+}
+
+.detalles-header h3 {
+  margin: 0;
+  color: #2c3e50;
+}
+
+.btn-cerrar {
+  background: #e74c3c;
+  color: white;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.btn-cerrar:hover {
+  background: #c0392b;
+  transform: rotate(90deg);
+}
+
+.detalles-content {
+  flex: 1;
+  padding: 1.5rem;
+  overflow-y: auto;
+}
+
+.detalles-list h4 {
+  color: #2c3e50;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.detalles-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.detalles-table th {
+  background: #f8f9fa;
+  color: #2c3e50;
+  padding: 0.75rem;
+  text-align: left;
+  font-weight: 600;
+  border-bottom: 2px solid #dee2e6;
+}
+
+.detalles-table td {
+  padding: 0.75rem;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.producto-info .producto-nombre {
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.producto-info .producto-categoria {
+  font-size: 0.8rem;
+  color: #7f8c8d;
+  text-transform: capitalize;
+}
+
+.cantidad, .precio, .subtotal {
+  text-align: center;
+}
+
+.precio, .subtotal {
+  font-weight: 600;
+}
+
+.detalles-table tfoot {
+  background: #f8f9fa;
+  font-weight: 700;
+}
+
+.total-label {
+  text-align: right;
+  color: #2c3e50;
+}
+
+.total-pedido {
+  color: #27ae60;
+  font-size: 1.1rem;
+}
+
+.no-detalles {
+  text-align: center;
+  color: #7f8c8d;
+  padding: 2rem;
+  font-style: italic;
+}
+
+.loading {
+  text-align: center;
+  padding: 2rem;
+  color: #7f8c8d;
+  font-size: 1.1rem;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .pedidos-content {
+    flex-direction: column;
+    height: auto;
+  }
+  
+  .pedidos-list.with-details {
+    flex: 1;
+  }
+  
+  .detalles-panel {
+    flex: 1;
+  }
+}
+
+@media (max-width: 768px) {
+  .pedidos-header {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: flex-start;
+  }
+  
+  .table-container {
+    overflow-x: auto;
+  }
+  
+  .pedidos-table {
+    min-width: 800px;
+  }
+}

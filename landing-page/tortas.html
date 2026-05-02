@@ -1,0 +1,98 @@
+<<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tortas - Sweetland</title>
+    <link rel="stylesheet" href="estilos.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+</head>
+<body>
+
+  <section id="page-header">
+    <h1>Nuestras Tortas</h1>
+  </section>
+
+  <header id="tortas">
+    <img src="logo-fotor-2025071492551.png" alt="Logo" class="logo1" />
+    <nav id="menu">
+      <ul>
+        <li><a href="index.html">Home</a></li>
+        <li><a href="aboutus.html">Sobre nosotros</a></li>
+        <li id="submenu">
+          <a href="#">Nuestros productos</a>
+          <ul class="dropdown">
+            <li><a href="tortas.html">Tortas</a></li>
+            <li><a href="postres.html">Postres</a></li>
+            <li><a href="detalles.html">Detalles</a></li>
+          </ul>
+        </li>
+        <li><a href="contactenos.html">Contáctenos</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <!-- Loader -->
+  <div id="loader" class="loader-container">
+    <img src="cupcake-rosa.png" class="loader-cupcake" alt="Cargando...">
+    <p class="loader-text">Cargando productos...</p>
+  </div>
+
+  <!-- Galería de productos -->
+  <div id="galeria-productos" class="galeria-productos"></div>
+
+  <!-- Carrito flotante -->
+  <a href="carrito.html" class="cart-link" id="cart-button">🛒 (<span id="cart-count">0</span>)</a>
+
+  <!-- Notificación -->
+  <div id="cart-notification" class="notification hidden">
+    <div class="notification-content">
+      <img src="cupcake.png" alt="Cupcake" class="cupcake-img">
+      <p>¡Se añadió al carrito!</p>
+      <button onclick="closeNotification()">Cerrar</button>
+    </div>
+  </div>
+
+    <script src="carrito.js"></script>
+  <script>
+    async function cargarProductos() {
+      const loader = document.getElementById('loader');
+      const galeria = document.getElementById('galeria-productos');
+
+      try {
+        const response = await fetch('http://127.0.0.1:5000/productos/public');
+        const data = await response.json();
+
+        if (data.success) {
+          galeria.innerHTML = '';
+
+          const tortas = data.productos.filter(p => p.categoria.toLowerCase() === 'tortas');
+
+          tortas.forEach(producto => {
+            const div = document.createElement('div');
+            div.className = 'producto';
+            div.innerHTML = `
+              <img src="http://127.0.0.1:5000/static/images/${producto.imagen}" alt="${producto.nombre}">
+              <h3>${producto.nombre}</h3>
+              <p>${producto.descripcion}</p>
+              <p><strong>$${parseInt(producto.precio).toLocaleString()}</strong></p>
+              <button class="btn-agregar" 
+                onclick="addToCart('${producto.nombre}', ${producto.precio}, 'http://127.0.0.1:5000/static/images/${producto.imagen}')">
+                Agregar al carrito
+              </button>
+            `;
+            galeria.appendChild(div);
+          });
+        }
+      } catch (error) {
+        galeria.innerHTML = '<p>Error al cargar los productos.</p>';
+      } finally {
+        loader.style.display = 'none';
+      }
+    }
+
+    window.addEventListener('load', cargarProductos);
+  </script>
+
+</body>
+</html>
