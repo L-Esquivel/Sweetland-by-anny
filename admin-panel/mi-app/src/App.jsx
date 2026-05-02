@@ -8,6 +8,8 @@ import PedidosList from './components/pedidos/PedidosList';
 import IngredientesList from "./components/ingredientes/IngredientesList";
 import RecetasList from "./components/recetas/RecetasList";
 
+const API_BASE = import.meta.env.VITE_API_URL || 'https://sweetland-by-anny-production.up.railway.app';
+
 function App() {
   const [activeSection, setActiveSection] = useState('inicio');
   const [currentView, setCurrentView] = useState('login');
@@ -18,7 +20,6 @@ function App() {
     checkAuth();
   }, []);
 
-  // DEBUG: Ver estado del usuario
   useEffect(() => {
     console.log('User state:', user);
     console.log('Current view:', currentView);
@@ -26,7 +27,7 @@ function App() {
 
   const checkAuth = async () => {
     try {
-      const response = await fetch('http://localhost:5000/auth/me', {
+      const response = await fetch(`${API_BASE}/auth/me`, {
         credentials: 'include'
       });
       
@@ -34,7 +35,6 @@ function App() {
         const userData = await response.json();
         const usuario = userData.usuario || userData;
         
-        // ✅ VERIFICAR SI ES ADMIN AL CARGAR LA APP
         if (usuario.rol !== 'admin') {
           console.log('❌ Cliente detectado en checkAuth, bloqueando acceso');
           await handleLogout();
@@ -57,7 +57,7 @@ function App() {
 
   const handleLogin = async (email, password) => {
     try {
-      const response = await fetch('http://localhost:5000/auth/login', {
+      const response = await fetch(`${API_BASE}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -70,11 +70,9 @@ function App() {
         const data = await response.json();
         const usuario = data.usuario;
         
-        // ✅ VERIFICAR SI ES ADMIN DESPUÉS DEL LOGIN
         if (usuario.rol !== 'admin') {
           console.log('❌ Cliente detectado, bloqueando acceso al panel');
-          // Cerrar sesión inmediatamente
-          await fetch('http://localhost:5000/auth/logout', {
+          await fetch(`${API_BASE}/auth/logout`, {
             method: 'POST',
             credentials: 'include'
           });
@@ -84,7 +82,6 @@ function App() {
           };
         }
         
-        // ✅ ES ADMIN - Permitir acceso
         setUser(usuario);
         setCurrentView('app');
         return { success: true, user: usuario };
@@ -99,7 +96,7 @@ function App() {
 
   const handleLogout = async () => {
     try {
-      await fetch('http://localhost:5000/auth/logout', {
+      await fetch(`${API_BASE}/auth/logout`, {
         method: 'POST',
         credentials: 'include'
       });

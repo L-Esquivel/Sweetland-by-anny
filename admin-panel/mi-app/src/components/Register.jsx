@@ -1,5 +1,7 @@
 import { useState } from 'react';
 
+const API_BASE = import.meta.env.VITE_API_URL || 'https://sweetland-by-anny-production.up.railway.app';
+
 const Register = ({ onShowLogin }) => {
   const [formData, setFormData] = useState({
     nombre: '',
@@ -24,7 +26,7 @@ const Register = ({ onShowLogin }) => {
     setError('');
 
     try {
-      const response = await fetch('http://localhost:5000/auth/registrarse', {
+      const response = await fetch(`${API_BASE}/auth/registrarse`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
