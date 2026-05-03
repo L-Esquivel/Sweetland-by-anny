@@ -1,7 +1,11 @@
 const BASE = import.meta.env.VITE_API_URL || 'https://sweetland-by-anny-production.up.railway.app';
 const API_URL = `${BASE}/pedidos`;
+const USUARIOS_URL = `${BASE}/usuarios`;
 
 export const pedidosService = {
+
+  // ==================== PEDIDOS ====================
+
   async getPedidos() {
     try {
       const response = await fetch(`${API_URL}/`, { credentials: 'include' });
@@ -91,6 +95,57 @@ export const pedidosService = {
       return await response.json();
     } catch (error) {
       console.error('Error en pedidosService.deletePedido:', error);
+      throw error;
+    }
+  },
+
+  async createDetallePedidoAlternativo(pedidoId, detalleData) {
+    try {
+      const response = await fetch(`${API_URL}/${pedidoId}/agregar_detalle`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(detalleData)
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Error ${response.status}`);
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Error en pedidosService.createDetallePedidoAlternativo:', error);
+      throw error;
+    }
+  },
+
+  // ==================== USUARIOS (para formulario de pedidos) ====================
+
+  async getUsuarios() {
+    try {
+      const response = await fetch(`${USUARIOS_URL}/`, { credentials: 'include' });
+      if (!response.ok) throw new Error('Error al cargar usuarios');
+      return await response.json();
+    } catch (error) {
+      console.error('Error en pedidosService.getUsuarios:', error);
+      throw error;
+    }
+  },
+
+  async createUsuario(usuarioData) {
+    try {
+      const response = await fetch(`${API_URL}/usuarios`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(usuarioData)
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Error ${response.status}`);
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Error en pedidosService.createUsuario:', error);
       throw error;
     }
   }

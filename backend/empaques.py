@@ -13,6 +13,7 @@ empaques_bp = Blueprint("empaques", __name__, url_prefix="/empaques")
 @empaques_bp.route("/", methods=["OPTIONS"])
 @empaques_bp.route("/<int:id>", methods=["OPTIONS"])
 @empaques_bp.route("/producto/<int:producto_id>", methods=["OPTIONS"])
+@empaques_bp.route("/producto/item/<int:id>", methods=["OPTIONS"])
 def handle_options(id=None, producto_id=None):
     return jsonify({"status": "ok"}), 200
 
@@ -25,19 +26,18 @@ def get_empaques():
     cursor.execute("SELECT id_empaque, nombre, descripcion, precio FROM empaques ORDER BY nombre")
     filas = cursor.fetchall()
     cursor.close()
-    
     return jsonify([{
-        "id_empaque":   row[0],
-        "nombre":       row[1],
-        "descripcion":  row[2],
-        "precio":       float(row[3]) if row[3] else 0
-    } for row in filas])
+        "id_empaque":  f["id_empaque"],
+        "nombre":      f["nombre"],
+        "descripcion": f["descripcion"],
+        "precio":      float(f["precio"]) if f["precio"] else 0
+    } for f in filas])
 
 
 @empaques_bp.route("/", methods=["POST"])
 @login_required
 def add_empaque():
-    data = request.get_json()
+    data        = request.get_json()
     nombre      = data.get("nombre")
     descripcion = data.get("descripcion", "")
     precio      = data.get("precio", 0)
@@ -96,16 +96,16 @@ def get_empaques_producto(producto_id):
 
     items = []
     costo_total = 0
-    for row in filas:
-        subtotal = float(row[3]) if row[3] else float(row[5] or 0) * int(row[2] or 1)
+    for f in filas:
+        subtotal = float(f["subtotal"]) if f["subtotal"] else float(f["precio"] or 0) * int(f["cantidad"] or 1)
         costo_total += subtotal
         items.append({
-            "id":           row[0],
-            "id_empaque":   row[1],
-            "cantidad":     row[2],
-            "subtotal":     subtotal,
-            "nombre":       row[4],
-            "precio":       float(row[5]) if row[5] else 0
+            "id":         f["id"],
+            "id_empaque": f["id_empaque"],
+            "cantidad":   f["cantidad"],
+            "subtotal":   subtotal,
+            "nombre":     f["nombre"],
+            "precio":     float(f["precio"]) if f["precio"] else 0
         })
 
     return jsonify({"empaques": items, "costo_total_empaque": costo_total})
@@ -114,9 +114,9 @@ def get_empaques_producto(producto_id):
 @empaques_bp.route("/producto/<int:producto_id>", methods=["POST"])
 @login_required
 def add_empaque_producto(producto_id):
-    data        = request.get_json()
-    id_empaque  = data.get("id_empaque")
-    cantidad    = data.get("cantidad", 1)
+    data       = request.get_json()
+    id_empaque = data.get("id_empaque")
+    cantidad   = data.get("cantidad", 1)
 
     if not id_empaque:
         return jsonify({"error": "id_empaque es obligatorio"}), 400
@@ -128,7 +128,7 @@ def add_empaque_producto(producto_id):
         cursor.close()
         return jsonify({"error": "Empaque no encontrado"}), 404
 
-    subtotal = float(row[0]) * int(cantidad)
+    subtotal = float(row["precio"]) * int(cantidad)
     cursor.execute("""
         INSERT INTO recetas_empaques (id_producto, id_empaque, cantidad, subtotal)
         VALUES (%s, %s, %s, %s)
