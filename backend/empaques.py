@@ -21,16 +21,16 @@ def handle_options(id=None, producto_id=None):
 @empaques_bp.route("/", methods=["GET"])
 @login_required
 def get_empaques():
-    cursor = mysql.connection.cursor()
+    cursor = mysql.connection.cursor(dictionary=True)  # ← importante
     cursor.execute("SELECT id_empaque, nombre, descripcion, precio FROM empaques ORDER BY nombre")
     filas = cursor.fetchall()
     cursor.close()
     
     return jsonify([{
-        "id_empaque":   row[0],
-        "nombre":       row[1],
-        "descripcion":  row[2],
-        "precio":       float(row[3]) if row[3] else 0
+        "id_empaque":   row['id_empaque'],
+        "nombre":       row['nombre'],
+        "descripcion":  row['descripcion'],
+        "precio":       float(row['precio']) if row['precio'] else 0
     } for row in filas])
 
 
