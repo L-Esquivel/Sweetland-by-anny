@@ -2,6 +2,7 @@ from flask import Blueprint, jsonify, request
 from flask_login import login_required
 from extensions import mysql
 import logging
+import MySQLdb.cursors   # ← Importante para usar diccionarios
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -21,7 +22,7 @@ def handle_options(id=None, producto_id=None):
 @empaques_bp.route("/", methods=["GET"])
 @login_required
 def get_empaques():
-    cursor = mysql.connection.cursor(dictionary=True)  # ← importante
+    cursor = mysql.connection.cursor(cursorclass=MySQLdb.cursors.DictCursor)
     cursor.execute("SELECT id_empaque, nombre, descripcion, precio FROM empaques ORDER BY nombre")
     filas = cursor.fetchall()
     cursor.close()
@@ -83,7 +84,7 @@ def delete_empaque(id):
 @empaques_bp.route("/producto/<int:producto_id>", methods=["GET"])
 @login_required
 def get_empaques_producto(producto_id):
-    cursor = mysql.connection.cursor(dictionary=True)  # ← Cambia aquí
+    cursor = mysql.connection.cursor(cursorclass=MySQLdb.cursors.DictCursor)
     cursor.execute("""
         SELECT re.id, re.id_empaque, re.cantidad, re.subtotal,
                e.nombre, e.precio
@@ -96,7 +97,7 @@ def get_empaques_producto(producto_id):
 
     items = []
     costo_total = 0
-    for row in filas:  # ← Cambia f por row
+    for row in filas:
         subtotal = float(row['subtotal']) if row['subtotal'] else float(row['precio'] or 0) * int(row['cantidad'] or 1)
         costo_total += subtotal
         items.append({
