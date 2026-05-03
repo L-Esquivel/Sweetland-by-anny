@@ -25,6 +25,30 @@ export const recetasService = {
     }
   },
 
+  // NUEVO: Recalcular costos con PAX y Utilidad personalizados
+  async recalcularCostos(productoId, pax, utilidadPorcentaje) {
+    try {
+      const response = await fetch(`${API_URL}/recalcular`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          id_producto: productoId,
+          pax: pax,
+          utilidad_porcentaje: utilidadPorcentaje
+        })
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Error al recalcular costos');
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Error en recetasService.recalcularCostos:', error);
+      throw error;
+    }
+  },
+
   async getCostoProduccion(productoId) {
     try {
       const response = await fetch(`${API_URL}/costo-produccion/${productoId}`, { credentials: 'include' });

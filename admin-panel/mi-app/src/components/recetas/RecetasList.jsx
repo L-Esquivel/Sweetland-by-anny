@@ -54,6 +54,7 @@ const RecetasList = () => {
     }
   };
 
+  // CORREGIDO: Ahora usa recalcularCostos para actualizar en tiempo real
   const actualizarCampoProducto = async (campo, valor) => {
     if (!productoSeleccionado) return;
 
@@ -61,10 +62,22 @@ const RecetasList = () => {
     setProductoSeleccionado(productoActualizado);
 
     try {
+      // 1. Actualizar el producto en la BD (pax y utilidad)
       await productosService.updateProducto(productoSeleccionado.id_producto, productoActualizado);
-      // Refrescamos los costos después de actualizar pax o utilidad
-      const data = await recetasService.getRecetasPorProducto(productoSeleccionado.id_producto);
+
+      // 2. Recalcular costos con los nuevos valores usando el endpoint /recalcular
+      const nuevoPax = campo === 'pax' ? valor : productoActualizado.pax;
+      const nuevaUtilidad = campo === 'utilidad_porcentaje' ? valor : productoActualizado.utilidad_porcentaje;
+
+      const data = await recetasService.recalcularCostos(
+        productoSeleccionado.id_producto,
+        parseInt(nuevoPax) || 1,
+        parseFloat(nuevaUtilidad) || 40
+      );
+
+      // 3. Actualizar solo los costos en el estado (sin recargar todo)
       setCostos(data.costos || null);
+
     } catch (error) {
       console.error('Error actualizando:', error);
     }
@@ -181,9 +194,8 @@ const RecetasList = () => {
 
               <div className="col-md-5">
                 <div className="bg-light p-3 rounded">
-                  <h6 className="text-center mb-3">Desglose según Excel</h6>
+                  <h6 className="text-center mb-3">Desglose de Costos</h6>
 
-                  {/* === DESGLOSE CORREGIDO SEGÚN TUS AJUSTES === */}
                   <div className="d-flex justify-content-between mb-1">
                     <span>Costo Base</span>
                     <strong>{formatearMoneda(costos.costo_base)}</strong>
