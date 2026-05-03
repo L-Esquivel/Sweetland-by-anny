@@ -1,5 +1,4 @@
-import API_URL from './api.js';
-
+const API_URL = (import.meta.env.VITE_API_URL || 'https://sweetland-by-anny-production.up.railway.app') + '/pedidos';
 export const pedidosService = {
   // Obtener todos los pedidos
   async getPedidos() {

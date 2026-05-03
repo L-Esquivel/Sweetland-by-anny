@@ -1,6 +1,5 @@
 // src/services/recetasService.js
-import API_URL from './api.js';
-
+const API_URL = (import.meta.env.VITE_API_URL || 'https://sweetland-by-anny-production.up.railway.app') + '/recetas';
 export const recetasService = {
   // Obtener todas las recetas
   async getRecetas() {
