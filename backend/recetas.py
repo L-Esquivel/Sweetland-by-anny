@@ -17,12 +17,13 @@ def calcular_costo_completo(id_producto):
     try:
         # 1. TOTAL 1 = Solo costo de ingredientes
         cursor.execute("""
-            SELECT COALESCE(SUM(r.cantidad_necesaria * i.costo_unitario), 0)
+            SELECT COALESCE(SUM(r.cantidad_necesaria * i.costo_unitario), 0) as total1
             FROM recetas r
             LEFT JOIN ingredientes i ON r.id_ingrediente = i.id_ingrediente
             WHERE r.id_producto = %s
         """, (id_producto,))
-        total1 = float(cursor.fetchone()[0] or 0)
+        resultado = cursor.fetchone()
+        total1 = float(resultado['total1'] if resultado else 0)
 
         # 2. Gastos Operativos = TOTAL 1 × 35%
         gastos_operativos = total1 * 0.35
@@ -38,11 +39,12 @@ def calcular_costo_completo(id_producto):
 
         # 6. Valor total de empaques
         cursor.execute("""
-            SELECT COALESCE(SUM(subtotal), 0)
+            SELECT COALESCE(SUM(subtotal), 0) as costo_empaques
             FROM recetas_empaques
             WHERE id_producto = %s
         """, (id_producto,))
-        costo_empaques = float(cursor.fetchone()[0] or 0)
+        resultado_empaques = cursor.fetchone()
+        costo_empaques = float(resultado_empaques['costo_empaques'] if resultado_empaques else 0)
 
         # 7. TOTAL 3
         total3 = total2 + dep_equipos + costo_empaques
@@ -54,8 +56,8 @@ def calcular_costo_completo(id_producto):
             WHERE id_producto = %s
         """, (id_producto,))
         prod = cursor.fetchone()
-        pax = int(prod[0]) if prod and prod[0] is not None else 1
-        utilidad_porcentaje = float(prod[1]) if prod and prod[1] is not None else 40.0
+        pax = int(prod['pax']) if prod and prod['pax'] is not None else 1
+        utilidad_porcentaje = float(prod['utilidad_porcentaje']) if prod and prod['utilidad_porcentaje'] is not None else 40.0
 
         # 9. Utilidad
         utilidad = total3 * (utilidad_porcentaje / 100)
@@ -79,7 +81,7 @@ def calcular_costo_completo(id_producto):
                 precio_sugerido = %s
             WHERE id_producto = %s
         """, (total1, precio_sugerido, id_producto))
-        
+
         mysql.connection.commit()
 
         # Retornamos exactamente lo que necesita el frontend
@@ -133,8 +135,8 @@ def get_recetas():
             LEFT JOIN ingredientes i ON r.id_ingrediente = i.id_ingrediente
         """)
         filas = cursor.fetchall()
-        columnas = ["id_receta", "id_producto", "id_ingrediente", "cantidad_necesaria", "producto", "ingrediente"]
-        resultado = [dict(zip(columnas, fila)) for fila in filas]
+        # DictCursor ya devuelve diccionarios, no necesitamos zip
+        resultado = [dict(fila) for fila in filas] if filas else []
         return jsonify(resultado)
     except Exception as e:
         logger.error(f"Error en get_recetas: {str(e)}")
@@ -159,7 +161,8 @@ def get_recetas_por_producto(producto_id):
             LEFT JOIN ingredientes i ON r.id_ingrediente = i.id_ingrediente
             WHERE r.id_producto = %s
         """, (producto_id,))
-        recetas = cursor.fetchall()
+        recetas_raw = cursor.fetchall()
+        recetas = [dict(r) for r in recetas_raw] if recetas_raw else []
 
         # Empaques
         cursor.execute("""
@@ -169,7 +172,8 @@ def get_recetas_por_producto(producto_id):
             LEFT JOIN empaques e ON re.id_empaque = e.id_empaque
             WHERE re.id_producto = %s
         """, (producto_id,))
-        empaques = cursor.fetchall()
+        empaques_raw = cursor.fetchall()
+        empaques = [dict(e) for e in empaques_raw] if empaques_raw else []
 
         # Cálculo completo (con la lógica corregida)
         costos = calcular_costo_completo(producto_id)
@@ -273,7 +277,7 @@ def delete_receta(id):
     try:
         cursor.execute("SELECT id_producto FROM recetas WHERE id_receta = %s", (id,))
         resultado = cursor.fetchone()
-        id_producto = resultado[0] if resultado else None
+        id_producto = resultado['id_producto'] if resultado else None
 
         cursor.execute("DELETE FROM recetas WHERE id_receta = %s", (id,))
         mysql.connection.commit()
