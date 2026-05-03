@@ -56,7 +56,7 @@ def upload_image():
 @login_required
 def get_productos():
     conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor()
     cursor.execute("SELECT id_producto, nombre, categoria, descripcion, precio, imagen, pax, utilidad_porcentaje, costo_produccion, precio_sugerido FROM productos")
     rows = cursor.fetchall()
     cursor.close()
@@ -67,7 +67,7 @@ def get_productos():
 @login_required
 def get_producto(id):
     conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor()
     cursor.execute("SELECT id_producto, nombre, categoria, descripcion, precio, imagen, pax, utilidad_porcentaje, costo_produccion, precio_sugerido FROM productos WHERE id_producto=%s", (id,))
     row = cursor.fetchone()
     cursor.close()
@@ -146,7 +146,7 @@ def delete_producto(id):
 def get_productos_public():
     try:
         conn = get_db_connection()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor()
         cursor.execute("""
             SELECT id_producto, nombre, categoria, descripcion, precio, imagen
             FROM productos

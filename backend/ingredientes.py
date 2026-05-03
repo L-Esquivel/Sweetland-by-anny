@@ -4,31 +4,34 @@ from extensions import mysql
 
 ingredientes_bp = Blueprint("ingredientes", __name__, url_prefix="/ingredientes")
 
-# Obtener todos los ingredientes
+@ingredientes_bp.route("/", methods=["OPTIONS"])
+@ingredientes_bp.route("/<int:id>", methods=["OPTIONS"])
+def handle_options(id=None):
+    return jsonify({"status": "ok"}), 200
+
 @ingredientes_bp.route("/", methods=["GET"])
 @login_required
 def get_ingredientes():
-    cursor = mysql.connection.cursor()
-    cursor.execute("""
-        SELECT id_ingrediente, nombre, unidad, cantidad, costo_unitario
-        FROM ingredientes
-    """)
-    filas = cursor.fetchall()
-    cursor.close()
+    try:
+        cursor = mysql.connection.cursor()
+        cursor.execute("""
+            SELECT id_ingrediente, nombre, unidad, cantidad, costo_unitario
+            FROM ingredientes
+            ORDER BY nombre
+        """)
+        filas = cursor.fetchall()
+        cursor.close()
 
-    ingredientes = []
-    for f in filas:
-        ingredientes.append({
-            "id_ingrediente": f[0],
-            "nombre": f[1],
-            "unidad": f[2],
-            "cantidad": float(f[3]) if f[3] is not None else None,
-            "costo_unitario": float(f[4]) if f[4] is not None else None
-        })
-    return jsonify(ingredientes)
+        return jsonify([{
+            "id_ingrediente": f["id_ingrediente"],
+            "nombre":         f["nombre"],
+            "unidad":         f["unidad"],
+            "cantidad":       float(f["cantidad"]) if f["cantidad"] is not None else 0,
+            "costo_unitario": float(f["costo_unitario"]) if f["costo_unitario"] is not None else 0
+        } for f in filas])
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
-
-# Obtener ingrediente por ID
 @ingredientes_bp.route("/<int:id>", methods=["GET"])
 @login_required
 def get_ingrediente(id):
@@ -44,22 +47,20 @@ def get_ingrediente(id):
         return jsonify({"error": "Ingrediente no encontrado"}), 404
 
     return jsonify({
-        "id_ingrediente": f[0],
-        "nombre": f[1],
-        "unidad": f[2],
-        "cantidad": float(f[3]) if f[3] is not None else None,
-        "costo_unitario": float(f[4]) if f[4] is not None else None
+        "id_ingrediente": f["id_ingrediente"],
+        "nombre":         f["nombre"],
+        "unidad":         f["unidad"],
+        "cantidad":       float(f["cantidad"]) if f["cantidad"] is not None else 0,
+        "costo_unitario": float(f["costo_unitario"]) if f["costo_unitario"] is not None else 0
     })
 
-
-# Crear ingrediente
 @ingredientes_bp.route("/", methods=["POST"])
 @login_required
 def create_ingrediente():
-    data = request.get_json() or {}
-    nombre = data.get("nombre")
-    unidad = data.get("unidad")
-    cantidad = data.get("cantidad")
+    data          = request.get_json() or {}
+    nombre        = data.get("nombre")
+    unidad        = data.get("unidad")
+    cantidad      = data.get("cantidad")
     costo_unitario = data.get("costo_unitario")
 
     cursor = mysql.connection.cursor()
@@ -69,18 +70,15 @@ def create_ingrediente():
     """, (nombre, unidad, cantidad, costo_unitario))
     mysql.connection.commit()
     cursor.close()
-
     return jsonify({"mensaje": "Ingrediente creado correctamente"}), 201
 
-
-# Actualizar ingrediente
 @ingredientes_bp.route("/<int:id>", methods=["PUT"])
 @login_required
 def update_ingrediente(id):
-    data = request.get_json() or {}
-    nombre = data.get("nombre")
-    unidad = data.get("unidad")
-    cantidad = data.get("cantidad")
+    data          = request.get_json() or {}
+    nombre        = data.get("nombre")
+    unidad        = data.get("unidad")
+    cantidad      = data.get("cantidad")
     costo_unitario = data.get("costo_unitario")
 
     cursor = mysql.connection.cursor()
@@ -91,11 +89,8 @@ def update_ingrediente(id):
     """, (nombre, unidad, cantidad, costo_unitario, id))
     mysql.connection.commit()
     cursor.close()
-
     return jsonify({"mensaje": "Ingrediente actualizado correctamente"})
 
-
-# Eliminar ingrediente
 @ingredientes_bp.route("/<int:id>", methods=["DELETE"])
 @login_required
 def delete_ingrediente(id):
@@ -103,5 +98,4 @@ def delete_ingrediente(id):
     cursor.execute("DELETE FROM ingredientes WHERE id_ingrediente = %s", (id,))
     mysql.connection.commit()
     cursor.close()
-
     return jsonify({"mensaje": "Ingrediente eliminado correctamente"})
