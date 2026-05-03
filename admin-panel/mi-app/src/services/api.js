@@ -3,12 +3,17 @@ const API_BASE = import.meta.env.VITE_API_URL || 'https://sweetland-by-anny-prod
 
 // Función básica para hacer peticiones al backend
 const fetchAPI = async (endpoint, options = {}) => {
+  // Asegurar slash al final si no tiene (evita redirects a HTTP)
+  if (endpoint && !endpoint.endsWith('/')) {
+    endpoint = endpoint + '/';
+  }
+
   const config = {
     credentials: 'include', // importante para las cookies de sesión
     headers: {
       'Content-Type': 'application/json',
     },
-    redirect: 'follow',     // ← sigue redirects automáticamente
+    redirect: 'follow',     // sigue redirects automáticamente
     ...options,
   };
 
