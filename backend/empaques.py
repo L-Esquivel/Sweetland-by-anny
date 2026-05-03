@@ -83,7 +83,7 @@ def delete_empaque(id):
 @empaques_bp.route("/producto/<int:producto_id>", methods=["GET"])
 @login_required
 def get_empaques_producto(producto_id):
-    cursor = mysql.connection.cursor()
+    cursor = mysql.connection.cursor(dictionary=True)  # ← Cambia aquí
     cursor.execute("""
         SELECT re.id, re.id_empaque, re.cantidad, re.subtotal,
                e.nombre, e.precio
@@ -96,16 +96,16 @@ def get_empaques_producto(producto_id):
 
     items = []
     costo_total = 0
-    for f in filas:
-        subtotal = float(f[3]) if f[3] else float(f[5] or 0) * int(f[2] or 1)
+    for row in filas:  # ← Cambia f por row
+        subtotal = float(row['subtotal']) if row['subtotal'] else float(row['precio'] or 0) * int(row['cantidad'] or 1)
         costo_total += subtotal
         items.append({
-            "id":           f[0],
-            "id_empaque":   f[1],
-            "cantidad":     f[2],
+            "id":           row['id'],
+            "id_empaque":   row['id_empaque'],
+            "cantidad":     row['cantidad'],
             "subtotal":     subtotal,
-            "nombre":       f[4],
-            "precio":       float(f[5]) if f[5] else 0
+            "nombre":       row['nombre'],
+            "precio":       float(row['precio']) if row['precio'] else 0
         })
 
     return jsonify({"empaques": items, "costo_total_empaque": costo_total})
