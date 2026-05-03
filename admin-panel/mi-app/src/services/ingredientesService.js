@@ -1,16 +1,11 @@
-const API_URL = (import.meta.env.VITE_API_URL || 'https://sweetland-by-anny-production.up.railway.app') + '/ingredientes';
+const BASE = import.meta.env.VITE_API_URL || 'https://sweetland-by-anny-production.up.railway.app';
+const API_URL = `${BASE}/ingredientes`;
+
 export const ingredientesService = {
-  // Obtener todos los ingredientes
   async getIngredientes() {
     try {
-      const response = await fetch(`${API_URL}/ingredientes`, {
-        credentials: 'include'
-      });
-      
-      if (!response.ok) {
-        throw new Error('Error al cargar ingredientes');
-      }
-      
+      const response = await fetch(`${API_URL}/`, { credentials: 'include' });
+      if (!response.ok) throw new Error('Error al cargar ingredientes');
       return await response.json();
     } catch (error) {
       console.error('Error en ingredientesService.getIngredientes:', error);
@@ -18,22 +13,15 @@ export const ingredientesService = {
     }
   },
 
-  // Crear nuevo ingrediente
   async createIngrediente(ingredienteData) {
     try {
-      const response = await fetch(`${API_URL}/ingredientes`, {
+      const response = await fetch(`${API_URL}/`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify(ingredienteData)
       });
-      
-      if (!response.ok) {
-        throw new Error('Error al crear ingrediente');
-      }
-      
+      if (!response.ok) throw new Error('Error al crear ingrediente');
       return await response.json();
     } catch (error) {
       console.error('Error en ingredientesService.createIngrediente:', error);
@@ -41,22 +29,15 @@ export const ingredientesService = {
     }
   },
 
-  // Actualizar ingrediente
   async updateIngrediente(ingredienteId, ingredienteData) {
     try {
-      const response = await fetch(`${API_URL}/ingredientes/${ingredienteId}`, {
+      const response = await fetch(`${API_URL}/${ingredienteId}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify(ingredienteData)
       });
-      
-      if (!response.ok) {
-        throw new Error('Error al actualizar ingrediente');
-      }
-      
+      if (!response.ok) throw new Error('Error al actualizar ingrediente');
       return await response.json();
     } catch (error) {
       console.error('Error en ingredientesService.updateIngrediente:', error);
@@ -64,18 +45,13 @@ export const ingredientesService = {
     }
   },
 
-  // Eliminar ingrediente
   async deleteIngrediente(ingredienteId) {
     try {
-      const response = await fetch(`${API_URL}/ingredientes/${ingredienteId}`, {
+      const response = await fetch(`${API_URL}/${ingredienteId}`, {
         method: 'DELETE',
         credentials: 'include'
       });
-      
-      if (!response.ok) {
-        throw new Error('Error al eliminar ingrediente');
-      }
-      
+      if (!response.ok) throw new Error('Error al eliminar ingrediente');
       return await response.json();
     } catch (error) {
       console.error('Error en ingredientesService.deleteIngrediente:', error);
