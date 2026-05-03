@@ -68,7 +68,6 @@ const PedidoForm = ({ productos, onSubmit, onClose, titulo = "➕ Nuevo Pedido" 
       console.log('🔍 Buscando usuario con:', { email, telefono });
       console.log('📋 Buscando en', usuarios.length, 'usuarios:', usuarios);
 
-      // Búsqueda en usuarios REALES de la BD
       const usuarioExistente = usuarios.find(usuario => {
         const usuarioEmail = usuario.email ? usuario.email.toLowerCase().trim() : '';
         const inputEmail = email ? email.toLowerCase().trim() : '';
@@ -78,15 +77,6 @@ const PedidoForm = ({ productos, onSubmit, onClose, titulo = "➕ Nuevo Pedido" 
         
         const emailMatch = inputEmail && usuarioEmail === inputEmail;
         const telefonoMatch = inputTel && usuarioTel === inputTel && inputTel.length > 5;
-        
-        console.log(`Comparando: ${usuario.nombre}`, {
-          emailMatch, 
-          telefonoMatch,
-          usuarioEmail, 
-          inputEmail, 
-          usuarioTel, 
-          inputTel
-        });
         
         return emailMatch || telefonoMatch;
       });
@@ -179,13 +169,10 @@ const PedidoForm = ({ productos, onSubmit, onClose, titulo = "➕ Nuevo Pedido" 
       let usuarioId;
       let nuevoUsuarioCreado = false;
 
-      // Lógica para usuario existente o nuevo
       if (usuarioEncontrado) {
-        // Usar usuario existente
         usuarioId = usuarioEncontrado.id_usuario;
         console.log('✅ Usando usuario existente:', usuarioEncontrado.nombre);
       } else {
-        // Crear nuevo usuario
         console.log('🆕 Creando nuevo usuario...');
         const nuevoUsuarioData = {
           nombre: formData.cliente_nombre,
@@ -198,7 +185,6 @@ const PedidoForm = ({ productos, onSubmit, onClose, titulo = "➕ Nuevo Pedido" 
         usuarioId = nuevoUsuario.id_usuario;
         nuevoUsuarioCreado = true;
         
-        // ✅ MOSTRAR CONTRASEÑA TEMPORAL
         console.log('✅ Nuevo usuario creado:', nuevoUsuario);
         setCredencialesUsuario({
           email: nuevoUsuario.email,
@@ -206,13 +192,10 @@ const PedidoForm = ({ productos, onSubmit, onClose, titulo = "➕ Nuevo Pedido" 
           nombre: nuevoUsuario.nombre
         });
         
-        // ACTUALIZAR LA LISTA DE USUARIOS después de crear uno nuevo
         const usuariosActualizados = await pedidosService.getUsuarios();
         setUsuarios(usuariosActualizados);
-        console.log('🔄 Lista de usuarios actualizada');
       }
 
-      // Crear el pedido
       const pedidoData = {
         usuario_id: usuarioId,
         telefono: formData.cliente_telefono,
@@ -220,31 +203,15 @@ const PedidoForm = ({ productos, onSubmit, onClose, titulo = "➕ Nuevo Pedido" 
         total: calcularTotal()
       };
 
-      console.log('📤 Creando pedido con datos:', pedidoData);
       const pedidoCreado = await pedidosService.createPedido(pedidoData);
-
-      // ✅ AGREGAR ESTOS LOGS DE DEBUG (CORREGIDO)
-      console.log('🔍 Respuesta completa de createPedido:', pedidoCreado);
-      console.log('🔍 Todas las claves del objeto:', Object.keys(pedidoCreado));
       const pedidoId = pedidoCreado.id_pedido;
-      console.log('✅ Pedido creado con ID:', pedidoId);
-      console.log('🔍 Tipo de ID:', typeof pedidoId);
 
-      // ✅ CREAR LOS DETALLES DEL PEDIDO (PRODUCTOS)
-      console.log(`📝 Creando ${formData.detalles.length} detalles del pedido...`);
-      
       for (const detalle of formData.detalles) {
-        try {
-          await pedidosService.createDetallePedidoAlternativo(pedidoId, {
-            producto_id: detalle.producto_id,
-            cantidad: detalle.cantidad,
-            subtotal: detalle.subtotal
-          });
-          console.log(`✅ Detalle creado: ${detalle.producto_nombre} x${detalle.cantidad}`);
-        } catch (detalleError) {
-          console.error(`❌ Error creando detalle para ${detalle.producto_nombre}:`, detalleError);
-          throw new Error(`Error al agregar producto ${detalle.producto_nombre}`);
-        }
+        await pedidosService.createDetallePedidoAlternativo(pedidoId, {
+          producto_id: detalle.producto_id,
+          cantidad: detalle.cantidad,
+          subtotal: detalle.subtotal
+        });
       }
 
       console.log('🎉 Pedido completado exitosamente!');
@@ -258,7 +225,6 @@ const PedidoForm = ({ productos, onSubmit, onClose, titulo = "➕ Nuevo Pedido" 
     }
   };
 
-  // Agregar indicador de carga de usuarios
   if (cargandoUsuarios) {
     return (
       <div className="modal fade show d-block" style={{backgroundColor: 'rgba(0,0,0,0.5)'}}>
@@ -469,7 +435,6 @@ const PedidoForm = ({ productos, onSubmit, onClose, titulo = "➕ Nuevo Pedido" 
             </div>
           </form>
 
-          {/* Modal de Credenciales - AGREGADO */}
           {credencialesUsuario && (
             <div className="modal fade show d-block" style={{backgroundColor: 'rgba(0,0,0,0.7)', position: 'fixed', top: '0', left: '0', zIndex: 9999}}>
               <div className="modal-dialog">
@@ -507,7 +472,6 @@ const PedidoForm = ({ productos, onSubmit, onClose, titulo = "➕ Nuevo Pedido" 
                       type="button" 
                       className="btn btn-primary"
                       onClick={() => {
-                        // Copiar al portapapeles
                         navigator.clipboard.writeText(`Email: ${credencialesUsuario.email}\nContraseña: ${credencialesUsuario.password}`);
                         alert('Credenciales copiadas al portapapeles!');
                         setCredencialesUsuario(null);
