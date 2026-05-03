@@ -25,12 +25,13 @@ def get_empaques():
     cursor.execute("SELECT id_empaque, nombre, descripcion, precio FROM empaques ORDER BY nombre")
     filas = cursor.fetchall()
     cursor.close()
+    
     return jsonify([{
-        "id_empaque":   f[0],
-        "nombre":       f[1],
-        "descripcion":  f[2],
-        "precio":       float(f[3]) if f[3] else 0
-    } for f in filas])
+        "id_empaque":   row[0],
+        "nombre":       row[1],
+        "descripcion":  row[2],
+        "precio":       float(row[3]) if row[3] else 0
+    } for row in filas])
 
 
 @empaques_bp.route("/", methods=["POST"])
