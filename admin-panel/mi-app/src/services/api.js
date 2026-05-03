@@ -8,6 +8,7 @@ const fetchAPI = async (endpoint, options = {}) => {
     headers: {
       'Content-Type': 'application/json',
     },
+    redirect: 'follow',     // ← sigue redirects automáticamente
     ...options,
   };
 
