@@ -3,6 +3,7 @@ from flask_cors import CORS
 from flask_login import LoginManager
 from dotenv import load_dotenv
 import os
+from flask import Flask, jsonify, request, send_from_directory, redirect
 
 # Cargar variables de entorno
 load_dotenv()
@@ -17,6 +18,13 @@ app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['REMEMBER_COOKIE_SAMESITE'] = 'None'
 app.config['REMEMBER_COOKIE_SECURE'] = True
 
+# Force HTTPS en producción (Railway)
+@app.before_request
+def force_https():
+    if os.getenv('FLASK_ENV') == 'production' and not request.is_secure and request.url.startswith('http://'):
+        url = request.url.replace('http://', 'https://', 1)
+        return redirect(url, code=301)
+    
 # ───────────────────────────────────────────────
 # CORS
 # ───────────────────────────────────────────────
