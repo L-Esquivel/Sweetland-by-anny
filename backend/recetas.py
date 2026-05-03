@@ -12,7 +12,12 @@ recetas_bp = Blueprint("recetas", __name__, url_prefix="/recetas")
 # ========================================
 # LÓGICA EXACTA DE COSTEO (versión final corregida)
 # ========================================
-def calcular_costo_completo(id_producto):
+def calcular_costo_completo(id_producto, pax=None, utilidad_porcentaje=None):
+    """
+    Calcula el costeo completo de un producto.
+    Si pax y utilidad_porcentaje son proporcionados, los usa.
+    Si no, los lee de la base de datos.
+    """
     cursor = mysql.connection.cursor()
     try:
         # 1. TOTAL 1 = Solo costo de ingredientes
@@ -49,15 +54,20 @@ def calcular_costo_completo(id_producto):
         # 7. TOTAL 3
         total3 = total2 + dep_equipos + costo_empaques
 
-        # 8. Obtener PAX y % de utilidad del producto
-        cursor.execute("""
-            SELECT pax, utilidad_porcentaje
-            FROM productos 
-            WHERE id_producto = %s
-        """, (id_producto,))
-        prod = cursor.fetchone()
-        pax = int(prod['pax']) if prod and prod['pax'] is not None else 1
-        utilidad_porcentaje = float(prod['utilidad_porcentaje']) if prod and prod['utilidad_porcentaje'] is not None else 40.0
+        # 8. Obtener PAX y % de utilidad
+        if pax is None or utilidad_porcentaje is None:
+            # Leer de la base de datos
+            cursor.execute("""
+                SELECT pax, utilidad_porcentaje
+                FROM productos 
+                WHERE id_producto = %s
+            """, (id_producto,))
+            prod = cursor.fetchone()
+            pax_db = int(prod['pax']) if prod and prod['pax'] is not None else 1
+            utilidad_db = float(prod['utilidad_porcentaje']) if prod and prod['utilidad_porcentaje'] is not None else 40.0
+
+            pax = pax if pax is not None else pax_db
+            utilidad_porcentaje = utilidad_porcentaje if utilidad_porcentaje is not None else utilidad_db
 
         # 9. Utilidad
         utilidad = total3 * (utilidad_porcentaje / 100)
@@ -78,9 +88,11 @@ def calcular_costo_completo(id_producto):
         cursor.execute("""
             UPDATE productos
             SET costo_produccion = %s,
-                precio_sugerido = %s
+                precio_sugerido = %s,
+                pax = %s,
+                utilidad_porcentaje = %s
             WHERE id_producto = %s
-        """, (total1, precio_sugerido, id_producto))
+        """, (total1, precio_sugerido, pax, utilidad_porcentaje, id_producto))
 
         mysql.connection.commit()
 
@@ -110,12 +122,46 @@ def calcular_costo_completo(id_producto):
 
 
 # ================================
+# RECALCULAR CON PAX Y UTILIDAD PERSONALIZADOS
+# ================================
+@recetas_bp.route("/recalcular", methods=["POST"])
+@login_required
+def recalcular_costos():
+    """
+    Recalcula los costos con PAX y % de utilidad personalizados.
+    Body: { id_producto, pax, utilidad_porcentaje }
+    """
+    data = request.get_json()
+    id_producto = data.get("id_producto")
+    pax = data.get("pax")
+    utilidad_porcentaje = data.get("utilidad_porcentaje")
+
+    if not id_producto:
+        return jsonify({"error": "id_producto es requerido"}), 400
+
+    try:
+        costos = calcular_costo_completo(
+            id_producto, 
+            pax=int(pax) if pax is not None else None,
+            utilidad_porcentaje=float(utilidad_porcentaje) if utilidad_porcentaje is not None else None
+        )
+        return jsonify({
+            "mensaje": "Costos recalculados correctamente",
+            "costos": costos
+        })
+    except Exception as e:
+        logger.error(f"Error en recalcular_costos: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+
+# ================================
 # PREFLIGHT OPTIONS
 # ================================
 @recetas_bp.route("/", methods=["OPTIONS"])
 @recetas_bp.route("/producto/<int:producto_id>", methods=["OPTIONS"])
 @recetas_bp.route("/<int:id>", methods=["OPTIONS"])
 @recetas_bp.route("/multiple", methods=["OPTIONS"])
+@recetas_bp.route("/recalcular", methods=["OPTIONS"])
 def handle_options():
     return jsonify({"status": "ok"}), 200
 
@@ -135,7 +181,6 @@ def get_recetas():
             LEFT JOIN ingredientes i ON r.id_ingrediente = i.id_ingrediente
         """)
         filas = cursor.fetchall()
-        # DictCursor ya devuelve diccionarios, no necesitamos zip
         resultado = [dict(fila) for fila in filas] if filas else []
         return jsonify(resultado)
     except Exception as e:

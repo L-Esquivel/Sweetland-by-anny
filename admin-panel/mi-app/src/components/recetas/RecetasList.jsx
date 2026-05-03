@@ -182,7 +182,7 @@ const RecetasList = () => {
               <div className="col-md-5">
                 <div className="bg-light p-3 rounded">
                   <h6 className="text-center mb-3">Desglose según Excel</h6>
-                  
+
                   {/* === DESGLOSE CORREGIDO SEGÚN TUS AJUSTES === */}
                   <div className="d-flex justify-content-between mb-1">
                     <span>Costo Base</span>
@@ -204,29 +204,29 @@ const RecetasList = () => {
                     <span>+ Empaques</span>
                     <strong>{formatearMoneda(costos.costo_empaques)}</strong>
                   </div>
-                  
+
                   <hr />
                   <div className="d-flex justify-content-between mb-1">
                     <strong>Total antes de Utilidad</strong>
                     <strong>{formatearMoneda(costos.total3)}</strong>
                   </div>
-                  
+
                   <div className="d-flex justify-content-between mb-1">
                     <span>+ {costos.utilidad_porcentaje}% Utilidad</span>
                     <strong>{formatearMoneda(costos.utilidad)}</strong>
                   </div>
-                  
+
                   <hr />
                   <div className="d-flex justify-content-between mb-1">
                     <strong>Total con Utilidad</strong>
                     <strong>{formatearMoneda(costos.total4)}</strong>
                   </div>
-                  
+
                   <div className="d-flex justify-content-between mb-1">
                     <span>+ 8% I.C.</span>
                     <strong>{formatearMoneda(costos.ic)}</strong>
                   </div>
-                  
+
                   <hr className="border-primary" />
                   <div className="d-flex justify-content-between fs-5">
                     <strong>Precio Sugerido Final</strong>
@@ -279,13 +279,13 @@ const RecetasList = () => {
                     <tbody>
                       {recetasProducto.map((receta, index) => (
                         <tr key={index}>
-                          <td className="fw-semibold">{receta[3] || 'Sin nombre'}</td>
-                          <td>{receta[2]}</td>
-                          <td><span className="badge bg-secondary">{receta[4]}</span></td>
-                          <td>{formatearMoneda(receta[5])}</td>
-                          <td className="fw-bold text-success">{formatearMoneda(receta[6])}</td>
+                          <td className="fw-semibold">{receta.ingrediente || 'Sin nombre'}</td>
+                          <td>{receta.cantidad_necesaria}</td>
+                          <td><span className="badge bg-secondary">{receta.unidad}</span></td>
+                          <td>{formatearMoneda(receta.costo_unitario)}</td>
+                          <td className="fw-bold text-success">{formatearMoneda(receta.costo_ingrediente)}</td>
                           <td className="text-center">
-                            <button className="btn btn-danger btn-sm" onClick={() => handleEliminarReceta(receta[0])}>
+                            <button className="btn btn-danger btn-sm" onClick={() => handleEliminarReceta(receta.id_receta)}>
                               🗑️
                             </button>
                           </td>
@@ -322,12 +322,12 @@ const RecetasList = () => {
                     <tbody>
                       {empaquesProducto.map((e, index) => (
                         <tr key={index}>
-                          <td className="fw-semibold">{e[4] || 'Sin nombre'}</td>
-                          <td>{e[2]}</td>
-                          <td>{formatearMoneda(e[5])}</td>
-                          <td className="fw-bold text-success">{formatearMoneda(e[3])}</td>
+                          <td className="fw-semibold">{e.nombre || 'Sin nombre'}</td>
+                          <td>{e.cantidad}</td>
+                          <td>{formatearMoneda(e.precio)}</td>
+                          <td className="fw-bold text-success">{formatearMoneda(e.subtotal)}</td>
                           <td className="text-center">
-                            <button className="btn btn-danger btn-sm" onClick={() => handleEliminarEmpaque(e[0])}>
+                            <button className="btn btn-danger btn-sm" onClick={() => handleEliminarEmpaque(e.id)}>
                               🗑️
                             </button>
                           </td>
