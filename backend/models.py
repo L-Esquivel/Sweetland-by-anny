@@ -14,7 +14,7 @@ class User(UserMixin):
     @staticmethod
     def get_by_email(email):
         conn = get_db_connection()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor()
         cursor.execute("SELECT * FROM usuarios WHERE email = %s", (email,))
         row = cursor.fetchone()
         cursor.close()
@@ -34,7 +34,7 @@ class User(UserMixin):
     @staticmethod
     def get_by_id(user_id):
         conn = get_db_connection()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor()
         cursor.execute("SELECT * FROM usuarios WHERE id_usuario = %s", (user_id,))
         row = cursor.fetchone()
         cursor.close()
