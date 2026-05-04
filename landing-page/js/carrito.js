@@ -167,7 +167,7 @@ async function finalizeOrder() {
 function abrirWhatsApp(id_pedido, nombreCliente, direccion, notas, total) {
   const nroWA = "573332422608";
   
-  // Estructura de mensaje profesional y "lindo"
+  // Estructura de mensaje con Emojis y Formato de WhatsApp
   let mensaje = `🎂 *NUEVO PEDIDO # ${id_pedido}* 🎂%0A`;
   mensaje += `━━━━━━━━━━━━━━━━━━━━━%0A`;
   mensaje += `👤 *Cliente:* ${nombreCliente}%0A`;
@@ -176,6 +176,7 @@ function abrirWhatsApp(id_pedido, nombreCliente, direccion, notas, total) {
   mensaje += `━━━━━━━━━━━━━━━━━━━━━%0A`;
   mensaje += `🛒 *DETALLE DEL PEDIDO:*%0A`;
   
+  // Aquí recorremos el carrito para listar los productos
   cart.forEach(item => {
     mensaje += `• ${item.qty}x ${item.name} (_$${(item.price * item.qty).toLocaleString('es-CO')}_)%0A`;
   });
@@ -184,7 +185,8 @@ function abrirWhatsApp(id_pedido, nombreCliente, direccion, notas, total) {
   mensaje += `💰 *TOTAL A PAGAR: $${total.toLocaleString('es-CO')}*%0A%0A`;
   mensaje += `_Hola Anny, acabo de realizar este pedido desde la web. Quedo atento a la confirmación para el pago. ✨_`;
 
-  window.open(`https://wa.me/${nroWA}?text=${mensaje}`, "_blank");
+  const url = `https://wa.me/${nroWA}?text=${mensaje}`;
+  window.open(url, "_blank");
 }
 
 function clearCartAndReload() {
