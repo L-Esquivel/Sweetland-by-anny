@@ -3,8 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Sweetland By Anny</title>
-  <link rel="stylesheet" href="estilos.css" />
+  <title>Sweetland By Anny | Pastelería Artesanal</title>
+  
+  <!-- Estilos en carpeta CSS -->
+  <link rel="stylesheet" href="css/estilos.css" />
+  
+  <!-- Recursos externos -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
@@ -13,7 +17,8 @@
 <body>
 
 <header id="home">
-  <img src="logo-fotor-2025071492551.png" alt="Logo" class="logo"/>
+  <!-- Logo en carpeta Assets -->
+  <img src="assets/logo-principal.png" alt="Sweetland Logo" class="logo"/>
   
   <nav id="menu">
     <ul>
@@ -33,81 +38,90 @@
   </nav>
 </header>
 
-  <main class="wrapper">
-    <!-- SLIDER -->
-    <div class="slider">
-      <div class="slides">
-        <div class="slide"><img src="http://127.0.0.1:5000/static/images/tortapersonalizadahellokitty.jpg" alt="Foto 1" class="imgslide"></div>
-        <div class="slide"><img src="http://127.0.0.1:5000/static/images/brownies one piece2.jpg" alt="Foto 2" class="imgslide"></div>
-        <div class="slide"><img src="http://127.0.0.1:5000/static/images/fresas2.jpg" alt="Foto 3" class="imgslide"></div>
-        <div class="slide"><img src="http://127.0.0.1:5000/static/images/diadelamadre.jpg" alt="Foto 4" class="imgslide"></div>
-      </div>
+<main class="wrapper">
+  
+  <!-- SLIDER CON FOTOS FIJAS (Identidad visual) -->
+  <div class="slider">
+    <div class="slides">
+      <div class="slide"><img src="assets/torta-kitty.jpg" alt="Torta Hello Kitty" class="imgslide"></div>
+      <div class="slide"><img src="assets/brownies-one-piece.jpg" alt="Brownies One Piece" class="imgslide"></div>
+      <div class="slide"><img src="assets/fresas-detalle.jpg" alt="Fresas con chocolate" class="imgslide"></div>
+      <div class="slide"><img src="assets/dia-madre.jpg" alt="Regalo día de la madre" class="imgslide"></div>
     </div>
-
-    <!-- FRASE + LISTA + VIDEO -->
-    <section class="order">
-      <div class="contenedor">
-        <h1 class="texto">Donde los sueños se combinan con el dulce</h1>
-        <ul class="content">
-          <li>Tortas personalizadas para cualquier evento</li>
-          <li>Brownies</li>
-          <li>Tortas de auyama (con queso y bocadillo)</li>
-          <li>Cupcakes</li>
-          <li>Paletas</li>
-        </ul>
-      </div>
-
-      <div class="contenedor1">
-        <h2 class="personal">Pastelería y Detalles</h2>
-        <p class="texto2">Tortas y pasteles personalizados</p>
-        <video src="PASTEL DE BARRITAS DECORACIÓN FÁCIL (CORTO) - BAKING DAY.mp4" controls autoplay></video>
-      </div>
-    </section>
-
-    <!-- TÍTULO PRODUCTOS -->
-    <div class="Title-Variedad-de-productos">
-      <h5 class="small-title">Variedad de</h5>
-      <h2 class="Title-producto">Producto</h2>
-    </div>
-
-    <!-- TARJETAS PRODUCTOS -->
-    <section class="categoria">
-      <div class="tarjeta">
-        <img src="http://127.0.0.1:5000/static/images/tortaauyama.jpg" alt="Torta de Ahuyama" class="image"/>
-        <div class="overlay1">
-          <div class="texto1">Tortas artesanales elaboradas con ingredientes frescos y el toque casero que encanta en cada bocado</div>
-        </div>
-        <h5>Tortas</h5>
-        <a class="explorar" href="tortas.html">Explorar</a>
-      </div>
-      <div class="tarjeta">
-        <img src="http://127.0.0.1:5000/static/images/galletasrellenas.jpg" alt="Postres" />
-        <div class="overlay1">
-          <div class="texto1">Galletas, brownies y más: dulces irresistibles para consentirte o compartir momentos especiales.</div>
-        </div>
-        <h5>Postres</h5>
-        <a class="explorar" href="postres.html">Explorar</a>
-      </div>
-
-      <div class="tarjeta">
-        <img src="http://127.0.0.1:5000/static/images/fresas2.jpg" alt="Detalles" />
-        <div class="overlay1">
-          <div class="texto1">Sorprende con cajas únicas llenas de sabor, mensajes especiales y detalles que enamoran.</div>
-        </div>
-        <h5>Detalles personalizados</h5>
-        <a class="explorar" href="detalles.html">Explorar</a>
-      </div>
-    </section>
-  </main>
-
-  <script src="script.js"></script>
-
-  <!-- Botones de redes -->
-  <div class="social-floating">
-    <a href="https://www.instagram.com/sweet_landbga" class="fa fa-instagram" target="_blank" title="Instagram"></a>
-    <a href="https://wa.me/573332422608" class="fa fa-whatsapp" target="_blank" title="WhatsApp"></a>
   </div>
+
+  <!-- SECCIÓN INTERMEDIA: FRASE + VIDEO -->
+  <section class="order">
+    <div class="contenedor">
+      <h1 class="texto">Donde los sueños se combinan con el dulce</h1>
+      <ul class="content">
+        <li>Tortas personalizadas para cualquier evento</li>
+        <li>Brownies melcochudos</li>
+        <li>Tortas de auyama (queso y bocadillo)</li>
+        <li>Cupcakes decorados</li>
+        <li>Paletas de chocolate</li>
+      </ul>
+    </div>
+
+    <div class="contenedor1">
+      <h2 class="personal">Pastelería y Detalles</h2>
+      <p class="texto2">Diseños que cuentan tu historia</p>
+      <!-- Video en carpeta Assets -->
+      <video src="assets/video-index.mp4" controls autoplay muted loop></video>
+    </div>
+  </section>
+
+  <!-- TÍTULO SECCIÓN PRODUCTOS -->
+  <div class="Title-Variedad-de-productos">
+    <h5 class="small-title">Explora nuestra</h5>
+    <h2 class="Title-producto">Variedad de Productos</h2>
+  </div>
+
+  <!-- TARJETAS DE CATEGORÍAS (Las 3 principales) -->
+  <section class="categoria">
+    
+    <!-- Categoría 1: Tortas -->
+    <div class="tarjeta">
+      <img src="assets/torta-auyama.jpg" alt="Categoría Tortas" class="image"/>
+      <div class="overlay1">
+        <div class="texto1">Tortas artesanales elaboradas con ingredientes frescos y el toque casero que encanta.</div>
+      </div>
+      <h5>Tortas</h5>
+      <a class="explorar" href="tortas.html">Explorar</a>
+    </div>
+
+    <!-- Categoría 2: Postres -->
+    <div class="tarjeta">
+      <img src="assets/galletas-rellenas.jpg" alt="Categoría Postres" />
+      <div class="overlay1">
+        <div class="texto1">Galletas, brownies y dulces irresistibles para consentirte o compartir momentos especiales.</div>
+      </div>
+      <h5>Postres</h5>
+      <a class="explorar" href="postres.html">Explorar</a>
+    </div>
+
+    <!-- Categoría 3: Detalles -->
+    <div class="tarjeta">
+      <!-- Usamos una foto de detalle distinta para no repetir la del slider si es posible -->
+      <img src="assets/fresas-detalle.jpg" alt="Categoría Detalles" />
+      <div class="overlay1">
+        <div class="texto1">Sorprende con cajas únicas llenas de sabor, mensajes especiales y detalles que enamoran.</div>
+      </div>
+      <h5>Detalles personalizados</h5>
+      <a class="explorar" href="detalles.html">Explorar</a>
+    </div>
+
+  </section>
+</main>
+
+<!-- Lógica en carpeta JS -->
+<script src="js/script.js"></script>
+
+<!-- Redes Sociales Flotantes -->
+<div class="social-floating">
+  <a href="https://www.instagram.com/sweet_landbga" class="fa fa-instagram" target="_blank" title="Instagram"></a>
+  <a href="https://wa.me/573332422608" class="fa fa-whatsapp" target="_blank" title="WhatsApp"></a>
+</div>
 
 </body>
 </html>
-

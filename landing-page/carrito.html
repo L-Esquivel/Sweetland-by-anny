@@ -3,36 +3,94 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Carrito de Compras - Sweetland</title>
-  <link rel="stylesheet" href="estilos.css">
-  <link rel="stylesheet" href="carrito.css" />  
+  <title>Finalizar Compra - Sweetland By Anny</title>
+  <!-- RUTAS ACTUALIZADAS -->
+  <link rel="stylesheet" href="css/estilos.css">
+  <link rel="stylesheet" href="css/carrito.css" />  
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
-<body>
+<body class="bg-checkout">
 
 <header id="home">
-  <img src="logo-fotor-2025071492551.png" alt="Logo" class="logo"/>
+  <img src="assets/logo-principal.png" alt="Logo Sweetland" class="logo"/>
+  <nav id="menu">
+    <ul>
+      <li><a href="index.html">Volver a la tienda</a></li>
+    </ul>
+  </nav>
 </header>
 
-  <h1>Tu Carrito de Compras</h1>
+<div class="container-checkout">
+  <h1>🛒 Resumen de tu pedido</h1>
 
-  <ul id="cart-list"></ul>
+  <div class="checkout-grid">
+    <!-- COLUMNA IZQUIERDA: LISTA DE PRODUCTOS -->
+    <div class="checkout-items">
+      <ul id="cart-list"></ul>
+      <button class="btn-vaciar" onclick="clearCartAndReload()">
+        <i class="fa-solid fa-trash-can"></i> Vaciar Carrito
+      </button>
+    </div>
 
-  <p><strong>Total:</strong> <span id="total">$0</span></p>
+    <!-- COLUMNA DERECHA: FORMULARIO Y TOTAL -->
+    <div class="checkout-summary">
+      <div class="card-resumen">
+        <h3>Datos de Entrega</h3>
+        <div class="form-group">
+          <label>Dirección exacta *</label>
+          <input type="text" id="pedido-direccion" placeholder="Calle, número, apto/casa, barrio..." required>
+        </div>
+        <div class="form-group">
+          <label>¿Alguna nota especial?</label>
+          <textarea id="pedido-notas" placeholder="Ej: Es un regalo, no incluir factura física."></textarea>
+        </div>
 
-  <div class="acciones">
-    <button class="btn btn-whatsapp" onclick="finalizeOrder()">Enviar pedido por WhatsApp</button>
-    <button class="btn btn-vaciar" onclick="clearCartAndReload()">Vaciar carrito</button>
+        <hr>
+
+        <div class="total-section">
+          <span>Total a pagar:</span>
+          <span id="total" class="total-monto">$0</span>
+        </div>
+
+        <!-- Aviso si no está logueado -->
+        <div id="auth-warning" class="alert-auth" style="display:none;">
+          ⚠️ Para finalizar tu pedido debes <a href="mi-cuenta.html">iniciar sesión</a>.
+        </div>
+
+        <button class="btn-whatsapp" id="btn-finalizar" onclick="finalizeOrder()">
+          <i class="fa-brands fa-whatsapp"></i> Confirmar pedido por WhatsApp
+        </button>
+      </div>
+    </div>
   </div>
+</div>
 
-  <a href="#" onclick="history.back();" class="volver">← Volver a la tienda</a>
+<!-- Pantalla de carga para cuando se está guardando el pedido -->
+<div id="order-loader" class="loader-overlay" style="display: none;">
+  <div class="loader-content">
+    <div class="spinner"></div>
+    <p>Estamos horneando tu pedido en nuestro sistema...</p>
+  </div>
+</div>
 
-  <script src="carrito.js"></script>
-  <script>
-    window.addEventListener('load', function () {
-      renderCart();
-      updateCartCount();
-    });
-  </script>
+<script src="js/carrito.js"></script>
+<script>
+  window.addEventListener('load', function () {
+    renderCart();
+    updateCartCount();
+    verificarAuthParaPedido();
+  });
+
+  function verificarAuthParaPedido() {
+    const usuario = localStorage.getItem("cliente_sweetland");
+    const btn = document.getElementById("btn-finalizar");
+    const warning = document.getElementById("auth-warning");
+    if (!usuario) {
+      btn.disabled = true;
+      btn.style.opacity = "0.5";
+      warning.style.display = "block";
+    }
+  }
+</script>
 </body>
 </html>
