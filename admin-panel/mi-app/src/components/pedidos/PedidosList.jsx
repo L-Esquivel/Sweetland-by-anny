@@ -214,13 +214,13 @@ const PedidosList = () => {
                     <tr>
                       <td>${detalle.producto_nombre}</td>
                       <td>${detalle.cantidad}</td>
-                      <td>${new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP' }).format(detalle.precio_unitario)}</td>
-                      <td>${new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP' }).format(detalle.subtotal)}</td>
+                      <td>${new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP' }).format(parseFloat(detalle.precio_unitario) || 0)}</td>
+                      <td>${new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP' }).format(parseFloat(detalle.subtotal) || 0)}</td>
                     </tr>
                   `).join('')}
                   <tr class="total-row">
                     <td colspan="3" style="text-align: right;"><strong>TOTAL:</strong></td>
-                    <td><strong>${new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP' }).format(detalles.reduce((sum, d) => sum + d.subtotal, 0))}</strong></td>
+                    <td><strong>${new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP' }).format(detalles.reduce((sum, d) => sum + (parseFloat(d.subtotal) || 0), 0))}</strong></td>
                   </tr>
                 </tbody>
               </table>
@@ -394,8 +394,8 @@ const PedidosList = () => {
                                 <small className="text-muted">{detalle.categoria}</small>
                               </td>
                               <td className="fw-bold">{detalle.cantidad}</td>
-                              <td>{formatearMoneda(detalle.precio_unitario)}</td>
-                              <td className="fw-bold text-success">{formatearMoneda(detalle.subtotal)}</td>
+                              <td>{formatearMoneda(parseFloat(detalle.precio_unitario) || 0)}</td>
+                              <td className="fw-bold text-success">{formatearMoneda(parseFloat(detalle.subtotal) || 0)}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -403,7 +403,7 @@ const PedidosList = () => {
                           <tr>
                             <td colSpan="3" className="fw-bold">Total:</td>
                             <td className="fw-bold text-success">
-                              {formatearMoneda(detallesPedido.reduce((sum, d) => sum + d.subtotal, 0))}
+                              {formatearMoneda(detallesPedido.reduce((sum, d) => sum + (parseFloat(d.subtotal) || 0), 0))}
                             </td>
                           </tr>
                         </tfoot>

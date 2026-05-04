@@ -32,24 +32,34 @@ def procesar_descuento_stock(pedido_id):
 def get_stats():
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("""
-        SELECT 
-            SUM(CASE WHEN DATE(fecha_pedido) = CURDATE() THEN total ELSE 0 END) as hoy,
-            SUM(CASE WHEN MONTH(fecha_pedido) = MONTH(CURDATE()) AND YEAR(fecha_pedido) = YEAR(CURDATE()) THEN total ELSE 0 END) as mes,
-            SUM(total) as total_historico,
-            COUNT(id_pedido) as num_pedidos
-        FROM pedidos WHERE estado != 'cancelado'
-    """)
-    resumen = cursor.fetchone()
-    cursor.execute("""
-        SELECT DATE(fecha_pedido) as fecha, SUM(total) as venta 
-        FROM pedidos WHERE estado != 'cancelado' 
-        GROUP BY DATE(fecha_pedido) ORDER BY fecha DESC LIMIT 7
-    """)
-    grafica = cursor.fetchall()
-    cursor.close()
-    conn.close()
-    return jsonify({"resumen": resumen, "grafica": list(grafica)})
+    try:
+        cursor.execute("""
+            SELECT 
+                SUM(CASE WHEN DATE(fecha_pedido) = CURDATE() THEN total ELSE 0 END) as hoy,
+                SUM(CASE WHEN MONTH(fecha_pedido) = MONTH(CURDATE()) AND YEAR(fecha_pedido) = YEAR(CURDATE()) THEN total ELSE 0 END) as mes,
+                SUM(total) as total_historico,
+                COUNT(id_pedido) as num_pedidos
+            FROM pedidos WHERE estado != 'cancelado'
+        """)
+        resumen = cursor.fetchone()
+        # Convertir Decimal a float
+        resumen = {k: float(v) if v is not None else 0 for k, v in dict(resumen).items()}
+
+        cursor.execute("""
+            SELECT DATE(fecha_pedido) as fecha, SUM(total) as venta 
+            FROM pedidos WHERE estado != 'cancelado' 
+            GROUP BY DATE(fecha_pedido) ORDER BY fecha DESC LIMIT 7
+        """)
+        grafica = cursor.fetchall()
+        grafica = [{k: float(v) if isinstance(v, (int, float)) else str(v) for k, v in dict(row).items()} for row in grafica]
+
+        return jsonify({"resumen": resumen, "grafica": grafica})
+    except Exception as e:
+        logger.error(f"Error en get_stats: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
 
 # ==================== GET PEDIDOS ====================
 
@@ -58,16 +68,29 @@ def get_stats():
 def get_pedidos():
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("""
-        SELECT p.*, u.nombre as cliente_nombre, u.telefono as cliente_telefono 
-        FROM pedidos p 
-        LEFT JOIN usuarios u ON p.usuario_id = u.id_usuario 
-        ORDER BY p.fecha_pedido DESC
-    """)
-    rows = cursor.fetchall()
-    cursor.close()
-    conn.close()
-    return jsonify(list(rows))
+    try:
+        cursor.execute("""
+            SELECT p.*, u.nombre as cliente_nombre, u.telefono as cliente_telefono 
+            FROM pedidos p 
+            LEFT JOIN usuarios u ON p.usuario_id = u.id_usuario 
+            ORDER BY p.fecha_pedido DESC
+        """)
+        rows = cursor.fetchall()
+        # Convertir Decimal a float para JSON
+        pedidos = []
+        for row in rows:
+            pedido = dict(row)
+            for key in ['total', 'costo_produccion', 'precio_sugerido']:
+                if key in pedido and pedido[key] is not None:
+                    pedido[key] = float(pedido[key])
+            pedidos.append(pedido)
+        return jsonify(pedidos)
+    except Exception as e:
+        logger.error(f"Error en get_pedidos: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
 
 # ==================== GET DETALLES PEDIDO ====================
 
@@ -76,23 +99,36 @@ def get_pedidos():
 def get_detalles_pedido(id):
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT id_pedido FROM pedidos WHERE id_pedido = %s", (id,))
-    if not cursor.fetchone():
+    try:
+        cursor.execute("SELECT id_pedido FROM pedidos WHERE id_pedido = %s", (id,))
+        if not cursor.fetchone():
+            return jsonify({"error": f"Pedido {id} no encontrado"}), 404
+
+        cursor.execute("""
+            SELECT dp.id_detalle, dp.producto_id, p.nombre AS producto_nombre,
+                   p.categoria, dp.cantidad, dp.precio_unitario, dp.subtotal
+            FROM detalle_pedidos dp
+            INNER JOIN productos p ON dp.producto_id = p.id_producto
+            WHERE dp.pedido_id = %s
+        """, (id,))
+        detalles_raw = cursor.fetchall()
+
+        # CORREGIDO: Convertir Decimal a float para evitar NaN en frontend
+        detalles = []
+        for row in detalles_raw:
+            detalle = dict(row)
+            detalle['cantidad'] = int(detalle.get('cantidad', 0) or 0)
+            detalle['precio_unitario'] = float(detalle.get('precio_unitario', 0) or 0)
+            detalle['subtotal'] = float(detalle.get('subtotal', 0) or 0)
+            detalles.append(detalle)
+
+        return jsonify(detalles)
+    except Exception as e:
+        logger.error(f"Error en get_detalles_pedido: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+    finally:
         cursor.close()
         conn.close()
-        return jsonify({"error": f"Pedido {id} no encontrado"}), 404
-
-    cursor.execute("""
-        SELECT dp.id_detalle, dp.producto_id, p.nombre AS producto_nombre,
-               p.categoria, dp.cantidad, dp.precio_unitario, dp.subtotal
-        FROM detalle_pedidos dp
-        INNER JOIN productos p ON dp.producto_id = p.id_producto
-        WHERE dp.pedido_id = %s
-    """, (id,))
-    detalles = cursor.fetchall()
-    cursor.close()
-    conn.close()
-    return jsonify(list(detalles))
 
 # ==================== CREATE PEDIDO ====================
 
@@ -227,11 +263,16 @@ def agregar_detalle_pedido(pedido_id):
 def get_usuarios_pedidos():
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT id_usuario, nombre, telefono, email, direccion FROM usuarios WHERE rol='cliente' ORDER BY nombre")
-    rows = cursor.fetchall()
-    cursor.close()
-    conn.close()
-    return jsonify(list(rows))
+    try:
+        cursor.execute("SELECT id_usuario, nombre, telefono, email, direccion FROM usuarios WHERE rol='cliente' ORDER BY nombre")
+        rows = cursor.fetchall()
+        return jsonify(list(rows))
+    except Exception as e:
+        logger.error(f"Error en get_usuarios_pedidos: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
 
 @pedidos_bp.route("/usuarios", methods=["POST"])
 @login_required
@@ -376,4 +417,3 @@ def mis_pedidos():
     finally:
         cursor.close()
         conn.close()
-    return jsonify({"mensaje": "Registrado"}), 201
