@@ -5,7 +5,7 @@ import Login from './components/Login';
 import Register from './components/Register';
 import ProductosList from './components/productos/ProductosList';
 import PedidosList from './components/pedidos/PedidosList';
-import InsumosPage from "./components/insumos/InsumosPage"; // <-- CAMBIO: Nuevo componente unificado
+import InsumosPage from "./components/Insumos/InsumosPage"; // <-- CAMBIO: Nuevo componente unificado
 import RecetasList from "./components/recetas/RecetasList";
 
 const API_BASE = import.meta.env.VITE_API_URL || 'https://sweetland-by-anny-production.up.railway.app';
