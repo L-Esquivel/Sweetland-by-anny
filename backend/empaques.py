@@ -9,7 +9,6 @@ logger = logging.getLogger(__name__)
 empaques_bp = Blueprint("empaques", __name__, url_prefix="/empaques")
 
 # ==================== PREFLIGHT ====================
-
 @empaques_bp.route("/", methods=["OPTIONS"])
 @empaques_bp.route("/<int:id>", methods=["OPTIONS"])
 @empaques_bp.route("/producto/<int:producto_id>", methods=["OPTIONS"])
@@ -18,7 +17,6 @@ def handle_options(id=None, producto_id=None):
     return jsonify({"status": "ok"}), 200
 
 # ==================== CATÁLOGO DE EMPAQUES ====================
-
 @empaques_bp.route("/", methods=["GET"])
 @login_required
 def get_empaques():
@@ -26,21 +24,21 @@ def get_empaques():
     cursor.execute("SELECT id_empaque, nombre, descripcion, precio FROM empaques ORDER BY nombre")
     filas = cursor.fetchall()
     cursor.close()
+    # f es un diccionario gracias a DictCursor
     return jsonify([{
-        "id_empaque":  f["id_empaque"],
-        "nombre":      f["nombre"],
-        "descripcion": f["descripcion"],
-        "precio":      float(f["precio"]) if f["precio"] else 0
+        "id_empaque":  f.get("id_empaque"),
+        "nombre":      f.get("nombre"),
+        "descripcion": f.get("descripcion"),
+        "precio":      float(f.get("precio") or 0)
     } for f in filas])
-
 
 @empaques_bp.route("/", methods=["POST"])
 @login_required
 def add_empaque():
-    data        = request.get_json()
-    nombre      = data.get("nombre")
+    data = request.get_json()
+    nombre = data.get("nombre")
     descripcion = data.get("descripcion", "")
-    precio      = data.get("precio", 0)
+    precio = data.get("precio", 0)
 
     if not nombre:
         return jsonify({"error": "El nombre es obligatorio"}), 400
@@ -53,7 +51,6 @@ def add_empaque():
     mysql.connection.commit()
     cursor.close()
     return jsonify({"mensaje": "Empaque creado"}), 201
-
 
 @empaques_bp.route("/<int:id>", methods=["PUT"])
 @login_required
@@ -68,7 +65,6 @@ def update_empaque(id):
     cursor.close()
     return jsonify({"mensaje": "Empaque actualizado"})
 
-
 @empaques_bp.route("/<int:id>", methods=["DELETE"])
 @login_required
 def delete_empaque(id):
@@ -79,7 +75,6 @@ def delete_empaque(id):
     return jsonify({"mensaje": "Empaque eliminado"})
 
 # ==================== EMPAQUES POR PRODUCTO ====================
-
 @empaques_bp.route("/producto/<int:producto_id>", methods=["GET"])
 @login_required
 def get_empaques_producto(producto_id):
@@ -97,26 +92,31 @@ def get_empaques_producto(producto_id):
     items = []
     costo_total = 0
     for f in filas:
-        subtotal = float(f["subtotal"]) if f["subtotal"] else float(f["precio"] or 0) * int(f["cantidad"] or 1)
+        # Usamos .get() para evitar KeyError y aseguramos conversión a float
+        precio_unitario = float(f.get("precio") or 0)
+        cantidad = int(f.get("cantidad") or 1)
+        subtotal_db = f.get("subtotal")
+        
+        subtotal = float(subtotal_db) if subtotal_db is not None else (precio_unitario * cantidad)
         costo_total += subtotal
+        
         items.append({
-            "id":         f["id"],
-            "id_empaque": f["id_empaque"],
-            "cantidad":   f["cantidad"],
+            "id":         f.get("id"),
+            "id_empaque": f.get("id_empaque"),
+            "cantidad":   cantidad,
             "subtotal":   subtotal,
-            "nombre":     f["nombre"],
-            "precio":     float(f["precio"]) if f["precio"] else 0
+            "nombre":     f.get("nombre"),
+            "precio":     precio_unitario
         })
 
     return jsonify({"empaques": items, "costo_total_empaque": costo_total})
 
-
 @empaques_bp.route("/producto/<int:producto_id>", methods=["POST"])
 @login_required
 def add_empaque_producto(producto_id):
-    data       = request.get_json()
+    data = request.get_json()
     id_empaque = data.get("id_empaque")
-    cantidad   = data.get("cantidad", 1)
+    cantidad = data.get("cantidad", 1)
 
     if not id_empaque:
         return jsonify({"error": "id_empaque es obligatorio"}), 400
@@ -124,11 +124,15 @@ def add_empaque_producto(producto_id):
     cursor = mysql.connection.cursor()
     cursor.execute("SELECT precio FROM empaques WHERE id_empaque=%s", (id_empaque,))
     row = cursor.fetchone()
+    
     if not row:
         cursor.close()
         return jsonify({"error": "Empaque no encontrado"}), 404
 
-    subtotal = float(row["precio"]) * int(cantidad)
+    # Acceso por clave de diccionario corregido
+    precio_empaque = float(row.get("precio") or 0)
+    subtotal = precio_empaque * int(cantidad)
+    
     cursor.execute("""
         INSERT INTO recetas_empaques (id_producto, id_empaque, cantidad, subtotal)
         VALUES (%s, %s, %s, %s)
@@ -136,7 +140,6 @@ def add_empaque_producto(producto_id):
     mysql.connection.commit()
     cursor.close()
     return jsonify({"mensaje": "Empaque asignado al producto"}), 201
-
 
 @empaques_bp.route("/producto/item/<int:id>", methods=["DELETE"])
 @login_required
