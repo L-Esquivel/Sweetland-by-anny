@@ -13,8 +13,17 @@ const API_BASE = import.meta.env.VITE_API_URL || 'https://sweetland-by-anny-prod
 
 function App() {
   const [activeSection, setActiveSection] = useState('inicio');
-  const [currentView, setCurrentView] = useState('login');
-  const [user, setUser] = useState(null);
+  
+  // 1. Inicializamos el estado intentando leer del localStorage para evitar el salto al Login al recargar
+  const [user, setUser] = useState(() => {
+    const savedUser = localStorage.getItem('sweetland_admin_user');
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
+
+  const [currentView, setCurrentView] = useState(() => {
+    return localStorage.getItem('sweetland_admin_user') ? 'app' : 'login';
+  });
+
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -28,22 +37,31 @@ function App() {
         const userData = await response.json();
         const usuario = userData.usuario || userData;
         
-        // Bloqueamos SOLO a los clientes. Permitimos admin y empleado.
         if (usuario.rol === 'cliente') {
           await handleLogout();
           return;
         }
         
+        // 2. Sincronizamos el estado de React con la respuesta real del servidor
         setUser(usuario);
         setCurrentView('app');
+        localStorage.setItem('sweetland_admin_user', JSON.stringify(usuario));
       } else {
-        setCurrentView('login');
+        // Si el servidor dice que no estamos autorizados, limpiamos todo
+        limpiarSesionLocal();
       }
     } catch (error) {
-      setCurrentView('login');
+      console.log('Error en checkAuth:', error);
+      // En caso de error de red, mantenemos lo que hay en localStorage (opcional)
     } finally {
       setLoading(false);
     }
+  };
+
+  const limpiarSesionLocal = () => {
+    setUser(null);
+    setCurrentView('login');
+    localStorage.removeItem('sweetland_admin_user');
   };
 
   const handleLogin = async (email, password) => {
@@ -64,6 +82,8 @@ function App() {
           return { success: false, error: '❌ Acceso denegado al panel administrativo.' };
         }
         
+        // Guardamos en local para persistencia al recargar
+        localStorage.setItem('sweetland_admin_user', JSON.stringify(usuario));
         setUser(usuario);
         setCurrentView('app');
         return { success: true, user: usuario };
@@ -80,13 +100,11 @@ function App() {
     try {
       await fetch(`${API_BASE}/auth/logout`, { method: 'POST', credentials: 'include' });
     } finally {
-      setUser(null);
-      setCurrentView('login');
+      limpiarSesionLocal();
     }
   };
 
   const renderSection = () => {
-    // Protección extra: Si un empleado intenta entrar a usuarios por consola
     if (activeSection === 'usuarios' && user?.rol !== 'admin') {
       setActiveSection('inicio');
       return null;
@@ -99,20 +117,11 @@ function App() {
       case 'insumos': return <InsumosPage />;
       case 'recetas': return <RecetasList />;
       case 'inicio': return <Dashboard user={user} />;
-      default:
-        return (
-          <div className="dashboard">
-            <h2>Panel de Control - Sweetland By Anny</h2>
-            <div className="welcome-message">
-              <p>Bienvenido, <strong>{user?.nombre}</strong></p>
-              <p>Rol: <span className="badge bg-info text-dark">{user?.rol?.toUpperCase()}</span></p>
-            </div>
-          </div>
-        );
+      default: return <Dashboard user={user} />;
     }
   };
 
-  if (loading) return <div className="loading">Cargando...</div>;
+  if (loading && !user) return <div className="loading">Verificando sesión...</div>;
 
   if (currentView === 'login' || currentView === 'register') {
     return (
@@ -135,7 +144,7 @@ function App() {
             {user && (
               <div className="d-flex align-items-center gap-3">
                 <span className="navbar-text text-white">
-                  {user.nombre} <small className="d-block text-warning text-end">{user.rol}</small>
+                  {user.nombre} <small className="d-block text-warning text-end">{user.rol?.toUpperCase()}</small>
                 </span>
                 <button className="btn btn-outline-light btn-sm" onClick={handleLogout}>🚪 Salir</button>
               </div>
@@ -148,10 +157,9 @@ function App() {
         <nav className="sidebar bg-light">
           <ul className="nav nav-pills flex-column p-3">
             <li className="nav-item">
-              <button className={`nav-link w-100 text-start ${activeSection === 'inicio' ? 'active' : ''}`} onClick={() => setActiveSection('inicio')}>📊 Inicio</button>
+              <button className={`nav-link w-100 text-start ${activeSection === 'inicio' ? 'active' : ''}`} onClick={() => setActiveSection('inicio')}>📊 Inicio / Dashboard</button>
             </li>
 
-            {/* SOLO ADMIN VE USUARIOS */}
             {user?.rol === 'admin' && (
               <li className="nav-item">
                 <button className={`nav-link w-100 text-start ${activeSection === 'usuarios' ? 'active' : ''}`} onClick={() => setActiveSection('usuarios')}>👥 Usuarios</button>
@@ -168,7 +176,6 @@ function App() {
               <button className={`nav-link w-100 text-start ${activeSection === 'insumos' ? 'active' : ''}`} onClick={() => setActiveSection('insumos')}>📦 Insumos</button>
             </li>
 
-            {/* SOLO ADMIN VE RECETAS (Finanzas/Margen) */}
             {user?.rol === 'admin' && (
               <li className="nav-item">
                 <button className={`nav-link w-100 text-start ${activeSection === 'recetas' ? 'active' : ''}`} onClick={() => setActiveSection('recetas')}>📋 Recetas y Costos</button>
