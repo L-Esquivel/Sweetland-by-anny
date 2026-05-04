@@ -9,9 +9,7 @@ const ProductosList = () => {
   const [showModal, setShowModal] = useState(false);
   const [editingProducto, setEditingProducto] = useState(null);
 
-  useEffect(() => {
-    loadProductos();
-  }, []);
+  useEffect(() => { loadProductos(); }, []);
 
   const loadProductos = async () => {
     try {
@@ -39,9 +37,7 @@ const ProductosList = () => {
       try {
         await productosService.deleteProducto(id);
         await loadProductos();
-      } catch (error) {
-        console.error('Error eliminando producto:', error);
-      }
+      } catch (error) { console.error(error); }
     }
   };
 
@@ -54,107 +50,78 @@ const ProductosList = () => {
       }
       setShowModal(false);
       await loadProductos();
-    } catch (error) {
-      console.error('Error guardando producto:', error);
+    } catch (error) { console.error(error); }
+  };
+
+  const formatPrecio = (p) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(p);
+
+  const renderStockBadge = (producto) => {
+    if (!producto.controla_stock) {
+      return <span className="badge bg-light text-muted border">N/A</span>;
     }
+    
+    let color = "bg-info";
+    if (producto.stock <= 0) color = "bg-danger";
+    else if (producto.stock < 5) color = "bg-warning text-dark";
+
+    return (
+      <span className={`badge ${color} px-3`}>
+        {producto.stock} unidades
+      </span>
+    );
   };
 
-  const formatPrecio = (precio) => {
-    return new Intl.NumberFormat('es-CO', {
-      style: 'currency',
-      currency: 'COP'
-    }).format(precio);
-  };
-
-  const getCategoriaBadgeClass = (categoria) => {
-    switch (categoria) {
-      case 'tortas':
-        return 'bg-primary';
-      case 'postres':
-        return 'bg-success';
-      case 'detalles':
-        return 'bg-warning text-dark';
-      default:
-        return 'bg-secondary';
-    }
-  };
-
-  if (loading) return <div className="text-center p-4">Cargando productos...</div>;
+  if (loading) return <div className="text-center p-5"><h4>Cargando catálogo...</h4></div>;
 
   return (
     <div className="productos-container">
       <div className="d-flex justify-content-between align-items-center mb-4">
-        <h2 className="mb-0">🎂 Gestión de Productos</h2>
-        <button className="btn btn-primary" onClick={handleCreate}>
+        <h2 className="mb-0">🎂 Gestión de Productos e Inventario</h2>
+        <button className="btn btn-primary shadow-sm" onClick={handleCreate}>
           ➕ Nuevo Producto
         </button>
       </div>
 
-      <div className="table-responsive">
-        <table className="table table-striped table-hover table-bordered">
-          <thead className="table-dark">
+      <div className="table-responsive shadow-sm rounded">
+        <table className="table table-hover table-bordered mb-0 bg-white">
+          <thead className="table-dark text-center">
             <tr>
               <th>ID</th>
               <th>Nombre</th>
               <th>Categoría</th>
-              <th>Descripción</th>
               <th>Precio</th>
-              <th>Imagen</th>
-              <th className="text-center">Acciones</th>
+              <th>Stock Actual</th> {/* NUEVA COLUMNA */}
+              <th>Estado</th>
+              <th>Acciones</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="align-middle">
             {productos.length === 0 ? (
-              <tr>
-                <td colSpan="7" className="text-center text-muted py-4">
-                  No hay productos registrados
-                </td>
-              </tr>
+              <tr><td colSpan="7" className="text-center py-4">No hay productos</td></tr>
             ) : (
               productos.map(producto => (
                 <tr key={producto.id_producto}>
-                  <td className="fw-bold">{producto.id_producto}</td>
+                  <td className="text-center fw-bold text-muted">{producto.id_producto}</td>
                   <td className="fw-semibold">{producto.nombre}</td>
-                  <td>
-                    <span className={`badge ${getCategoriaBadgeClass(producto.categoria)}`}>
-                      {producto.categoria}
+                  <td className="text-center">
+                    <span className="badge bg-secondary text-uppercase" style={{fontSize: '0.7rem'}}>
+                        {producto.categoria}
                     </span>
                   </td>
-                  <td>
-                    {producto.descripcion ? (
-                      <span title={producto.descripcion}>
-                        {producto.descripcion.length > 50 
-                          ? `${producto.descripcion.substring(0, 50)}...`
-                          : producto.descripcion}
-                      </span>
-                    ) : (
-                      <span className="text-muted">N/A</span>
-                    )}
-                  </td>
-                  <td className="fw-bold text-success">{formatPrecio(producto.precio)}</td>
+                  <td className="fw-bold text-success text-end">{formatPrecio(producto.precio)}</td>
                   <td className="text-center">
-                    {producto.imagen ? (
-                      <span className="badge bg-info">📷 Imagen</span>
-                    ) : (
-                      <span className="text-muted">N/A</span>
-                    )}
+                    {renderStockBadge(producto)}
                   </td>
                   <td className="text-center">
-                    <div className="btn-group" role="group">
-                      <button 
-                        className="btn btn-warning btn-sm me-1"
-                        onClick={() => handleEdit(producto)}
-                        title="Editar producto"
-                      >
-                        ✏️ Editar
-                      </button>
-                      <button 
-                        className="btn btn-danger btn-sm"
-                        onClick={() => handleDelete(producto.id_producto)}
-                        title="Eliminar producto"
-                      >
-                        🗑️ Eliminar
-                      </button>
+                    {producto.controla_stock ? 
+                        <span className="text-primary small">📦 Inventario Activo</span> : 
+                        <span className="text-muted small">✨ Personalizado</span>
+                    }
+                  </td>
+                  <td className="text-center">
+                    <div className="btn-group">
+                      <button className="btn btn-outline-warning btn-sm" onClick={() => handleEdit(producto)}>✏️</button>
+                      <button className="btn btn-outline-danger btn-sm" onClick={() => handleDelete(producto.id_producto)}>🗑️</button>
                     </div>
                   </td>
                 </tr>
