@@ -1,4 +1,3 @@
-// src/components/recetas/RecetasList.jsx
 import React, { useState, useEffect } from 'react';
 import { recetasService } from '../../services/recetasService';
 import { productosService } from '../../services/productosService';
@@ -17,6 +16,7 @@ const RecetasList = () => {
   const [costos, setCostos] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false); // Para mostrar feedback visual de carga
 
   useEffect(() => {
     cargarDatosIniciales();
@@ -54,32 +54,32 @@ const RecetasList = () => {
     }
   };
 
-  // CORREGIDO: Ahora usa recalcularCostos para actualizar en tiempo real
+  // OPTIMIZADO: Llamada única al backend para recalcular y guardar
   const actualizarCampoProducto = async (campo, valor) => {
     if (!productoSeleccionado) return;
 
+    // 1. Actualización instantánea en la UI para que no se sienta lag
     const productoActualizado = { ...productoSeleccionado, [campo]: valor };
     setProductoSeleccionado(productoActualizado);
+    setIsUpdating(true);
 
     try {
-      // 1. Actualizar el producto en la BD (pax y utilidad)
-      await productosService.updateProducto(productoSeleccionado.id_producto, productoActualizado);
-
-      // 2. Recalcular costos con los nuevos valores usando el endpoint /recalcular
       const nuevoPax = campo === 'pax' ? valor : productoActualizado.pax;
       const nuevaUtilidad = campo === 'utilidad_porcentaje' ? valor : productoActualizado.utilidad_porcentaje;
 
+      // 2. Solo llamamos a recalcular. El backend ya hace el UPDATE en la tabla productos.
       const data = await recetasService.recalcularCostos(
         productoSeleccionado.id_producto,
         parseInt(nuevoPax) || 1,
-        parseFloat(nuevaUtilidad) || 40
+        parseFloat(nuevaUtilidad) || 0
       );
 
-      // 3. Actualizar solo los costos en el estado (sin recargar todo)
+      // 3. Sincronizamos el estado de costos con la respuesta del servidor
       setCostos(data.costos || null);
-
     } catch (error) {
-      console.error('Error actualizando:', error);
+      console.error('Error al recalcular:', error);
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -88,270 +88,213 @@ const RecetasList = () => {
       try {
         await recetasService.deleteReceta(id_receta);
         cargarRecetasProducto(productoSeleccionado.id_producto);
-      } catch (error) {
-        console.error(error);
-      }
+      } catch (error) { console.error(error); }
     }
   };
 
   const handleEliminarEmpaque = async (id) => {
     if (window.confirm('¿Eliminar este empaque?')) {
       try {
-        await empaquesService.deleteEmpaque(id);
+        await empaquesService.deleteEmpaqueProducto(id); // Asegúrate que el service tenga este nombre
         cargarRecetasProducto(productoSeleccionado.id_producto);
-      } catch (error) {
-        console.error(error);
-      }
+      } catch (error) { console.error(error); }
     }
   };
 
   const handleCrearReceta = () => {
-    if (!productoSeleccionado) {
-      alert('Selecciona un producto primero');
-      return;
-    }
+    if (!productoSeleccionado) return alert('Selecciona un producto primero');
     setShowModal(true);
   };
 
   const handleSubmitReceta = async (data, isEmpaque = false) => {
     try {
       if (isEmpaque) {
-        await empaquesService.addEmpaque(productoSeleccionado.id_producto, data);
+        await empaquesService.addEmpaqueProducto(productoSeleccionado.id_producto, data);
       } else {
         await recetasService.createReceta({ ...data, id_producto: productoSeleccionado.id_producto });
       }
       setShowModal(false);
       cargarRecetasProducto(productoSeleccionado.id_producto);
-    } catch (error) {
-      console.error('Error guardando:', error);
-    }
+    } catch (error) { console.error('Error guardando:', error); }
   };
 
   const formatearMoneda = (valor) => {
-    return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP' }).format(valor || 0);
+    return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(valor || 0);
   };
 
-  if (loading) return <div className="text-center p-4">Cargando...</div>;
+  if (loading) return <div className="text-center p-5"><h3>Cargando sistema de costeo...</h3></div>;
 
   return (
-    <div className="recetas-container">
-      <h2 className="mb-4">📋 Sistema de Recetas</h2>
+    <div className="recetas-container container-fluid p-4">
+      <h2 className="mb-4 text-center">📋 Análisis de Costos y Recetas</h2>
 
-      <div className="card mb-4">
-        <div className="card-body">
+      <div className="card shadow-sm mb-4">
+        <div className="card-body bg-light">
+          <label className="form-label fw-bold">Seleccionar Producto para Costear:</label>
           <select 
-            className="form-select"
+            className="form-select form-select-lg"
             value={productoSeleccionado?.id_producto || ''}
             onChange={(e) => cargarRecetasProducto(parseInt(e.target.value))}
           >
-            <option value="">-- Selecciona un producto --</option>
+            <option value="">-- Seleccione un producto del catálogo --</option>
             {productos.map(p => (
-              <option key={p.id_producto} value={p.id_producto}>
-                {p.nombre} - {formatearMoneda(p.precio)}
-              </option>
+              <option key={p.id_producto} value={p.id_producto}>{p.nombre}</option>
             ))}
           </select>
         </div>
       </div>
 
       {productoSeleccionado && costos && (
-        <div className="card mb-4">
-          <div className="card-header bg-primary text-white">
-            <h5 className="mb-0">📊 Análisis de Rentabilidad</h5>
-          </div>
-          <div className="card-body">
-            <div className="row">
-              <div className="col-md-7">
-                <h5>{productoSeleccionado.nombre}</h5>
-                <p className="text-muted">{productoSeleccionado.descripcion}</p>
-                <div className="mb-3">
-                  <strong>Precio de venta:</strong> 
-                  <span className="fw-bold text-success ms-2">{formatearMoneda(productoSeleccionado.precio)}</span>
-                </div>
-
-                <div className="mb-3">
-                  <strong>PAX (unidades que rinde):</strong>
-                  <input 
-                    type="number" 
-                    className="form-control d-inline-block ms-2" 
-                    style={{width: '100px'}}
-                    value={productoSeleccionado.pax || 1}
-                    onChange={(e) => actualizarCampoProducto('pax', parseInt(e.target.value) || 1)}
-                  />
-                </div>
-
-                <div className="mb-3">
-                  <strong>Utilidad deseada (%):</strong>
-                  <input 
-                    type="number" 
-                    className="form-control d-inline-block ms-2" 
-                    style={{width: '100px'}}
-                    value={productoSeleccionado.utilidad_porcentaje || 40}
-                    onChange={(e) => actualizarCampoProducto('utilidad_porcentaje', parseFloat(e.target.value) || 40)}
-                  />
-                </div>
+        <div className="row">
+          {/* Columna Izquierda: Ajustes */}
+          <div className="col-lg-5">
+            <div className="card shadow-sm border-0 mb-4">
+              <div className="card-header bg-dark text-white">
+                <h5 className="mb-0">⚙️ Parámetros de Venta</h5>
               </div>
-
-              <div className="col-md-5">
-                <div className="bg-light p-3 rounded">
-                  <h6 className="text-center mb-3">Desglose de Costos</h6>
-
-                  <div className="d-flex justify-content-between mb-1">
-                    <span>Costo Base</span>
-                    <strong>{formatearMoneda(costos.costo_base)}</strong>
+              <div className="card-body">
+                <h4 className="text-primary">{productoSeleccionado.nombre}</h4>
+                <hr />
+                
+                <div className="mb-4">
+                  <label className="form-label fw-bold">PAX (Unidades que rinde la receta):</label>
+                  <div className="input-group">
+                    <span className="input-group-text">📦</span>
+                    <input 
+                      type="number" 
+                      className="form-control form-control-lg" 
+                      value={productoSeleccionado.pax || 1}
+                      onChange={(e) => actualizarCampoProducto('pax', e.target.value)}
+                    />
                   </div>
-                  <div className="d-flex justify-content-between mb-1">
-                    <span>+ 35% Gastos Operativos</span>
-                    <strong>{formatearMoneda(costos.gastos_operativos)}</strong>
-                  </div>
-                  <div className="d-flex justify-content-between mb-1">
-                    <span>+ 5% Depreciación Equipos</span>
-                    <strong>{formatearMoneda(costos.dep_equipos)}</strong>
-                  </div>
-                  <div className="d-flex justify-content-between mb-1">
-                    <span>+ 10% Depreciación Mercado</span>
-                    <strong>{formatearMoneda(costos.dep_mercado)}</strong>
-                  </div>
-                  <div className="d-flex justify-content-between mb-1">
-                    <span>+ Empaques</span>
-                    <strong>{formatearMoneda(costos.costo_empaques)}</strong>
-                  </div>
-
-                  <hr />
-                  <div className="d-flex justify-content-between mb-1">
-                    <strong>Total antes de Utilidad</strong>
-                    <strong>{formatearMoneda(costos.total3)}</strong>
-                  </div>
-
-                  <div className="d-flex justify-content-between mb-1">
-                    <span>+ {costos.utilidad_porcentaje}% Utilidad</span>
-                    <strong>{formatearMoneda(costos.utilidad)}</strong>
-                  </div>
-
-                  <hr />
-                  <div className="d-flex justify-content-between mb-1">
-                    <strong>Total con Utilidad</strong>
-                    <strong>{formatearMoneda(costos.total4)}</strong>
-                  </div>
-
-                  <div className="d-flex justify-content-between mb-1">
-                    <span>+ 8% I.C.</span>
-                    <strong>{formatearMoneda(costos.ic)}</strong>
-                  </div>
-
-                  <hr className="border-primary" />
-                  <div className="d-flex justify-content-between fs-5">
-                    <strong>Precio Sugerido Final</strong>
-                    <strong className="text-success">{formatearMoneda(costos.precio_sugerido)}</strong>
-                  </div>
-                  <small className="text-muted d-block text-end">
-                    por unidad (PAX = {costos.pax})
-                  </small>
+                  <small className="text-muted">El precio final se dividirá por este número.</small>
                 </div>
+
+                <div className="mb-4">
+                  <label className="form-label fw-bold">Utilidad Deseada (%):</label>
+                  <div className="d-flex align-items-center">
+                    <input 
+                      type="range" 
+                      className="form-range me-3" 
+                      min="0" max="200" step="1"
+                      value={productoSeleccionado.utilidad_porcentaje || 40}
+                      onChange={(e) => actualizarCampoProducto('utilidad_porcentaje', e.target.value)}
+                    />
+                    <span className="badge bg-primary fs-5">{productoSeleccionado.utilidad_porcentaje}%</span>
+                  </div>
+                </div>
+
+                {isUpdating && <div className="text-primary"><span className="spinner-border spinner-border-sm me-2"></span>Recalculando...</div>}
               </div>
             </div>
+          </div>
 
-            <div className="text-center mt-4">
-              <button className="btn btn-primary" onClick={handleCrearReceta}>
-                ➕ Agregar Ingrediente o Empaque
-              </button>
+          {/* Columna Derecha: Desglose (Las 8 líneas) */}
+          <div className="col-lg-7">
+            <div className="card shadow-sm border-0">
+              <div className="card-header bg-success text-white">
+                <h5 className="mb-0">💰 Desglose Detallado de Precio</h5>
+              </div>
+              <div className="card-body p-0">
+                <table className="table table-hover mb-0">
+                  <tbody>
+                    <tr>
+                      <td className="ps-4">Costo Base (Ingredientes)</td>
+                      <td className="text-end pe-4 fw-bold">{formatearMoneda(costos.costo_base)}</td>
+                    </tr>
+                    <tr className="table-light">
+                      <td className="ps-4 text-muted small">+ 35% Gastos Operativos</td>
+                      <td className="text-end pe-4">{formatearMoneda(costos.gastos_operativos)}</td>
+                    </tr>
+                    <tr className="table-light">
+                      <td className="ps-4 text-muted small">+ 10% Depreciación Mercado</td>
+                      <td className="text-end pe-4">{formatearMoneda(costos.dep_mercado)}</td>
+                    </tr>
+                    <tr className="table-light border-bottom">
+                      <td className="ps-4 text-muted small">+ 5% Depreciación Equipos</td>
+                      <td className="text-end pe-4">{formatearMoneda(costos.dep_equipos)}</td>
+                    </tr>
+                    <tr>
+                      <td className="ps-4">+ Valor Total Empaques</td>
+                      <td className="text-end pe-4">{formatearMoneda(costos.costo_empaques)}</td>
+                    </tr>
+                    <tr className="fw-bold bg-light">
+                      <td className="ps-4 text-primary">TOTAL ANTES DE UTILIDAD</td>
+                      <td className="text-end pe-4 text-primary">{formatearMoneda(costos.total3)}</td>
+                    </tr>
+                    <tr>
+                      <td className="ps-4">{costos.utilidad_porcentaje}% Utilidad Seleccionada</td>
+                      <td className="text-end pe-4 text-success">+ {formatearMoneda(costos.utilidad)}</td>
+                    </tr>
+                    <tr className="fw-bold">
+                      <td className="ps-4">TOTAL CON UTILIDAD</td>
+                      <td className="text-end pe-4">{formatearMoneda(costos.total4)}</td>
+                    </tr>
+                    <tr>
+                      <td className="ps-4">8% Impuesto al Consumo (I.C.)</td>
+                      <td className="text-end pe-4">{formatearMoneda(costos.ic)}</td>
+                    </tr>
+                    <tr className="table-dark">
+                      <td className="ps-4 fs-5 py-3 fw-bold">PRECIO SUGERIDO FINAL (por unidad)</td>
+                      <td className="text-end pe-4 fs-5 py-3 fw-bold text-warning">{formatearMoneda(costos.precio_sugerido)}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div className="card-footer text-center bg-white border-0 py-3">
+                <button className="btn btn-outline-primary btn-lg" onClick={handleCrearReceta}>
+                  ➕ Agregar Ingrediente o Empaque
+                </button>
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* Tablas de Ingredientes y Empaques */}
+      {/* Tablas Detalladas (Ingredientes / Empaques) abajo para orden */}
       {productoSeleccionado && (
-        <>
-          <div className="card mb-4">
-            <div className="card-header bg-primary text-white">
-              <h5 className="mb-0">📝 Ingredientes de la Receta</h5>
-            </div>
-            <div className="card-body p-0">
-              {recetasProducto.length === 0 ? (
-                <div className="text-center text-muted py-4">
-                  <p>No hay ingredientes en esta receta</p>
-                  <button className="btn btn-primary btn-sm" onClick={handleCrearReceta}>
-                    ➕ Agregar primer ingrediente
-                  </button>
+        <div className="row mt-4">
+            <div className="col-md-6">
+                <div className="card shadow-sm">
+                    <div className="card-header bg-secondary text-white">Ingredientes</div>
+                    <div className="table-responsive">
+                        <table className="table table-sm mb-0">
+                            <thead><tr><th>Item</th><th>Cant.</th><th>Subtotal</th><th></th></tr></thead>
+                            <tbody>
+                                {recetasProducto.map((r, i) => (
+                                    <tr key={i}>
+                                        <td>{r.ingrediente}</td>
+                                        <td>{r.cantidad_necesaria} {r.unidad}</td>
+                                        <td className="fw-bold">{formatearMoneda(r.costo_ingrediente)}</td>
+                                        <td><button className="btn btn-link btn-sm text-danger" onClick={() => handleEliminarReceta(r.id_receta)}>🗑️</button></td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-              ) : (
-                <div className="table-responsive">
-                  <table className="table table-striped table-hover mb-0">
-                    <thead className="table-dark">
-                      <tr>
-                        <th>Ingrediente</th>
-                        <th>Cantidad</th>
-                        <th>Unidad</th>
-                        <th>Costo Unitario</th>
-                        <th>Costo Total</th>
-                        <th className="text-center">Acciones</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {recetasProducto.map((receta, index) => (
-                        <tr key={index}>
-                          <td className="fw-semibold">{receta.ingrediente || 'Sin nombre'}</td>
-                          <td>{receta.cantidad_necesaria}</td>
-                          <td><span className="badge bg-secondary">{receta.unidad}</span></td>
-                          <td>{formatearMoneda(receta.costo_unitario)}</td>
-                          <td className="fw-bold text-success">{formatearMoneda(receta.costo_ingrediente)}</td>
-                          <td className="text-center">
-                            <button className="btn btn-danger btn-sm" onClick={() => handleEliminarReceta(receta.id_receta)}>
-                              🗑️
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
             </div>
-          </div>
-
-          <div className="card">
-            <div className="card-header bg-primary text-white">
-              <h5 className="mb-0">📦 Empaques de la Receta</h5>
-            </div>
-            <div className="card-body p-0">
-              {empaquesProducto.length === 0 ? (
-                <div className="text-center text-muted py-4">
-                  <p>No hay empaques configurados para este producto</p>
+            <div className="col-md-6">
+                <div className="card shadow-sm">
+                    <div className="card-header bg-secondary text-white">Empaques</div>
+                    <div className="table-responsive">
+                        <table className="table table-sm mb-0">
+                            <thead><tr><th>Item</th><th>Cant.</th><th>Subtotal</th><th></th></tr></thead>
+                            <tbody>
+                                {empaquesProducto.map((e, i) => (
+                                    <tr key={i}>
+                                        <td>{e.nombre}</td>
+                                        <td>{e.cantidad}</td>
+                                        <td className="fw-bold">{formatearMoneda(e.subtotal)}</td>
+                                        <td><button className="btn btn-link btn-sm text-danger" onClick={() => handleEliminarEmpaque(e.id)}>🗑️</button></td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-              ) : (
-                <div className="table-responsive">
-                  <table className="table table-striped table-hover mb-0">
-                    <thead className="table-dark">
-                      <tr>
-                        <th>Empaque</th>
-                        <th>Cantidad</th>
-                        <th>Precio Unitario</th>
-                        <th>Subtotal</th>
-                        <th className="text-center">Acciones</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {empaquesProducto.map((e, index) => (
-                        <tr key={index}>
-                          <td className="fw-semibold">{e.nombre || 'Sin nombre'}</td>
-                          <td>{e.cantidad}</td>
-                          <td>{formatearMoneda(e.precio)}</td>
-                          <td className="fw-bold text-success">{formatearMoneda(e.subtotal)}</td>
-                          <td className="text-center">
-                            <button className="btn btn-danger btn-sm" onClick={() => handleEliminarEmpaque(e.id)}>
-                              🗑️
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
             </div>
-          </div>
-        </>
+        </div>
       )}
 
       {showModal && (
