@@ -1,5 +1,5 @@
-// CONFIGURACIÓN GLOBAL
-const API_BASE = "https://sweetland-by-anny-production.up.railway.app";
+// Usamos un nombre diferente para evitar el error de "Already declared"
+const URL_RAILWAY = "https://sweetland-by-anny-production.up.railway.app";
 
 // --- 1. LÓGICA DEL MENÚ (Scroll) ---
 let prevScrollpos = window.pageYOffset;
@@ -16,32 +16,41 @@ window.onscroll = function() {
     prevScrollpos = currentScrollPos;
 }
 
-// --- 2. FUNCIÓN PARA OCULTAR CUALQUIER LOADER ---
+// --- 2. FUNCIÓN PARA OCULTAR EL LOADER ---
 function ocultarLoader() {
     const loader = document.getElementById('loader');
     if (loader) {
-        loader.style.opacity = "0";
+        // Un pequeño delay para que no sea tan brusco
         setTimeout(() => {
             loader.style.display = 'none';
-        }, 500); // Desvanecimiento suave
+        }, 300);
     }
 }
 
 // --- 3. CARGA DINÁMICA DE PRODUCTOS ---
 async function cargarProductos(categoria) {
     const galeria = document.getElementById('galeria-productos');
+    
+    // Si no hay galería en esta página, solo quitamos el loader y salimos
     if (!galeria) {
         ocultarLoader();
         return;
     }
 
     try {
-        const response = await fetch(`${API_BASE}/productos/public`);
+        console.log(`Buscando productos de la categoría: ${categoria}`);
+        
+        // Usamos la nueva constante URL_RAILWAY
+        const response = await fetch(`${URL_RAILWAY}/productos/public`);
         const data = await response.json();
 
         if (data.success) {
             galeria.innerHTML = '';
-            const filtrados = data.productos.filter(p => p.categoria.toLowerCase() === categoria.toLowerCase());
+            
+            // Filtramos productos por categoría
+            const filtrados = data.productos.filter(p => 
+                p.categoria && p.categoria.toLowerCase() === categoria.toLowerCase()
+            );
 
             if (filtrados.length === 0) {
                 galeria.innerHTML = `<p class="no-data">Próximamente más ${categoria} deliciosas...</p>`;
@@ -49,7 +58,7 @@ async function cargarProductos(categoria) {
                 filtrados.forEach(producto => {
                     const div = document.createElement('div');
                     div.className = 'producto';
-                    const imgUrl = `${API_BASE}/static/images/${producto.imagen}`;
+                    const imgUrl = `${URL_RAILWAY}/static/images/${producto.imagen}`;
                     
                     div.innerHTML = `
                         <div class="img-wrapper">
@@ -60,7 +69,7 @@ async function cargarProductos(categoria) {
                         <p class="precio"><strong>$${parseInt(producto.precio).toLocaleString('es-CO')}</strong></p>
                         <button class="btn-agregar" 
                             onclick="addToCart('${producto.nombre}', ${producto.precio}, '${imgUrl}', ${producto.id_producto})">
-                            🛒 Agregar
+                            🛒 Agregar al carrito
                         </button>
                     `;
                     galeria.appendChild(div);
@@ -68,15 +77,16 @@ async function cargarProductos(categoria) {
             }
         }
     } catch (error) {
-        console.error("Error:", error);
-        galeria.innerHTML = '<p class="error">Error al cargar productos.</p>';
+        console.error("Error cargando productos:", error);
+        galeria.innerHTML = '<p class="error">Error al conectar con el servidor.</p>';
     } finally {
-        // Pase lo que pase, ocultamos el loader
+        // El bloque finally se ejecuta SIEMPRE, incluso si hay error
+        // Esto garantiza que el loader desaparezca
         ocultarLoader();
     }
 }
 
-// Función para cerrar notificaciones
+// --- 4. FUNCIÓN PARA CERRAR NOTIFICACIONES ---
 function closeNotification() {
     const notification = document.getElementById('cart-notification');
     if (notification) notification.classList.add('hidden');
