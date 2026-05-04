@@ -98,6 +98,14 @@ def serve_image(filename):
     image_dir = os.path.join(app.root_path, 'static', 'images')
     return send_from_directory(image_dir, filename)
 
+@app.after_request
+def add_header(response):
+    # Esto le dice al navegador: "No guardes caché de mis respuestas de la API"
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '-1'
+    return response
+
 if __name__ == "__main__":
     os.makedirs(os.path.join(app.root_path, 'static', 'images'), exist_ok=True)
     port = int(os.getenv("PORT", 5000))
