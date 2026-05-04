@@ -292,6 +292,15 @@
       mostrarMisPedidos();
     }
   });
+
+  // --- LÓGICA PARA INICIAR SESIÓN CON LA TECLA ENTER ---
+// En el Login
+document.getElementById('login-email').addEventListener('keypress', (e) => { if (e.key === 'Enter') doLogin(); });
+document.getElementById('login-password').addEventListener('keypress', (e) => { if (e.key === 'Enter') doLogin(); });
+
+// En el Registro (opcional, para mayor comodidad)
+document.getElementById('reg-telefono').addEventListener('keypress', (e) => { if (e.key === 'Enter') doRegistro(); });
+
 </script>
 </body>
 </html>
