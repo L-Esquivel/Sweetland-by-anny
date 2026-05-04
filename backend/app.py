@@ -3,6 +3,8 @@ from flask_cors import CORS
 from flask_login import LoginManager
 from dotenv import load_dotenv
 import os
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 load_dotenv()
 
@@ -16,6 +18,13 @@ if not allowed_origins or allowed_origins == ['']:
     allowed_origins = ["https://sweetland-by-anny.vercel.app", "https://sweetlandbyanny.vercel.app"]
 
 CORS(app, origins=allowed_origins, supports_credentials=True)
+
+limiter = Limiter(
+    key_func=get_remote_address,
+    app=app,
+    default_limits=["500 per day", "100 per hour"],
+    storage_uri="memory://",
+)
 
 # --- 2. CONFIGURACIÓN DE COOKIES Y SEGURIDAD ---
 app.config['SESSION_COOKIE_SAMESITE'] = 'None'

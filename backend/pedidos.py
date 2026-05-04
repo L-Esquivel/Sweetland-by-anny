@@ -95,6 +95,7 @@ def create_pedido_public():
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
+        # Nota: Usamos usuario_id (con guión bajo) porque así está en la DB
         cursor.execute("""
             INSERT INTO pedidos (usuario_id, telefono, direccion, total, estado, fecha_pedido)
             VALUES (%s, %s, %s, %s, 'pendiente', NOW())

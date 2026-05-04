@@ -115,39 +115,38 @@ async function finalizeOrder() {
   try {
     const total = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
 
-    // CORRECCIÓN CLAVE: Usamos usuario.id (que es como viene del backend)
-    const resPedido = await fetch(`${API_BASE}/pedidos/`, {
+    // PREPARAMOS EL PAQUETE COMPLETO (Cabecera + Items)
+    const pedidoCompleto = {
+        usuario_id: usuario.id,
+        telefono: usuario.telefono || "Sin teléfono",
+        direccion: direccion,
+        total: total,
+        items: cart.map(item => ({
+            id_producto: item.id_producto,
+            cantidad: item.qty,
+            precio: item.price,
+            subtotal: item.price * item.qty
+        }))
+    };
+
+    // UNA SOLA LLAMADA AL ENDPOINT PÚBLICO
+    const response = await fetch(`${API_BASE}/pedidos/public`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
-      body: JSON.stringify({
-        usuario_id: usuario.id, 
-        telefono: usuario.telefono || "Sin teléfono",
-        direccion: direccion,
-        total: total
-      })
+      body: JSON.stringify(pedidoCompleto)
     });
 
-    const dataPedido = await resPedido.json();
-    if (!resPedido.ok) throw new Error(dataPedido.error || "Error al crear pedido.");
+    const data = await response.json();
 
-    const id_pedido = dataPedido.id_pedido;
-
-    // 2. Guardar cada producto en el detalle del pedido
-    for (const item of cart) {
-      await fetch(`${API_BASE}/pedidos/${id_pedido}/agregar_detalle`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          producto_id: item.id_producto,
-          cantidad: item.qty,
-          subtotal: item.price * item.qty
-        })
-      });
+    if (!response.ok) {
+        throw new Error(data.error || "Error al registrar el pedido");
     }
 
-    // 3. Abrir WhatsApp con el resumen profesional
+    // Si llegamos aquí, el pedido ya está en la DB con todos sus productos
+    const id_pedido = data.id_pedido;
+
+    // 3. Abrir WhatsApp
     abrirWhatsApp(id_pedido, usuario.nombre, direccion, notas, total);
 
     // 4. Limpiar carrito
@@ -157,8 +156,8 @@ async function finalizeOrder() {
     actualizarContadorHeader();
 
   } catch (error) {
-    console.error(error);
-    alert("Hubo un problema al guardar tu pedido: " + error.message);
+    console.error("Error detallado:", error);
+    alert("Hubo un problema: " + error.message);
   } finally {
     loader.style.display = "none";
   }
