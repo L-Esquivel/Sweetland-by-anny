@@ -16,65 +16,96 @@ empaques_bp = Blueprint("empaques", __name__, url_prefix="/empaques")
 def handle_options(id=None, producto_id=None):
     return jsonify({"status": "ok"}), 200
 
-# ==================== CATÁLOGO DE EMPAQUES ====================
+# ==================== CATÁLOGO GENERAL DE EMPAQUES ====================
+# Estos son los que aparecerán en la nueva sección de "Insumos"
+
 @empaques_bp.route("/", methods=["GET"])
 @login_required
 def get_empaques():
-    cursor = mysql.connection.cursor()
-    cursor.execute("SELECT id_empaque, nombre, descripcion, precio FROM empaques ORDER BY nombre")
-    filas = cursor.fetchall()
-    cursor.close()
-    # f es un diccionario gracias a DictCursor
-    return jsonify([{
-        "id_empaque":  f.get("id_empaque"),
-        "nombre":      f.get("nombre"),
-        "descripcion": f.get("descripcion"),
-        "precio":      float(f.get("precio") or 0)
-    } for f in filas])
+    try:
+        cursor = mysql.connection.cursor()
+        cursor.execute("SELECT id_empaque, nombre, descripcion, precio FROM empaques ORDER BY nombre")
+        filas = cursor.fetchall()
+        cursor.close()
+        return jsonify([dict(f) for f in filas])
+    except Exception as e:
+        logger.error(f"Error en get_empaques: {str(e)}")
+        return jsonify({"error": str(e)}), 500
 
 @empaques_bp.route("/", methods=["POST"])
 @login_required
 def add_empaque():
-    data = request.get_json()
-    nombre = data.get("nombre")
-    descripcion = data.get("descripcion", "")
-    precio = data.get("precio", 0)
+    try:
+        data = request.get_json()
+        nombre = data.get("nombre")
+        descripcion = data.get("descripcion", "")
+        # Forzamos conversión a float
+        precio = float(data.get("precio") or 0)
 
-    if not nombre:
-        return jsonify({"error": "El nombre es obligatorio"}), 400
+        if not nombre:
+            return jsonify({"error": "El nombre es obligatorio"}), 400
 
-    cursor = mysql.connection.cursor()
-    cursor.execute(
-        "INSERT INTO empaques (nombre, descripcion, precio) VALUES (%s, %s, %s)",
-        (nombre, descripcion, precio)
-    )
-    mysql.connection.commit()
-    cursor.close()
-    return jsonify({"mensaje": "Empaque creado"}), 201
+        cursor = mysql.connection.cursor()
+        cursor.execute(
+            "INSERT INTO empaques (nombre, descripcion, precio) VALUES (%s, %s, %s)",
+            (nombre, descripcion, precio)
+        )
+        mysql.connection.commit()
+        cursor.close()
+        return jsonify({"mensaje": "Empaque creado en el catálogo"}), 201
+    except Exception as e:
+        logger.error(f"Error en add_empaque: {str(e)}")
+        return jsonify({"error": str(e)}), 500
 
 @empaques_bp.route("/<int:id>", methods=["PUT"])
 @login_required
 def update_empaque(id):
-    data = request.get_json()
-    cursor = mysql.connection.cursor()
-    cursor.execute(
-        "UPDATE empaques SET nombre=%s, descripcion=%s, precio=%s WHERE id_empaque=%s",
-        (data.get("nombre"), data.get("descripcion"), data.get("precio"), id)
-    )
-    mysql.connection.commit()
-    cursor.close()
-    return jsonify({"mensaje": "Empaque actualizado"})
+    try:
+        data = request.get_json()
+        nombre = data.get("nombre")
+        descripcion = data.get("descripcion", "")
+        precio = float(data.get("precio") or 0)
+
+        if not nombre:
+            return jsonify({"error": "El nombre es obligatorio"}), 400
+
+        cursor = mysql.connection.cursor()
+        cursor.execute(
+            "UPDATE empaques SET nombre=%s, descripcion=%s, precio=%s WHERE id_empaque=%s",
+            (nombre, descripcion, precio, id)
+        )
+        mysql.connection.commit()
+        cursor.close()
+        return jsonify({"mensaje": "Empaque actualizado correctamente"})
+    except Exception as e:
+        logger.error(f"Error en update_empaque: {str(e)}")
+        return jsonify({"error": str(e)}), 500
 
 @empaques_bp.route("/<int:id>", methods=["DELETE"])
 @login_required
 def delete_empaque(id):
-    cursor = mysql.connection.cursor()
-    cursor.execute("DELETE FROM empaques WHERE id_empaque=%s", (id,))
-    mysql.connection.commit()
-    cursor.close()
-    return jsonify({"mensaje": "Empaque eliminado"})
+    try:
+        cursor = mysql.connection.cursor()
+        
+        # VERIFICACIÓN: ¿Está este empaque en uso por algún producto?
+        cursor.execute("SELECT COUNT(*) as total FROM recetas_empaques WHERE id_empaque = %s", (id,))
+        uso = cursor.fetchone()
+        
+        if uso and uso.get('total', 0) > 0:
+            cursor.close()
+            return jsonify({"error": "No se puede eliminar: el empaque está asignado a productos en la sección de Recetas"}), 400
 
-# ==================== EMPAQUES POR PRODUCTO ====================
+        cursor.execute("DELETE FROM empaques WHERE id_empaque=%s", (id,))
+        mysql.connection.commit()
+        cursor.close()
+        return jsonify({"mensaje": "Empaque eliminado del catálogo"})
+    except Exception as e:
+        logger.error(f"Error en delete_empaque: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+# ==================== EMPAQUES ASIGNADOS A PRODUCTOS ====================
+# Estos se usan específicamente dentro de la sección de recetas de cada producto
+
 @empaques_bp.route("/producto/<int:producto_id>", methods=["GET"])
 @login_required
 def get_empaques_producto(producto_id):
@@ -92,14 +123,11 @@ def get_empaques_producto(producto_id):
     items = []
     costo_total = 0
     for f in filas:
-        # Usamos .get() para evitar KeyError y aseguramos conversión a float
         precio_unitario = float(f.get("precio") or 0)
         cantidad = int(f.get("cantidad") or 1)
-        subtotal_db = f.get("subtotal")
+        subtotal = float(f.get("subtotal") or (precio_unitario * cantidad))
         
-        subtotal = float(subtotal_db) if subtotal_db is not None else (precio_unitario * cantidad)
         costo_total += subtotal
-        
         items.append({
             "id":         f.get("id"),
             "id_empaque": f.get("id_empaque"),
@@ -129,7 +157,6 @@ def add_empaque_producto(producto_id):
         cursor.close()
         return jsonify({"error": "Empaque no encontrado"}), 404
 
-    # Acceso por clave de diccionario corregido
     precio_empaque = float(row.get("precio") or 0)
     subtotal = precio_empaque * int(cantidad)
     
