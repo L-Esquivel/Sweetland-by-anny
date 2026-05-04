@@ -3,12 +3,7 @@ import { pedidosService } from '../services/pedidosService';
 import { productosService } from '../services/productosService';
 
 // Chart.js se importa dinámicamente para evitar errores si no está instalado
-let Chart = null;
-try {
-  Chart = require('chart.js/auto');
-} catch (e) {
-  console.warn('Chart.js no está instalado. Gráfico no disponible.');
-}
+import Chart from 'chart.js/auto';
 
 const Dashboard = ({ user }) => {
   const [stats, setStats] = useState(null);
