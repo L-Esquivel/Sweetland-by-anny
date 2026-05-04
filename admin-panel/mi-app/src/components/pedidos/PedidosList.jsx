@@ -65,13 +65,8 @@ const PedidosList = () => {
     setNuevoEstado('');
   };
 
-  const abrirModalNuevoPedido = () => {
-    setMostrarModalNuevoPedido(true);
-  };
-
-  const cerrarModalNuevoPedido = () => {
-    setMostrarModalNuevoPedido(false);
-  };
+  const abrirModalNuevoPedido = () => setMostrarModalNuevoPedido(true);
+  const cerrarModalNuevoPedido = () => setMostrarModalNuevoPedido(false);
 
   const abrirModalEditarPedido = (pedido) => {
     setPedidoParaEditar(pedido);
@@ -85,17 +80,14 @@ const PedidosList = () => {
 
   const actualizarEstadoPedido = async () => {
     if (!pedidoParaCambiar || !nuevoEstado) return;
-
     try {
       setError('');
-      await pedidosService.updateEstadoPedido(pedidoParaCambiar.id, nuevoEstado);
-      
-      setPedidos(pedidos.map(pedido => 
-        pedido.id === pedidoParaCambiar.id 
+      await pedidosService.updateEstadoPedido(pedidoParaCambiar.id_pedido, nuevoEstado);
+      setPedidos(pedidos.map(pedido =>
+        pedido.id_pedido === pedidoParaCambiar.id_pedido
           ? { ...pedido, estado: nuevoEstado }
           : pedido
       ));
-      
       cerrarModalEstado();
     } catch (error) {
       console.error('Error actualizando estado:', error);
@@ -103,41 +95,34 @@ const PedidosList = () => {
     }
   };
 
-  const handleCrearPedido = async (pedidoData) => {
-  try {
-    setError('');
-    // ❌ ELIMINAR ESTA LÍNEA - el pedido ya se creó en el formulario
-    // await pedidosService.createPedido(pedidoData);
-    
-    // ✅ Solo recargar la lista para mostrar el nuevo pedido
-    await cargarDatosIniciales();
-    cerrarModalNuevoPedido();
-  } catch (error) {
-    console.error('Error creando pedido:', error);
-    setError('No se pudo crear el pedido');
-    throw error;
-  }
-};
-
-useEffect(() => {
-  const handlePedidoCreado = () => {
-    console.log('🔄 Recargando lista por pedido creado...');
-    cargarDatosIniciales();
+  const handleCrearPedido = async () => {
+    try {
+      setError('');
+      await cargarDatosIniciales();
+      cerrarModalNuevoPedido();
+    } catch (error) {
+      console.error('Error creando pedido:', error);
+      setError('No se pudo crear el pedido');
+      throw error;
+    }
   };
 
-  const handlePedidoActualizado = () => {
-    console.log('🔄 Recargando lista por pedido actualizado...');
-    cargarDatosIniciales();
-  };
-
-  window.addEventListener('pedidoCreado', handlePedidoCreado);
-  window.addEventListener('pedidoActualizado', handlePedidoActualizado);
-
-  return () => {
-    window.removeEventListener('pedidoCreado', handlePedidoCreado);
-    window.removeEventListener('pedidoActualizado', handlePedidoActualizado);
-  };
-}, []);
+  useEffect(() => {
+    const handlePedidoCreado = () => {
+      console.log('🔄 Recargando lista por pedido creado...');
+      cargarDatosIniciales();
+    };
+    const handlePedidoActualizado = () => {
+      console.log('🔄 Recargando lista por pedido actualizado...');
+      cargarDatosIniciales();
+    };
+    window.addEventListener('pedidoCreado', handlePedidoCreado);
+    window.addEventListener('pedidoActualizado', handlePedidoActualizado);
+    return () => {
+      window.removeEventListener('pedidoCreado', handlePedidoCreado);
+      window.removeEventListener('pedidoActualizado', handlePedidoActualizado);
+    };
+  }, []);
 
   const handleEditarPedido = async (pedidoId, pedidoData) => {
     try {
@@ -176,98 +161,28 @@ useEffect(() => {
 
   const generarRecibo = async (pedido) => {
     try {
-      const detalles = await pedidosService.getDetallesPedido(pedido.id);
-      
+      const detalles = await pedidosService.getDetallesPedido(pedido.id_pedido);
       const ventanaRecibo = window.open('', '_blank');
-      
       const contenidoRecibo = `
         <!DOCTYPE html>
         <html>
         <head>
-          <title>Recibo - Pedido #${pedido.id}</title>
+          <title>Recibo - Pedido #${pedido.id_pedido}</title>
           <style>
-            body { 
-              font-family: 'Courier New', monospace; 
-              margin: 0; 
-              padding: 20px; 
-              background: white;
-            }
-            .recibo {
-              max-width: 400px;
-              margin: 0 auto;
-              border: 2px solid #333;
-              padding: 20px;
-              background: white;
-            }
-            .header { 
-              text-align: center; 
-              border-bottom: 2px dashed #333;
-              padding-bottom: 15px;
-              margin-bottom: 15px;
-            }
-            .header h1 { 
-              margin: 0; 
-              font-size: 24px; 
-              color: #333;
-            }
-            .header .subtitle {
-              font-size: 14px;
-              color: #666;
-            }
-            .info-section {
-              margin-bottom: 15px;
-            }
-            .info-section h3 {
-              margin: 0 0 8px 0;
-              font-size: 16px;
-              color: #333;
-              border-bottom: 1px solid #ddd;
-              padding-bottom: 4px;
-            }
-            .info-row {
-              display: flex;
-              justify-content: space-between;
-              margin-bottom: 4px;
-              font-size: 14px;
-            }
-            .productos-table {
-              width: 100%;
-              border-collapse: collapse;
-              margin: 10px 0;
-              font-size: 12px;
-            }
-            .productos-table th {
-              background: #f8f9fa;
-              border-bottom: 2px solid #333;
-              padding: 6px 4px;
-              text-align: left;
-            }
-            .productos-table td {
-              padding: 6px 4px;
-              border-bottom: 1px solid #ddd;
-            }
-            .productos-table .total-row {
-              font-weight: bold;
-              border-top: 2px dashed #333;
-            }
-            .total-section {
-              border-top: 2px dashed #333;
-              padding-top: 10px;
-              margin-top: 15px;
-              font-weight: bold;
-            }
-            .footer {
-              text-align: center;
-              margin-top: 20px;
-              font-size: 12px;
-              color: #666;
-              border-top: 1px solid #ddd;
-              padding-top: 10px;
-            }
-            @media print {
-              body { margin: 0; }
-              .no-print { display: none; }
-            }
+            body { font-family: 'Courier New', monospace; margin: 0; padding: 20px; background: white; }
+            .recibo { max-width: 400px; margin: 0 auto; border: 2px solid #333; padding: 20px; background: white; }
+            .header { text-align: center; border-bottom: 2px dashed #333; padding-bottom: 15px; margin-bottom: 15px; }
+            .header h1 { margin: 0; font-size: 24px; color: #333; }
+            .header .subtitle { font-size: 14px; color: #666; }
+            .info-section { margin-bottom: 15px; }
+            .info-section h3 { margin: 0 0 8px 0; font-size: 16px; color: #333; border-bottom: 1px solid #ddd; padding-bottom: 4px; }
+            .info-row { display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 14px; }
+            .productos-table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 12px; }
+            .productos-table th { background: #f8f9fa; border-bottom: 2px solid #333; padding: 6px 4px; text-align: left; }
+            .productos-table td { padding: 6px 4px; border-bottom: 1px solid #ddd; }
+            .total-row { font-weight: bold; border-top: 2px dashed #333; }
+            .footer { text-align: center; margin-top: 20px; font-size: 12px; color: #666; border-top: 1px solid #ddd; padding-top: 10px; }
+            @media print { body { margin: 0; } .no-print { display: none; } }
           </style>
         </head>
         <body>
@@ -275,74 +190,41 @@ useEffect(() => {
             <div class="header">
               <h1>Sweetland By Anny</h1>
               <div class="subtitle">Delicias hechas con amor</div>
-              <div class="subtitle">Pedido #${pedido.id}</div>
+              <div class="subtitle">Pedido #${pedido.id_pedido}</div>
             </div>
-            
             <div class="info-section">
               <h3>📋 Información del Pedido</h3>
-              <div class="info-row">
-                <span>Fecha:</span>
-                <span>${new Date(pedido.fecha_pedido).toLocaleDateString('es-ES')}</span>
-              </div>
-              <div class="info-row">
-                <span>Estado:</span>
-                <span>${pedido.estado}</span>
-              </div>
+              <div class="info-row"><span>Fecha:</span><span>${new Date(pedido.fecha_pedido).toLocaleDateString('es-ES')}</span></div>
+              <div class="info-row"><span>Estado:</span><span>${pedido.estado}</span></div>
             </div>
-            
             <div class="info-section">
               <h3>👤 Información del Cliente</h3>
-              <div class="info-row">
-                <span>Nombre:</span>
-                <span>${pedido.cliente_nombre}</span>
-              </div>
-              <div class="info-row">
-                <span>Teléfono:</span>
-                <span>${pedido.cliente_telefono}</span>
-              </div>
-              <div class="info-row">
-                <span>Dirección:</span>
-                <span>${pedido.direccion}</span>
-              </div>
+              <div class="info-row"><span>Nombre:</span><span>${pedido.cliente_nombre}</span></div>
+              <div class="info-row"><span>Teléfono:</span><span>${pedido.cliente_telefono}</span></div>
+              <div class="info-row"><span>Dirección:</span><span>${pedido.direccion}</span></div>
             </div>
-            
             <div class="info-section">
               <h3>🛒 Productos del Pedido</h3>
               <table class="productos-table">
                 <thead>
-                  <tr>
-                    <th>Producto</th>
-                    <th>Cant</th>
-                    <th>Precio</th>
-                    <th>Subtotal</th>
-                  </tr>
+                  <tr><th>Producto</th><th>Cant</th><th>Precio</th><th>Subtotal</th></tr>
                 </thead>
                 <tbody>
                   ${detalles.map(detalle => `
                     <tr>
                       <td>${detalle.producto_nombre}</td>
                       <td>${detalle.cantidad}</td>
-                      <td>${new Intl.NumberFormat('es-CO', {
-                        style: 'currency',
-                        currency: 'COP'
-                      }).format(detalle.precio_unitario)}</td>
-                      <td>${new Intl.NumberFormat('es-CO', {
-                        style: 'currency',
-                        currency: 'COP'
-                      }).format(detalle.subtotal)}</td>
+                      <td>${new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP' }).format(detalle.precio_unitario)}</td>
+                      <td>${new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP' }).format(detalle.subtotal)}</td>
                     </tr>
                   `).join('')}
                   <tr class="total-row">
                     <td colspan="3" style="text-align: right;"><strong>TOTAL:</strong></td>
-                    <td><strong>${new Intl.NumberFormat('es-CO', {
-                      style: 'currency',
-                      currency: 'COP'
-                    }).format(detalles.reduce((sum, detalle) => sum + detalle.subtotal, 0))}</strong></td>
+                    <td><strong>${new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP' }).format(detalles.reduce((sum, d) => sum + d.subtotal, 0))}</strong></td>
                   </tr>
                 </tbody>
               </table>
             </div>
-            
             <div class="footer">
               <div>¡Gracias por su compra!</div>
               <div>Sweetland By Anny - ${new Date().getFullYear()}</div>
@@ -354,7 +236,6 @@ useEffect(() => {
         </body>
         </html>
       `;
-      
       ventanaRecibo.document.write(contenidoRecibo);
       ventanaRecibo.document.close();
     } catch (error) {
@@ -364,55 +245,40 @@ useEffect(() => {
   };
 
   const estados = [
-    { value: 'pendiente', label: '⏳ Pendiente', color: '#f39c12' },
-    { value: 'confirmado', label: '✅ Confirmado', color: '#3498db' },
-    { value: 'en_preparacion', label: '👨‍🍳 En Preparación', color: '#9b59b6' },
-    { value: 'completado', label: '🎉 Completado', color: '#27ae60' },
-    { value: 'cancelado', label: '❌ Cancelado', color: '#e74c3c' }
+    { value: 'pendiente', label: '⏳ Pendiente' },
+    { value: 'confirmado', label: '✅ Confirmado' },
+    { value: 'en_preparacion', label: '👨‍🍳 En Preparación' },
+    { value: 'completado', label: '🎉 Completado' },
+    { value: 'cancelado', label: '❌ Cancelado' }
   ];
 
   const getEstadoBadgeClass = (estado) => {
     switch (estado) {
-      case 'pendiente':
-        return 'bg-warning text-dark';
-      case 'confirmado':
-        return 'bg-info';
-      case 'en_preparacion':
-        return 'bg-primary';
-      case 'completado':
-        return 'bg-success';
-      case 'cancelado':
-        return 'bg-danger';
-      default:
-        return 'bg-secondary';
+      case 'pendiente':     return 'bg-warning text-dark';
+      case 'confirmado':    return 'bg-info';
+      case 'en_preparacion':return 'bg-primary';
+      case 'completado':    return 'bg-success';
+      case 'cancelado':     return 'bg-danger';
+      default:              return 'bg-secondary';
     }
   };
 
-  if (loading) {
-    return <div className="text-center p-4">Cargando pedidos...</div>;
-  }
+  if (loading) return <div className="text-center p-4">Cargando pedidos...</div>;
 
   return (
     <div className="pedidos-container">
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h2 className="mb-0">📦 Gestión de Pedidos</h2>
-        <button 
-          className="btn btn-success"
-          onClick={abrirModalNuevoPedido}
-        >
+        <button className="btn btn-success" onClick={abrirModalNuevoPedido}>
           ➕ Nuevo Pedido
         </button>
       </div>
 
-      {error && (
-        <div className="alert alert-danger">
-          {error}
-        </div>
-      )}
+      {error && <div className="alert alert-danger">{error}</div>}
 
       <div className="row">
         {/* Lista de Pedidos */}
-        <div className={`${pedidoSeleccionado ? 'col-md-8' : 'col-12'}`}>
+        <div className={pedidoSeleccionado ? 'col-md-8' : 'col-12'}>
           <div className="card">
             <div className="card-header bg-light">
               <h5 className="mb-0">Lista de Pedidos</h5>
@@ -439,17 +305,18 @@ useEffect(() => {
                       </tr>
                     ) : (
                       pedidos.map(pedido => (
-                        <tr key={pedido.id} className={pedidoSeleccionado === pedido.id ? 'table-active' : ''}>
-                          <td className="fw-bold">#{pedido.id}</td>
+                        <tr
+                          key={pedido.id_pedido}
+                          className={pedidoSeleccionado === pedido.id_pedido ? 'table-active' : ''}
+                        >
+                          <td className="fw-bold">#{pedido.id_pedido}</td>
                           <td>
                             <div className="fw-semibold">{pedido.cliente_nombre}</div>
                             <small className="text-muted">{pedido.cliente_telefono}</small>
                           </td>
+                          <td><small>{formatearFecha(pedido.fecha_pedido)}</small></td>
                           <td>
-                            <small>{formatearFecha(pedido.fecha_pedido)}</small>
-                          </td>
-                          <td>
-                            <button 
+                            <button
                               className={`btn btn-sm ${getEstadoBadgeClass(pedido.estado)}`}
                               onClick={() => abrirModalCambioEstado(pedido)}
                               title="Click para cambiar estado"
@@ -460,14 +327,14 @@ useEffect(() => {
                           <td className="fw-bold text-success">{formatearMoneda(pedido.total)}</td>
                           <td className="text-center">
                             <div className="btn-group" role="group">
-                              <button 
+                              <button
                                 className="btn btn-info btn-sm me-1"
-                                onClick={() => cargarDetallesPedido(pedido.id)}
+                                onClick={() => cargarDetallesPedido(pedido.id_pedido)}
                                 title="Ver detalles"
                               >
                                 👁️ Detalles
                               </button>
-                              <button 
+                              <button
                                 className="btn btn-outline-primary btn-sm"
                                 onClick={() => generarRecibo(pedido)}
                                 title="Generar recibo"
@@ -492,22 +359,17 @@ useEffect(() => {
             <div className="card">
               <div className="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                 <h5 className="mb-0">Detalles del Pedido #{pedidoSeleccionado}</h5>
-                <button 
-                  className="btn btn-sm btn-light" 
-                  onClick={cerrarDetalles}
-                >
-                  ✕
-                </button>
+                <button className="btn btn-sm btn-light" onClick={cerrarDetalles}>✕</button>
               </div>
               <div className="card-body">
                 {detallesPedido.length > 0 ? (
                   <div>
                     <div className="d-flex justify-content-between align-items-center mb-3">
                       <h6 className="mb-0">Productos del Pedido</h6>
-                      <button 
+                      <button
                         className="btn btn-warning btn-sm"
                         onClick={() => {
-                          const pedido = pedidos.find(p => p.id === pedidoSeleccionado);
+                          const pedido = pedidos.find(p => p.id_pedido === pedidoSeleccionado);
                           if (pedido) abrirModalEditarPedido(pedido);
                         }}
                       >
@@ -541,9 +403,7 @@ useEffect(() => {
                           <tr>
                             <td colSpan="3" className="fw-bold">Total:</td>
                             <td className="fw-bold text-success">
-                              {formatearMoneda(
-                                detallesPedido.reduce((sum, detalle) => sum + detalle.subtotal, 0)
-                              )}
+                              {formatearMoneda(detallesPedido.reduce((sum, d) => sum + d.subtotal, 0))}
                             </td>
                           </tr>
                         </tfoot>
@@ -561,87 +421,67 @@ useEffect(() => {
         )}
       </div>
 
-      {/* Modal para cambiar estado */}
+      {/* Modal cambiar estado */}
       {mostrarModalEstado && pedidoParaCambiar && (
-        <div className="modal fade show d-block" style={{backgroundColor: 'rgba(0,0,0,0.5)'}}>
+        <div className="modal fade show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
           <div className="modal-dialog">
             <div className="modal-content">
               <div className="modal-header bg-warning text-dark">
                 <h5 className="modal-title">🔄 Cambiar Estado del Pedido</h5>
-                <button 
-                  type="button" 
-                  className="btn-close" 
-                  onClick={cerrarModalEstado}
-                ></button>
+                <button type="button" className="btn-close" onClick={cerrarModalEstado}></button>
               </div>
               <div className="modal-body">
-                <p>
-                  Pedido <strong>#{pedidoParaCambiar.id}</strong> - {pedidoParaCambiar.cliente_nombre}
-                </p>
+                <p>Pedido <strong>#{pedidoParaCambiar.id_pedido}</strong> - {pedidoParaCambiar.cliente_nombre}</p>
                 <div className="mb-3">
                   <label className="form-label fw-semibold">Nuevo Estado:</label>
-                  <select 
+                  <select
                     className="form-select"
-                    value={nuevoEstado} 
+                    value={nuevoEstado}
                     onChange={(e) => setNuevoEstado(e.target.value)}
                   >
                     {estados.map(estado => (
-                      <option key={estado.value} value={estado.value}>
-                        {estado.label}
-                      </option>
+                      <option key={estado.value} value={estado.value}>{estado.label}</option>
                     ))}
                   </select>
                 </div>
               </div>
               <div className="modal-footer">
-                <button 
-                  className="btn btn-secondary"
-                  onClick={cerrarModalEstado}
-                >
-                  Cancelar
-                </button>
-                <button 
-                  className="btn btn-warning"
-                  onClick={actualizarEstadoPedido}
-                >
-                  ✅ Actualizar Estado
-                </button>
+                <button className="btn btn-secondary" onClick={cerrarModalEstado}>Cancelar</button>
+                <button className="btn btn-warning" onClick={actualizarEstadoPedido}>✅ Actualizar Estado</button>
               </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* Modal para nuevo pedido */}
+      {/* Modal nuevo pedido */}
       {mostrarModalNuevoPedido && (
-      <PedidoForm
-      productos={productos}
-      onSubmit={handleCrearPedido}
-      onClose={() => {
-      cerrarModalNuevoPedido();
-      cargarDatosIniciales(); // ← SOLO AGREGAR ESTA LÍNEA
-      }}
-      titulo="➕ Crear Nuevo Pedido"
-      />
+        <PedidoForm
+          productos={productos}
+          onSubmit={handleCrearPedido}
+          onClose={() => {
+            cerrarModalNuevoPedido();
+            cargarDatosIniciales();
+          }}
+          titulo="➕ Crear Nuevo Pedido"
+        />
       )}
 
+      {/* Modal editar pedido */}
       {mostrarModalEditarPedido && pedidoParaEditar && (
-  <EditarPedidoModal
-    pedido={pedidoParaEditar}
-    productos={productos}
-    onSubmit={handleEditarPedido}
-    onClose={() => {
-      cerrarModalEditarPedido();
-      cargarDatosIniciales(); // ← Actualizar lista general
-      
-      // ✅ SI ESTÁS VIENDO LOS DETALLES DE ESE PEDIDO, RECARGARLOS TAMBIÉN
-      if (pedidoSeleccionado === pedidoParaEditar.id) {
-        console.log('🔄 Recargando detalles del pedido editado...');
-        cargarDetallesPedido(pedidoParaEditar.id);
-      }
-    }}
-  />
-)}
+        <EditarPedidoModal
+          pedido={pedidoParaEditar}
+          productos={productos}
+          onSubmit={handleEditarPedido}
+          onClose={() => {
+            cerrarModalEditarPedido();
+            cargarDatosIniciales();
+            if (pedidoSeleccionado === pedidoParaEditar.id_pedido) {
+              cargarDetallesPedido(pedidoParaEditar.id_pedido);
+            }
+          }}
+        />
+      )}
     </div>
   );
 };
