@@ -7,6 +7,7 @@ import ProductosList from './components/productos/ProductosList';
 import PedidosList from './components/pedidos/PedidosList';
 import InsumosPage from "./components/Insumos/InsumosPage";
 import RecetasList from "./components/recetas/RecetasList";
+import Dashboard from './components/Dashboard';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'https://sweetland-by-anny-production.up.railway.app';
 
@@ -97,7 +98,7 @@ function App() {
       case 'pedidos': return <PedidosList />;
       case 'insumos': return <InsumosPage />;
       case 'recetas': return <RecetasList />;
-      case 'inicio':
+      case 'inicio': return <Dashboard user={user} />;
       default:
         return (
           <div className="dashboard">

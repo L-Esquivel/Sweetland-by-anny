@@ -31,7 +31,7 @@ export const pedidosService = {
 
   async createPedido(pedidoData) {
     try {
-      const response = await fetch(`${API_URL}/`, { // Nota el / al final
+      const response = await fetch(`${API_URL}/`, { 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -123,7 +123,6 @@ export const pedidosService = {
 
   async getUsuarios() {
     try {
-      // Usamos la URL de usuarios global para listar
       const response = await fetch(`${USUARIOS_URL}/`, { credentials: 'include' });
       if (!response.ok) throw new Error('Error al cargar usuarios');
       return await response.json();
@@ -135,7 +134,6 @@ export const pedidosService = {
 
   async createUsuario(usuarioData) {
     try {
-      // Importante: El resumen indica que el endpoint es /pedidos/usuarios
       const response = await fetch(`${API_URL}/usuarios`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -151,5 +149,19 @@ export const pedidosService = {
       console.error('Error en pedidosService.createUsuario:', error);
       throw error;
     }
+  }, // <--- AQUÍ FALTABA ESTA COMA
+
+  // ==================== ESTADÍSTICAS ====================
+
+  async getStats() {
+    try {
+      const response = await fetch(`${API_URL}/stats`, { credentials: 'include' });
+      if (!response.ok) throw new Error('Error al cargar estadísticas');
+      return await response.json();
+    } catch (error) {
+      console.error('Error en pedidosService.getStats:', error);
+      throw error;
+    }
   }
 };
+
