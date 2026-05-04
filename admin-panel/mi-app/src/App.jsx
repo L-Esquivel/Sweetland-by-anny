@@ -5,7 +5,7 @@ import Login from './components/Login';
 import Register from './components/Register';
 import ProductosList from './components/productos/ProductosList';
 import PedidosList from './components/pedidos/PedidosList';
-import InsumosPage from "./components/Insumos/InsumosPage"; // <-- CAMBIO: Nuevo componente unificado
+import InsumosPage from "./components/Insumos/InsumosPage";
 import RecetasList from "./components/recetas/RecetasList";
 
 const API_BASE = import.meta.env.VITE_API_URL || 'https://sweetland-by-anny-production.up.railway.app';
@@ -26,11 +26,13 @@ function App() {
       if (response.ok) {
         const userData = await response.json();
         const usuario = userData.usuario || userData;
-        if (usuario.rol !== 'admin') {
+        
+        // Bloqueamos SOLO a los clientes. Permitimos admin y empleado.
+        if (usuario.rol === 'cliente') {
           await handleLogout();
-          setCurrentView('login');
           return;
         }
+        
         setUser(usuario);
         setCurrentView('app');
       } else {
@@ -55,10 +57,12 @@ function App() {
       if (response.ok) {
         const data = await response.json();
         const usuario = data.usuario;
-        if (usuario.rol !== 'admin') {
+        
+        if (usuario.rol === 'cliente') {
           await fetch(`${API_BASE}/auth/logout`, { method: 'POST', credentials: 'include' });
-          return { success: false, error: '❌ Acceso denegado.' };
+          return { success: false, error: '❌ Acceso denegado al panel administrativo.' };
         }
+        
         setUser(usuario);
         setCurrentView('app');
         return { success: true, user: usuario };
@@ -81,20 +85,26 @@ function App() {
   };
 
   const renderSection = () => {
+    // Protección extra: Si un empleado intenta entrar a usuarios por consola
+    if (activeSection === 'usuarios' && user?.rol !== 'admin') {
+      setActiveSection('inicio');
+      return null;
+    }
+
     switch (activeSection) {
       case 'usuarios': return <UsuariosList />;
       case 'productos': return <ProductosList />;
       case 'pedidos': return <PedidosList />;
-      case 'insumos': return <InsumosPage />; // <-- CAMBIO: Seccion unificada
+      case 'insumos': return <InsumosPage />;
       case 'recetas': return <RecetasList />;
       case 'inicio':
       default:
         return (
           <div className="dashboard">
-            <h2>Panel de Administración - Sweetland By Anny</h2>
+            <h2>Panel de Control - Sweetland By Anny</h2>
             <div className="welcome-message">
-              <p>Bienvenido{user ? `, ${user.nombre}` : ''}</p>
-              <p>Selecciona una sección del menú para comenzar</p>
+              <p>Bienvenido, <strong>{user?.nombre}</strong></p>
+              <p>Rol: <span className="badge bg-info text-dark">{user?.rol?.toUpperCase()}</span></p>
             </div>
           </div>
         );
@@ -119,14 +129,14 @@ function App() {
     <div className="app">
       <header className="app-header navbar navbar-expand-lg navbar-dark bg-primary">
         <div className="container-fluid">
-          <span className="navbar-brand fs-3 fw-bold">🎂 Sweetland by Anny Admin</span>
+          <span className="navbar-brand fs-3 fw-bold">🎂 Sweetland Admin</span>
           <div className="navbar-nav ms-auto">
             {user && (
               <div className="d-flex align-items-center gap-3">
                 <span className="navbar-text text-white">
-                  {user.nombre} <small className="d-block text-warning text-end">Admin</small>
+                  {user.nombre} <small className="d-block text-warning text-end">{user.rol}</small>
                 </span>
-                <button className="btn btn-outline-light btn-sm" onClick={handleLogout}>🚪 Cerrar</button>
+                <button className="btn btn-outline-light btn-sm" onClick={handleLogout}>🚪 Salir</button>
               </div>
             )}
           </div>
@@ -139,27 +149,30 @@ function App() {
             <li className="nav-item">
               <button className={`nav-link w-100 text-start ${activeSection === 'inicio' ? 'active' : ''}`} onClick={() => setActiveSection('inicio')}>📊 Inicio</button>
             </li>
-            <li className="nav-item">
-              <button className={`nav-link w-100 text-start ${activeSection === 'usuarios' ? 'active' : ''}`} onClick={() => setActiveSection('usuarios')}>👥 Usuarios</button>
-            </li>
+
+            {/* SOLO ADMIN VE USUARIOS */}
+            {user?.rol === 'admin' && (
+              <li className="nav-item">
+                <button className={`nav-link w-100 text-start ${activeSection === 'usuarios' ? 'active' : ''}`} onClick={() => setActiveSection('usuarios')}>👥 Usuarios</button>
+              </li>
+            )}
+
             <li className="nav-item">
               <button className={`nav-link w-100 text-start ${activeSection === 'productos' ? 'active' : ''}`} onClick={() => setActiveSection('productos')}>🎂 Productos</button>
             </li>
             <li className="nav-item">
               <button className={`nav-link w-100 text-start ${activeSection === 'pedidos' ? 'active' : ''}`} onClick={() => setActiveSection('pedidos')}>📦 Pedidos</button>
             </li>
-            {/* --- CAMBIO: INGREDIENTES A INSUMOS --- */}
             <li className="nav-item">
-              <button 
-                className={`nav-link w-100 text-start ${activeSection === 'insumos' ? 'active' : ''}`} 
-                onClick={() => setActiveSection('insumos')}
-              >
-                📦 Insumos (Ingr. / Emp.)
-              </button>
+              <button className={`nav-link w-100 text-start ${activeSection === 'insumos' ? 'active' : ''}`} onClick={() => setActiveSection('insumos')}>📦 Insumos</button>
             </li>
-            <li className="nav-item">
-              <button className={`nav-link w-100 text-start ${activeSection === 'recetas' ? 'active' : ''}`} onClick={() => setActiveSection('recetas')}>📋 Recetas</button>
-            </li>
+
+            {/* SOLO ADMIN VE RECETAS (Finanzas/Margen) */}
+            {user?.rol === 'admin' && (
+              <li className="nav-item">
+                <button className={`nav-link w-100 text-start ${activeSection === 'recetas' ? 'active' : ''}`} onClick={() => setActiveSection('recetas')}>📋 Recetas y Costos</button>
+              </li>
+            )}
           </ul>
         </nav>
 

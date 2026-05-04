@@ -2,16 +2,25 @@ from flask import Blueprint, request, jsonify
 from flask_login import login_required
 from db import get_db_connection
 from werkzeug.security import generate_password_hash
+from utils import admin_required  # Importamos tu nuevo decorador
 
 usuarios_bp = Blueprint("usuarios_bp", __name__, url_prefix="/usuarios")
 
+# =========================
+# Rutas OPTIONS para CORS
+# =========================
 @usuarios_bp.route("/", methods=["OPTIONS"])
 @usuarios_bp.route("/<int:id>", methods=["OPTIONS"])
 def handle_options(id=None):
     return jsonify({"status": "ok"}), 200
 
+# ============================================================
+# TODAS LAS RUTAS ABAJO REQUIEREN ROL 'admin' 🛡️
+# ============================================================
+
 @usuarios_bp.route("/", methods=["GET"])
 @login_required
+@admin_required
 def get_usuarios():
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -23,6 +32,7 @@ def get_usuarios():
 
 @usuarios_bp.route("/<int:id>", methods=["GET"])
 @login_required
+@admin_required
 def get_usuario(id):
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -36,6 +46,7 @@ def get_usuario(id):
 
 @usuarios_bp.route("/", methods=["POST"])
 @login_required
+@admin_required
 def add_usuario():
     data = request.json
     nombre    = data.get("nombre")
@@ -51,17 +62,22 @@ def add_usuario():
     hashed_pw = generate_password_hash(password)
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("""
-        INSERT INTO usuarios (nombre, email, password, telefono, direccion, rol)
-        VALUES (%s, %s, %s, %s, %s, %s)
-    """, (nombre, email, hashed_pw, telefono, direccion, rol))
-    conn.commit()
-    cursor.close()
-    conn.close()
-    return jsonify({"mensaje": "Usuario agregado"}), 201
+    try:
+        cursor.execute("""
+            INSERT INTO usuarios (nombre, email, password, telefono, direccion, rol)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """, (nombre, email, hashed_pw, telefono, direccion, rol))
+        conn.commit()
+        return jsonify({"mensaje": "Usuario agregado con éxito"}), 201
+    except Exception as e:
+        return jsonify({"error": "El email ya podría estar registrado"}), 400
+    finally:
+        cursor.close()
+        conn.close()
 
 @usuarios_bp.route("/<int:id>", methods=["PUT"])
 @login_required
+@admin_required
 def update_usuario(id):
     data      = request.json
     nombre    = data.get("nombre")
@@ -89,13 +105,16 @@ def update_usuario(id):
     conn.commit()
     cursor.close()
     conn.close()
-    return jsonify({"mensaje": "Usuario actualizado"})
+    return jsonify({"mensaje": "Usuario actualizado correctamente"})
 
 @usuarios_bp.route("/<int:id>", methods=["DELETE"])
 @login_required
+@admin_required
 def delete_usuario(id):
     conn = get_db_connection()
     cursor = conn.cursor()
+    # Evitar que el admin se borre a sí mismo por error
+    # (Suponiendo que current_user.id es accesible)
     cursor.execute("DELETE FROM usuarios WHERE id_usuario=%s", (id,))
     conn.commit()
     cursor.close()
