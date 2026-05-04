@@ -88,6 +88,16 @@ def serve_image(filename):
     image_dir = os.path.join(app.root_path, 'static', 'images')
     return send_from_directory(image_dir, filename)
 
+# === RUTA TEMPORAL DE MANTENIMIENTO (BORRAR DESPUÉS DE USAR) ===
+@app.route("/ejecutar-gran-reset-2026")
+def trigger_reset():
+    from reset_db import reset_database
+    try:
+        reset_database()
+        return "✅ Base de datos reseteada con éxito. ELIMINA ESTE CÓDIGO AHORA."
+    except Exception as e:
+        return f"❌ Error: {str(e)}"
+
 if __name__ == "__main__":
     # Asegurar que la carpeta static/images exista al arrancar
     os.makedirs(os.path.join(app.root_path, 'static', 'images'), exist_ok=True)
