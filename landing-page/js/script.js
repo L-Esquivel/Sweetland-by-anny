@@ -1,10 +1,10 @@
 // CONFIGURACIÓN GLOBAL
 const API_BASE = "https://sweetland-by-anny-production.up.railway.app";
 
-// --- LÓGICA DEL MENÚ ---
-var prevScrollpos = window.pageYOffset;
+// --- 1. LÓGICA DEL MENÚ (Scroll) ---
+let prevScrollpos = window.pageYOffset;
 window.onscroll = function() {
-    var currentScrollPos = window.pageYOffset;
+    let currentScrollPos = window.pageYOffset;
     const menu = document.getElementById("menu");
     if (menu) {
         if (prevScrollpos > currentScrollPos) {
@@ -16,59 +16,67 @@ window.onscroll = function() {
     prevScrollpos = currentScrollPos;
 }
 
-// --- FUNCIÓN DINÁMICA PARA CARGAR PRODUCTOS ---
-async function cargarProductos(categoria) {
+// --- 2. FUNCIÓN PARA OCULTAR CUALQUIER LOADER ---
+function ocultarLoader() {
     const loader = document.getElementById('loader');
+    if (loader) {
+        loader.style.opacity = "0";
+        setTimeout(() => {
+            loader.style.display = 'none';
+        }, 500); // Desvanecimiento suave
+    }
+}
+
+// --- 3. CARGA DINÁMICA DE PRODUCTOS ---
+async function cargarProductos(categoria) {
     const galeria = document.getElementById('galeria-productos');
-    
-    if (!galeria) return;
+    if (!galeria) {
+        ocultarLoader();
+        return;
+    }
 
     try {
-        // Llamada al endpoint público de tu Railway
         const response = await fetch(`${API_BASE}/productos/public`);
         const data = await response.json();
 
         if (data.success) {
             galeria.innerHTML = '';
-            
-            // Filtramos por la categoría que nos pidan (tortas, postres, etc)
             const filtrados = data.productos.filter(p => p.categoria.toLowerCase() === categoria.toLowerCase());
 
             if (filtrados.length === 0) {
                 galeria.innerHTML = `<p class="no-data">Próximamente más ${categoria} deliciosas...</p>`;
+            } else {
+                filtrados.forEach(producto => {
+                    const div = document.createElement('div');
+                    div.className = 'producto';
+                    const imgUrl = `${API_BASE}/static/images/${producto.imagen}`;
+                    
+                    div.innerHTML = `
+                        <div class="img-wrapper">
+                            <img src="${imgUrl}" alt="${producto.nombre}" onerror="this.src='assets/logo-principal.png'">
+                        </div>
+                        <h3>${producto.nombre}</h3>
+                        <p class="descripcion">${producto.descripcion}</p>
+                        <p class="precio"><strong>$${parseInt(producto.precio).toLocaleString('es-CO')}</strong></p>
+                        <button class="btn-agregar" 
+                            onclick="addToCart('${producto.nombre}', ${producto.precio}, '${imgUrl}', ${producto.id_producto})">
+                            🛒 Agregar
+                        </button>
+                    `;
+                    galeria.appendChild(div);
+                });
             }
-
-            filtrados.forEach(producto => {
-                const div = document.createElement('div');
-                div.className = 'producto';
-                
-                // Si la imagen no carga, ponemos el logo por defecto
-                const imgUrl = `${API_BASE}/static/images/${producto.imagen}`;
-                
-                div.innerHTML = `
-                    <div class="img-wrapper">
-                        <img src="${imgUrl}" alt="${producto.nombre}" onerror="this.src='assets/logo-principal.png'">
-                    </div>
-                    <h3>${producto.nombre}</h3>
-                    <p class="descripcion">${producto.descripcion}</p>
-                    <p class="precio"><strong>$${parseInt(producto.precio).toLocaleString()}</strong></p>
-                    <button class="btn-agregar" 
-                        onclick="addToCart('${producto.nombre}', ${producto.precio}, '${imgUrl}')">
-                        🛒 Agregar al carrito
-                    </button>
-                `;
-                galeria.appendChild(div);
-            });
         }
     } catch (error) {
-        console.error("Error cargando productos:", error);
-        galeria.innerHTML = '<p class="error">Error al conectar con la pastelería. Intenta de nuevo.</p>';
+        console.error("Error:", error);
+        galeria.innerHTML = '<p class="error">Error al cargar productos.</p>';
     } finally {
-        if (loader) loader.style.display = 'none';
+        // Pase lo que pase, ocultamos el loader
+        ocultarLoader();
     }
 }
 
-// --- CIERRE DE NOTIFICACIÓN ---
+// Función para cerrar notificaciones
 function closeNotification() {
     const notification = document.getElementById('cart-notification');
     if (notification) notification.classList.add('hidden');
