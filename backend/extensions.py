@@ -1,8 +1,11 @@
 import pymysql
 import threading
 from db import get_db_connection
+from flask_mail import Mail
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
-# Hace que PyMySQL se comporte como MySQLdb (compatibilidad con Flask-Login y otros)
+# Hace que PyMySQL se comporte como MySQLdb
 pymysql.install_as_MySQLdb()
 
 class MySQL:
@@ -32,4 +35,11 @@ class MySQL:
                 pass
             self._local.conn = None
 
+# --- INSTANCIAS GLOBALES ---
 mysql = MySQL()
+mail = Mail()
+limiter = Limiter(
+    key_func=get_remote_address,
+    default_limits=["500 per day", "100 per hour"],
+    storage_uri="memory://"
+)
