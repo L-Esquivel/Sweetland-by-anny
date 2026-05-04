@@ -9,21 +9,26 @@ load_dotenv()
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'super_clave_secreta_sweetland_2026')
 
-# Force HTTPS fuerte (al principio)
+# --- 1. CONFIGURACIÓN DE CORS DINÁMICO ---
+# Leemos los orígenes permitidos de la variable de entorno que configuraste en Railway
+allowed_origins = os.getenv('ALLOWED_ORIGINS', '').split(',')
+if not allowed_origins or allowed_origins == ['']:
+    allowed_origins = ["https://sweetland-by-anny.vercel.app", "https://sweetlandbyanny.vercel.app"]
+
+CORS(app, origins=allowed_origins, supports_credentials=True)
+
+# --- 2. CONFIGURACIÓN DE COOKIES Y SEGURIDAD ---
+app.config['SESSION_COOKIE_SAMESITE'] = 'None'
+app.config['SESSION_COOKIE_SECURE'] = True
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+
 @app.before_request
 def force_https():
     if os.getenv('FLASK_ENV') == 'production' and not request.is_secure:
         url = request.url.replace('http://', 'https://', 1)
         return redirect(url, code=301)
 
-# Configuración de cookies
-app.config['SESSION_COOKIE_SAMESITE'] = 'None'
-app.config['SESSION_COOKIE_SECURE'] = True
-app.config['SESSION_COOKIE_HTTPONLY'] = True
-app.config['REMEMBER_COOKIE_SAMESITE'] = 'None'
-app.config['REMEMBER_COOKIE_SECURE'] = True
-
-# MySQL config
+# --- 3. CONFIGURACIÓN DE BASE DE DATOS ---
 app.config['MYSQL_HOST'] = os.getenv('MYSQL_HOST', 'localhost')
 app.config['MYSQL_USER'] = os.getenv('MYSQL_USER', 'root')
 app.config['MYSQL_PASSWORD'] = os.getenv('MYSQL_PASSWORD', 'Root1234')
@@ -33,16 +38,7 @@ app.config['MYSQL_PORT'] = int(os.getenv('MYSQL_PORT', 3306))
 from extensions import mysql
 mysql.init_app(app)
 
-# CORS
-CORS(app, origins=["https://sweetland-by-anny.vercel.app", "*"], supports_credentials=True)
-
-# Preflight
-@app.before_request
-def handle_preflight():
-    if request.method == "OPTIONS":
-        return jsonify({"status": "ok"}), 200
-
-# Flask-Login
+# --- 4. MANEJO DE SESIONES (Flask-Login) ---
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = "auth_bp.login"
@@ -56,7 +52,7 @@ def load_user(user_id):
 def unauthorized():
     return jsonify({"error": "No autorizado"}), 401
 
-# Blueprints
+# --- 5. REGISTRO DE BLUEPRINTS ---
 from login import auth_bp
 from usuarios import usuarios_bp
 from productos import productos_bp
@@ -75,14 +71,26 @@ app.register_blueprint(ingredientes_bp)
 app.register_blueprint(recetas_bp)
 app.register_blueprint(empaques_bp)
 
+# --- 6. RUTAS DE ARCHIVOS ESTÁTICOS E ÍNDICE ---
+
 @app.route("/")
 def index():
-    return jsonify({"mensaje": "Backend Sweetland funcionando correctamente ✅"})
+    return jsonify({
+        "mensaje": "Backend Sweetland funcionando correctamente ✅",
+        "servidor": "Railway Production"
+    })
 
-@app.route('/static/images/<filename>')
+# RUTA CORREGIDA PARA IMÁGENES
+# Busca la carpeta 'static/images' dentro de la carpeta del backend
+@app.route('/static/images/<path:filename>')
 def serve_image(filename):
-    image_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'shared-assets', 'images')
+    # Usamos app.root_path para asegurar que busque dentro de la carpeta del proyecto
+    image_dir = os.path.join(app.root_path, 'static', 'images')
     return send_from_directory(image_dir, filename)
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.getenv("PORT", 5000)), debug=False)
+    # Asegurar que la carpeta static/images exista al arrancar
+    os.makedirs(os.path.join(app.root_path, 'static', 'images'), exist_ok=True)
+    
+    port = int(os.getenv("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=False)
