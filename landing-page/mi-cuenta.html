@@ -55,7 +55,6 @@
 </header>
 
 <div class="container">
-  <!-- SECCIÓN LOGIN/REGISTRO -->
   <div id="seccion-auth">
     <h1>Mi cuenta</h1>
     <div class="card">
@@ -104,7 +103,6 @@
     </div>
   </div>
 
-  <!-- SECCIÓN MIS PEDIDOS -->
   <div id="seccion-mis-pedidos">
     <div class="usuario-info">
       <strong id="saludo-usuario" style="font-family: 'Playfair Display', serif; font-size: 1.3em;"></strong><br>
@@ -164,7 +162,7 @@
     }
 
     btn.disabled = true;
-    btn.textContent = 'Entrando...';
+    btn.innerHTML = 'Verificando...';
 
     try {
       const res = await fetch(`${API}/pedidos/public/login`, {
@@ -202,14 +200,14 @@
     }
 
     btn.disabled = true;
-    btn.textContent = 'Creando cuenta...';
+    btn.innerHTML = 'Creando cuenta...';
 
     try {
       const res = await fetch(`${API}/pedidos/public/registro`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ nombre, email, password, telefono })
+        body: JSON.stringify({ nombre, email, password, telefono, direccion: '' })
       });
       const data = await res.json();
 
@@ -243,7 +241,12 @@
     document.getElementById('saludo-usuario').textContent = `¡Hola, ${cliente.nombre}!`;
 
     try {
-      const res = await fetch(`${API}/pedidos/public/mis-pedidos`, { credentials: 'include' });
+      // 🚀 CACHE BUSTING: Agregamos timestamp para obligar al navegador a traer datos frescos
+      const timestamp = new Date().getTime();
+      const res = await fetch(`${API}/pedidos/public/mis-pedidos?t=${timestamp}`, { 
+        credentials: 'include' 
+      });
+      
       const data = await res.json();
       const lista = document.getElementById('lista-pedidos');
 
@@ -293,14 +296,9 @@
     }
   });
 
-  // --- LÓGICA PARA INICIAR SESIÓN CON LA TECLA ENTER ---
-// En el Login
-document.getElementById('login-email').addEventListener('keypress', (e) => { if (e.key === 'Enter') doLogin(); });
-document.getElementById('login-password').addEventListener('keypress', (e) => { if (e.key === 'Enter') doLogin(); });
-
-// En el Registro (opcional, para mayor comodidad)
-document.getElementById('reg-telefono').addEventListener('keypress', (e) => { if (e.key === 'Enter') doRegistro(); });
-
+  // ENTER KEY SUPPORT
+  document.getElementById('login-email').addEventListener('keypress', (e) => { if (e.key === 'Enter') doLogin(); });
+  document.getElementById('login-password').addEventListener('keypress', (e) => { if (e.key === 'Enter') doLogin(); });
 </script>
 </body>
 </html>
