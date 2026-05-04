@@ -76,11 +76,21 @@ const IngredientesList = () => {
     try {
       setError('');
 
+      // Validamos que los números sean válidos antes de enviar
       const datosEnviar = {
-        ...formData,
-        cantidad: formData.cantidad ? parseFloat(formData.cantidad) : null,
-        costo_unitario: formData.costo_unitario ? parseFloat(formData.costo_unitario) : null
+        nombre: formData.nombre.trim(),
+        unidad: formData.unidad,
+        // Si está vacío, enviamos 0 para evitar errores de DB
+        cantidad: formData.cantidad === '' ? 0 : parseFloat(formData.cantidad),
+        costo_unitario: formData.costo_unitario === '' ? 0 : parseFloat(formData.costo_unitario)
       };
+
+      if (!datosEnviar.nombre || !datosEnviar.unidad) {
+        setError('Nombre y Unidad son obligatorios');
+        return;
+      }
+
+      console.log('Enviando ingrediente:', datosEnviar);
 
       if (ingredienteEditando) {
         await ingredientesService.updateIngrediente(ingredienteEditando.id_ingrediente, datosEnviar);
@@ -89,10 +99,10 @@ const IngredientesList = () => {
       }
 
       cerrarModal();
-      cargarIngredientes();
+      await cargarIngredientes(); // Recargar la lista
     } catch (error) {
       console.error('Error guardando ingrediente:', error);
-      setError('No se pudo guardar el ingrediente');
+      setError(error.message || 'No se pudo guardar el ingrediente');
     }
   };
 

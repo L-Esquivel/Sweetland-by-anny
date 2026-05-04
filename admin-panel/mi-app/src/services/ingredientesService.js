@@ -1,5 +1,5 @@
 const BASE = import.meta.env.VITE_API_URL || 'https://sweetland-by-anny-production.up.railway.app';
-const API_URL = `${BASE}/ingredientes`;
+const API_URL = `${BASE.replace(/\/$/, '')}/ingredientes`;
 
 export const ingredientesService = {
   async getIngredientes() {
@@ -21,7 +21,12 @@ export const ingredientesService = {
         credentials: 'include',
         body: JSON.stringify(ingredienteData)
       });
-      if (!response.ok) throw new Error('Error al crear ingrediente');
+      
+      if (!response.ok) {
+        const errorBody = await response.json().catch(() => ({}));
+        throw new Error(errorBody.error || `Error del servidor: ${response.status}`);
+      }
+      
       return await response.json();
     } catch (error) {
       console.error('Error en ingredientesService.createIngrediente:', error);
@@ -37,7 +42,12 @@ export const ingredientesService = {
         credentials: 'include',
         body: JSON.stringify(ingredienteData)
       });
-      if (!response.ok) throw new Error('Error al actualizar ingrediente');
+      
+      if (!response.ok) {
+        const errorBody = await response.json().catch(() => ({}));
+        throw new Error(errorBody.error || `Error al actualizar: ${response.status}`);
+      }
+      
       return await response.json();
     } catch (error) {
       console.error('Error en ingredientesService.updateIngrediente:', error);

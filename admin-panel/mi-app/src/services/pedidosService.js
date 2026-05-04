@@ -1,6 +1,7 @@
 const BASE = import.meta.env.VITE_API_URL || 'https://sweetland-by-anny-production.up.railway.app';
-const API_URL = `${BASE}/pedidos`;
-const USUARIOS_URL = `${BASE}/usuarios`;
+// Aseguramos que la URL base no termine en slash para no duplicarlos
+const API_URL = `${BASE.replace(/\/$/, '')}/pedidos`;
+const USUARIOS_URL = `${BASE.replace(/\/$/, '')}/usuarios`;
 
 export const pedidosService = {
 
@@ -30,7 +31,7 @@ export const pedidosService = {
 
   async createPedido(pedidoData) {
     try {
-      const response = await fetch(`${API_URL}/`, {
+      const response = await fetch(`${API_URL}/`, { // Nota el / al final
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -118,10 +119,11 @@ export const pedidosService = {
     }
   },
 
-  // ==================== USUARIOS (para formulario de pedidos) ====================
+  // ==================== USUARIOS ====================
 
   async getUsuarios() {
     try {
+      // Usamos la URL de usuarios global para listar
       const response = await fetch(`${USUARIOS_URL}/`, { credentials: 'include' });
       if (!response.ok) throw new Error('Error al cargar usuarios');
       return await response.json();
@@ -133,6 +135,7 @@ export const pedidosService = {
 
   async createUsuario(usuarioData) {
     try {
+      // Importante: El resumen indica que el endpoint es /pedidos/usuarios
       const response = await fetch(`${API_URL}/usuarios`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
