@@ -76,6 +76,7 @@ function cambiarQty(index, delta) {
   }
   localStorage.setItem("sweetland_cart", JSON.stringify(cart));
   renderCart();
+  actualizarContadorHeader();
 }
 
 function removeFromCart(index) {
@@ -93,6 +94,12 @@ async function finalizeOrder() {
   const notas = document.getElementById("pedido-notas").value.trim();
   const loader = document.getElementById("order-loader");
 
+  if (!usuario) {
+    alert("Debes iniciar sesión para finalizar el pedido.");
+    window.location.href = "mi-cuenta.html";
+    return;
+  }
+
   if (!direccion) {
     alert("Por favor ingresa una dirección para la entrega.");
     return;
@@ -108,13 +115,13 @@ async function finalizeOrder() {
   try {
     const total = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
 
-    // 1. Crear la cabecera del pedido
+    // CORRECCIÓN CLAVE: Usamos usuario.id (que es como viene del backend)
     const resPedido = await fetch(`${API_BASE}/pedidos/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
       body: JSON.stringify({
-        usuario_id: usuario.id_usuario,
+        usuario_id: usuario.id, 
         telefono: usuario.telefono || "Sin teléfono",
         direccion: direccion,
         total: total
@@ -140,13 +147,14 @@ async function finalizeOrder() {
       });
     }
 
-    // 3. Abrir WhatsApp con el resumen
-    abrirWhatsApp(id_pedido, direccion, notas, total);
+    // 3. Abrir WhatsApp con el resumen profesional
+    abrirWhatsApp(id_pedido, usuario.nombre, direccion, notas, total);
 
     // 4. Limpiar carrito
     localStorage.removeItem("sweetland_cart");
     cart = [];
     renderCart();
+    actualizarContadorHeader();
 
   } catch (error) {
     console.error(error);
@@ -156,20 +164,25 @@ async function finalizeOrder() {
   }
 }
 
-function abrirWhatsApp(id_pedido, direccion, notas, total) {
+function abrirWhatsApp(id_pedido, nombreCliente, direccion, notas, total) {
   const nroWA = "573332422608";
-  let mensaje = `✨ *NUEVO PEDIDO # ${id_pedido}* ✨%0A`;
-  mensaje += `👤 *Cliente:* ${JSON.parse(localStorage.getItem("cliente_sweetland")).nombre}%0A`;
-  mensaje += `📍 *Dirección:* ${direccion}%0A`;
-  if (notas) mensaje += `📝 *Nota:* ${notas}%0A%0A`;
   
-  mensaje += `🛒 *Resumen:*%0A`;
+  // Estructura de mensaje profesional y "lindo"
+  let mensaje = `🎂 *NUEVO PEDIDO # ${id_pedido}* 🎂%0A`;
+  mensaje += `━━━━━━━━━━━━━━━━━━━━━%0A`;
+  mensaje += `👤 *Cliente:* ${nombreCliente}%0A`;
+  mensaje += `📍 *Dirección:* ${direccion}%0A`;
+  if (notas) mensaje += `📝 *Nota:* ${notas}%0A`;
+  mensaje += `━━━━━━━━━━━━━━━━━━━━━%0A`;
+  mensaje += `🛒 *DETALLE DEL PEDIDO:*%0A`;
+  
   cart.forEach(item => {
-    mensaje += `- ${item.qty}x ${item.name} ($${(item.price * item.qty).toLocaleString('es-CO')})%0A`;
+    mensaje += `• ${item.qty}x ${item.name} (_$${(item.price * item.qty).toLocaleString('es-CO')}_)%0A`;
   });
 
-  mensaje += `%0A💰 *TOTAL:* $${total.toLocaleString('es-CO')}%0A%0A`;
-  mensaje += `_Por favor, confírmame disponibilidad para realizar el pago._`;
+  mensaje += `━━━━━━━━━━━━━━━━━━━━━%0A`;
+  mensaje += `💰 *TOTAL A PAGAR: $${total.toLocaleString('es-CO')}*%0A%0A`;
+  mensaje += `_Hola Anny, acabo de realizar este pedido desde la web. Quedo atento a la confirmación para el pago. ✨_`;
 
   window.open(`https://wa.me/${nroWA}?text=${mensaje}`, "_blank");
 }
