@@ -1,4 +1,4 @@
-// Usamos un nombre diferente para evitar el error de "Already declared"
+// CONFIGURACIÓN GLOBAL
 const URL_RAILWAY = "https://sweetland-by-anny-production.up.railway.app";
 
 // --- 1. LÓGICA DEL MENÚ (Scroll) ---
@@ -20,7 +20,6 @@ window.onscroll = function() {
 function ocultarLoader() {
     const loader = document.getElementById('loader');
     if (loader) {
-        // Un pequeño delay para que no sea tan brusco
         setTimeout(() => {
             loader.style.display = 'none';
         }, 300);
@@ -31,23 +30,18 @@ function ocultarLoader() {
 async function cargarProductos(categoria) {
     const galeria = document.getElementById('galeria-productos');
     
-    // Si no hay galería en esta página, solo quitamos el loader y salimos
     if (!galeria) {
         ocultarLoader();
         return;
     }
 
     try {
-        console.log(`Buscando productos de la categoría: ${categoria}`);
-        
-        // Usamos la nueva constante URL_RAILWAY
         const response = await fetch(`${URL_RAILWAY}/productos/public`);
         const data = await response.json();
 
         if (data.success) {
             galeria.innerHTML = '';
             
-            // Filtramos productos por categoría
             const filtrados = data.productos.filter(p => 
                 p.categoria && p.categoria.toLowerCase() === categoria.toLowerCase()
             );
@@ -58,7 +52,13 @@ async function cargarProductos(categoria) {
                 filtrados.forEach(producto => {
                     const div = document.createElement('div');
                     div.className = 'producto';
-                    const imgUrl = `${URL_RAILWAY}/static/images/${producto.imagen}`;
+
+                    // 💡 LÓGICA HÍBRIDA DE IMAGEN (Ciberseguridad & Persistencia)
+                    // Si la imagen empieza con http, es una URL de Cloudinary.
+                    // Si no, es un nombre de archivo que debe buscarse en la carpeta static del backend.
+                    const imgUrl = (producto.imagen && producto.imagen.startsWith('http'))
+                        ? producto.imagen
+                        : `${URL_RAILWAY}/static/images/${producto.imagen}`;
                     
                     div.innerHTML = `
                         <div class="img-wrapper">
@@ -69,7 +69,7 @@ async function cargarProductos(categoria) {
                         <p class="precio"><strong>$${parseInt(producto.precio).toLocaleString('es-CO')}</strong></p>
                         <button class="btn-agregar" 
                             onclick="addToCart('${producto.nombre}', ${producto.precio}, '${imgUrl}', ${producto.id_producto})">
-                            🛒 Agregar al carrito
+                            🛒 Agregar
                         </button>
                     `;
                     galeria.appendChild(div);
@@ -80,8 +80,6 @@ async function cargarProductos(categoria) {
         console.error("Error cargando productos:", error);
         galeria.innerHTML = '<p class="error">Error al conectar con el servidor.</p>';
     } finally {
-        // El bloque finally se ejecuta SIEMPRE, incluso si hay error
-        // Esto garantiza que el loader desaparezca
         ocultarLoader();
     }
 }

@@ -1,36 +1,62 @@
-from flask import Blueprint, request, jsonify
+import os
+import cloudinary
+import cloudinary.uploader
+from flask import Blueprint, request, jsonify, current_app
 from flask_login import login_required
 from db import get_db_connection
 from utils import admin_required
 from recetas import calcular_costo_completo
-import os
-from werkzeug.utils import secure_filename
 
 productos_bp = Blueprint("productos_bp", __name__, url_prefix="/productos")
 
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+# ==========================================
+# CONFIGURACIÓN DE CLOUDINARY ☁️
+# ==========================================
+cloudinary.config( 
+  cloud_name = os.getenv('CLOUDINARY_CLOUD_NAME'), 
+  api_key = os.getenv('CLOUDINARY_API_KEY'), 
+  api_secret = os.getenv('CLOUDINARY_API_SECRET'),
+  secure = True
+)
 
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
-def get_images_dir():
-    # Asegura que las imágenes se guarden en la carpeta static del backend
-    return os.path.join(os.path.dirname(__file__), 'static', 'images')
-
+# ==========================================
+# SUBIDA DE IMAGEN A LA NUBE
+# ==========================================
 @productos_bp.route("/upload-image", methods=["POST"])
 @login_required
 @admin_required
 def upload_image():
-    if 'imagen' not in request.files: return jsonify({"error": "No hay archivo"}), 400
-    file = request.files['imagen']
-    if file.filename == '': return jsonify({"error": "Nombre vacío"}), 400
-    if not allowed_file(file.filename): return jsonify({"error": "Formato inválido"}), 400
+    if 'imagen' not in request.files:
+        return jsonify({"error": "No se envió ningún archivo"}), 400
 
-    filename = secure_filename(file.filename)
-    images_dir = get_images_dir()
-    os.makedirs(images_dir, exist_ok=True)
-    file.save(os.path.join(images_dir, filename))
-    return jsonify({"mensaje": "Imagen subida", "filename": filename}), 201
+    file = request.files['imagen']
+    if file.filename == '':
+        return jsonify({"error": "Nombre de archivo vacío"}), 400
+
+    try:
+        # 🛡️ Seguridad IT: Subimos a Cloudinary en una carpeta específica
+        # Esto evita que los archivos se mezclen y permite borrarlos fácilmente después
+        upload_result = cloudinary.uploader.upload(
+            file,
+            folder="sweetland/productos",
+            resource_type="image"
+        )
+        
+        # IMPORTANTE: Ahora guardamos la URL completa (https) que nos da la nube
+        secure_url = upload_result.get("secure_url")
+        
+        return jsonify({
+            "mensaje": "Imagen persistente en la nube ✅",
+            "filename": secure_url # Devolvemos la URL completa al frontend
+        }), 201
+
+    except Exception as e:
+        current_app.logger.error(f"Error en Cloudinary: {str(e)}")
+        return jsonify({"error": "Error interno al subir a la nube"}), 500
+
+# ==========================================
+# GESTIÓN DE PRODUCTOS (Se mantiene igual, pero usando db.py)
+# ==========================================
 
 @productos_bp.route("/", methods=["GET"])
 @login_required
@@ -42,18 +68,6 @@ def get_productos():
     cursor.close()
     conn.close()
     return jsonify(list(rows))
-
-@productos_bp.route("/<int:id>", methods=["GET"])
-@login_required
-def get_producto(id):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM productos WHERE id_producto=%s", (id,))
-    row = cursor.fetchone()
-    cursor.close()
-    conn.close()
-    if row: return jsonify(row)
-    return jsonify({"error": "No encontrado"}), 404
 
 @productos_bp.route("/", methods=["POST"])
 @login_required

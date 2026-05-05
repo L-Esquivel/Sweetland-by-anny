@@ -10,13 +10,20 @@ const ProductoForm = ({ producto, onSubmit, onClose }) => {
     precio: '',
     imagen: '',
     stock: 0,
-    controla_stock: false // NUEVO CAMPO
+    controla_stock: false
   });
 
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
+
+  // 💡 FUNCIÓN AYUDANTE: Decide si la ruta es local o de Cloudinary
+  const getImageUrl = (imgName) => {
+    if (!imgName) return null;
+    if (imgName.startsWith('http')) return imgName; // Es Cloudinary
+    return `${API_BASE}/static/images/${imgName}`; // Es local antiguo
+  };
 
   useEffect(() => {
     if (producto) {
@@ -29,8 +36,9 @@ const ProductoForm = ({ producto, onSubmit, onClose }) => {
         stock: producto.stock || 0,
         controla_stock: producto.controla_stock === 1 || producto.controla_stock === true
       });
+      
       if (producto.imagen) {
-        setImagePreview(`${API_BASE}/static/images/${producto.imagen}`);
+        setImagePreview(getImageUrl(producto.imagen));
       }
     }
   }, [producto]);
@@ -57,6 +65,7 @@ const ProductoForm = ({ producto, onSubmit, onClose }) => {
     setUploading(true);
     let imagenFinal = formData.imagen;
 
+    // Si el usuario seleccionó un archivo nuevo, lo subimos a Cloudinary vía nuestro Backend
     if (imageFile) {
       try {
         const fd = new FormData();
@@ -67,15 +76,25 @@ const ProductoForm = ({ producto, onSubmit, onClose }) => {
           body: fd
         });
         const data = await res.json();
-        if (res.ok) imagenFinal = data.filename;
-      } catch (err) { console.error(err); }
+        if (res.ok) {
+          imagenFinal = data.filename; // Esto ahora es la URL de Cloudinary https://...
+        } else {
+            setUploadError(data.error || 'Error al subir imagen');
+            setUploading(false);
+            return;
+        }
+      } catch (err) { 
+          setUploadError('Error de conexión con el servidor');
+          setUploading(false);
+          return;
+      }
     }
 
     const datosEnviar = {
       ...formData,
       precio: parseFloat(formData.precio) || 0,
       stock: parseInt(formData.stock) || 0,
-      imagen: imagenFinal
+      imagen: imagenFinal // Aquí va la URL completa o el nombre antiguo
     };
 
     onSubmit(datosEnviar);
@@ -94,6 +113,7 @@ const ProductoForm = ({ producto, onSubmit, onClose }) => {
 
           <form onSubmit={handleSubmit}>
             <div className="modal-body p-4">
+                {uploadError && <div className="alert alert-danger">{uploadError}</div>}
               <div className="row g-3">
                 <div className="col-md-8">
                   <label className="form-label fw-bold">Nombre del Producto *</label>
@@ -118,7 +138,6 @@ const ProductoForm = ({ producto, onSubmit, onClose }) => {
                   <input type="number" name="precio" className="form-control" value={formData.precio} onChange={handleChange} required />
                 </div>
 
-                {/* --- SECCIÓN DE INVENTARIO --- */}
                 <div className="col-md-6">
                   <div className="card bg-light border-0 p-2">
                     <div className="form-check form-switch mt-1">
@@ -127,7 +146,7 @@ const ProductoForm = ({ producto, onSubmit, onClose }) => {
                     </div>
                     {formData.controla_stock && (
                       <div className="mt-2">
-                        <label className="form-label small mb-1">Unidades Disponibles:</label>
+                        <label className="form-label small mb-1">Stock disponible:</label>
                         <input type="number" name="stock" className="form-control form-control-sm" value={formData.stock} onChange={handleChange} min="0" />
                       </div>
                     )}
@@ -135,9 +154,15 @@ const ProductoForm = ({ producto, onSubmit, onClose }) => {
                 </div>
 
                 <div className="col-12 text-center">
-                  <label className="form-label fw-bold d-block">Imagen</label>
-                  {imagePreview && <img src={imagePreview} alt="Preview" className="img-thumbnail mb-2" style={{maxHeight: '150px'}} />}
+                  <label className="form-label fw-bold d-block">Imagen del Producto</label>
+                  {imagePreview && (
+                    <div className="mb-3 position-relative d-inline-block">
+                        <img src={imagePreview} alt="Preview" className="img-thumbnail" style={{maxHeight: '180px', borderRadius: '10px'}} />
+                        <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-info">Vista Previa</span>
+                    </div>
+                  )}
                   <input type="file" className="form-control" onChange={handleFileChange} accept="image/*" />
+                  <small className="text-muted mt-1 d-block">Las imágenes se guardan de forma permanente en Cloudinary ☁️</small>
                 </div>
               </div>
             </div>
@@ -145,7 +170,11 @@ const ProductoForm = ({ producto, onSubmit, onClose }) => {
             <div className="modal-footer bg-light border-0">
               <button type="button" className="btn btn-secondary px-4" onClick={onClose}>Cancelar</button>
               <button type="submit" className="btn btn-primary px-4 shadow-sm" disabled={uploading}>
-                {uploading ? 'Guardando...' : (producto ? 'Guardar Cambios' : 'Crear Producto')}
+                {uploading ? (
+                  <><span className="spinner-border spinner-border-sm me-2"></span>Subiendo a la nube...</>
+                ) : (
+                  <>{producto ? 'Guardar Cambios' : 'Crear Producto'}</>
+                )}
               </button>
             </div>
           </form>

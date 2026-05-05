@@ -50,6 +50,8 @@ function renderCart() {
 
     const li = document.createElement("li");
     li.className = "cart-item";
+    
+    // 💡 La imagen ya viene procesada desde script.js (Cloudinary o Local)
     li.innerHTML = `
       <img src="${item.image || 'assets/logo-principal.png'}" onerror="this.src='assets/logo-principal.png'">
       <div class="item-info">
@@ -86,7 +88,7 @@ function removeFromCart(index) {
   actualizarContadorHeader();
 }
 
-// ==================== PROCESAR PEDIDO (Guardar + WhatsApp) ====================
+// ==================== PROCESAR PEDIDO ====================
 
 async function finalizeOrder() {
   const usuario = JSON.parse(localStorage.getItem("cliente_sweetland"));
@@ -115,7 +117,6 @@ async function finalizeOrder() {
   try {
     const total = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
 
-    // PREPARAMOS EL PAQUETE COMPLETO (Cabecera + Items)
     const pedidoCompleto = {
         usuario_id: usuario.id,
         telefono: usuario.telefono || "Sin teléfono",
@@ -129,7 +130,6 @@ async function finalizeOrder() {
         }))
     };
 
-    // UNA SOLA LLAMADA AL ENDPOINT PÚBLICO
     const response = await fetch(`${API_BASE}/pedidos/public`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -139,24 +139,17 @@ async function finalizeOrder() {
 
     const data = await response.json();
 
-    if (!response.ok) {
-        throw new Error(data.error || "Error al registrar el pedido");
-    }
+    if (!response.ok) throw new Error(data.error || "Error al registrar el pedido");
 
-    // Si llegamos aquí, el pedido ya está en la DB con todos sus productos
-    const id_pedido = data.id_pedido;
+    // 🚀 Todo bien: Abrimos WhatsApp y limpiamos
+    abrirWhatsApp(data.id_pedido, usuario.nombre, direccion, notas, total);
 
-    // 3. Abrir WhatsApp
-    abrirWhatsApp(id_pedido, usuario.nombre, direccion, notas, total);
-
-    // 4. Limpiar carrito
     localStorage.removeItem("sweetland_cart");
     cart = [];
     renderCart();
     actualizarContadorHeader();
 
   } catch (error) {
-    console.error("Error detallado:", error);
     alert("Hubo un problema: " + error.message);
   } finally {
     loader.style.display = "none";
@@ -166,25 +159,25 @@ async function finalizeOrder() {
 function abrirWhatsApp(id_pedido, nombreCliente, direccion, notas, total) {
   const nroWA = "573332422608";
   
-  // Estructura de mensaje con Emojis y Formato de WhatsApp
-  let mensaje = `🎂 *NUEVO PEDIDO # ${id_pedido}* 🎂%0A`;
-  mensaje += `━━━━━━━━━━━━━━━━━━━━━%0A`;
-  mensaje += `👤 *Cliente:* ${nombreCliente}%0A`;
-  mensaje += `📍 *Dirección:* ${direccion}%0A`;
-  if (notas) mensaje += `📝 *Nota:* ${notas}%0A`;
-  mensaje += `━━━━━━━━━━━━━━━━━━━━━%0A`;
-  mensaje += `🛒 *DETALLE DEL PEDIDO:*%0A`;
+  // Construimos el mensaje con saltos de línea reales (\n)
+  let mensaje = `🎂 *NUEVO PEDIDO # ${id_pedido}* 🎂\n`;
+  mensaje += `━━━━━━━━━━━━━━━━━━━━━\n`;
+  mensaje += `👤 *Cliente:* ${nombreCliente}\n`;
+  mensaje += `📍 *Dirección:* ${direccion}\n`;
+  if (notas) mensaje += `📝 *Nota:* ${notas}\n`;
+  mensaje += `━━━━━━━━━━━━━━━━━━━━━\n`;
+  mensaje += `🛒 *DETALLE DEL PEDIDO:*\n`;
   
-  // Aquí recorremos el carrito para listar los productos
   cart.forEach(item => {
-    mensaje += `• ${item.qty}x ${item.name} (_$${(item.price * item.qty).toLocaleString('es-CO')}_)%0A`;
+    mensaje += `• ${item.qty}x ${item.name} (_$${(item.price * item.qty).toLocaleString('es-CO')}_)\n`;
   });
 
-  mensaje += `━━━━━━━━━━━━━━━━━━━━━%0A`;
-  mensaje += `💰 *TOTAL A PAGAR: $${total.toLocaleString('es-CO')}*%0A%0A`;
+  mensaje += `━━━━━━━━━━━━━━━━━━━━━\n`;
+  mensaje += `💰 *TOTAL A PAGAR: $${total.toLocaleString('es-CO')}*\n\n`;
   mensaje += `_Hola Anny, acabo de realizar este pedido desde la web. Quedo atento a la confirmación para el pago. ✨_`;
 
-  const url = `https://wa.me/${nroWA}?text=${mensaje}`;
+  // 💡 CIBERSEGURIDAD: encodeURIComponent asegura que el mensaje sea válido para una URL
+  const url = `https://wa.me/${nroWA}?text=${encodeURIComponent(mensaje)}`;
   window.open(url, "_blank");
 }
 
@@ -195,4 +188,15 @@ function clearCartAndReload() {
     renderCart();
     actualizarContadorHeader();
   }
+}
+
+function showNotification(productName, imageSrc = null) {
+  const notification = document.getElementById("cart-notification");
+  if (!notification) return;
+  const messageEl = notification.querySelector("p");
+  if (messageEl) messageEl.textContent = `¡${productName} añadido!`;
+  const imgEl = notification.querySelector("img");
+  if (imgEl && imageSrc) imgEl.src = imageSrc;
+  notification.classList.remove("hidden");
+  setTimeout(() => notification.classList.add("hidden"), 2500);
 }
