@@ -1,36 +1,27 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { pedidosService } from '../services/pedidosService';
-import { productosService } from '../services/productosService';
-
-// Chart.js se importa dinámicamente para evitar errores si no está instalado
 import Chart from 'chart.js/auto';
 
 const Dashboard = ({ user }) => {
   const [stats, setStats] = useState(null);
-  const [productoTop, setProductoTop] = useState(null);
-  const [pedidosPorEstado, setPedidosPorEstado] = useState([]);
   const [loading, setLoading] = useState(true);
-  const chartRef = React.useRef(null);
-  const chartInstance = React.useRef(null);
+  const chartRef = useRef(null);
+  const chartInstance = useRef(null);
+
+  // Configuración de colores por estado
+  const coloresEstados = {
+    'completado': '#28a745',
+    'confirmado': '#17a2b8',
+    'en_preparacion': '#007bff',
+    'pendiente': '#ffc107',
+    'cancelado': '#dc3545'
+  };
 
   useEffect(() => {
     const cargarDatos = async () => {
       try {
-        const [statsData, productosData] = await Promise.all([
-          pedidosService.getStats(),
-          productosService.getProductos()
-        ]);
-
+        const statsData = await pedidosService.getStats();
         setStats(statsData);
-
-        // Calcular producto más vendido (simulado - en producción debería venir del backend)
-        const productoMasVendido = calcularProductoTop(productosData);
-        setProductoTop(productoMasVendido);
-
-        // Calcular pedidos por estado (simulado - idealmente viene del backend)
-        const estados = calcularPedidosPorEstado(statsData);
-        setPedidosPorEstado(estados);
-
       } catch (error) {
         console.error('Error cargando dashboard:', error);
       } finally {
@@ -40,18 +31,20 @@ const Dashboard = ({ user }) => {
     cargarDatos();
   }, []);
 
-  // Efecto para renderizar el gráfico
+  // Efecto para renderizar el gráfico de tendencia
   useEffect(() => {
-    if (!Chart || !stats?.grafica || !chartRef.current) return;
+    if (!stats?.grafica || !chartRef.current) return;
 
-    // Destruir gráfico anterior si existe
     if (chartInstance.current) {
       chartInstance.current.destroy();
     }
 
     const ctx = chartRef.current.getContext('2d');
-    const labels = stats.grafica.map(d => formatearFechaCorta(d.fecha));
-    const data = stats.grafica.map(d => d.venta);
+    
+    // Invertimos el array para que la fecha más antigua salga a la izquierda
+    const datosGrafica = [...stats.grafica].reverse();
+    const labels = datosGrafica.map(d => formatearFechaCorta(d.fecha));
+    const data = datosGrafica.map(d => d.venta);
 
     chartInstance.current = new Chart(ctx, {
       type: 'bar',
@@ -99,23 +92,6 @@ const Dashboard = ({ user }) => {
     };
   }, [stats]);
 
-  const calcularProductoTop = (productos) => {
-    if (!productos || productos.length === 0) return null;
-    // En producción, esto debería calcularse desde ventas reales
-    // Por ahora, simulamos con el producto con más recetas (más complejo = más vendido)
-    return productos.reduce((max, p) => (p.precio > max.precio ? p : max), productos[0]);
-  };
-
-  const calcularPedidosPorEstado = (stats) => {
-    // Simulación - en producción debería venir del backend
-    return [
-      { estado: 'Completado', cantidad: 45, color: '#28a745', porcentaje: 68 },
-      { estado: 'Pendiente', cantidad: 12, color: '#ffc107', porcentaje: 18 },
-      { estado: 'En preparación', cantidad: 6, color: '#007bff', porcentaje: 9 },
-      { estado: 'Cancelado', cantidad: 3, color: '#dc3545', porcentaje: 5 },
-    ];
-  };
-
   const formatearDinero = (valor) => {
     return new Intl.NumberFormat('es-CO', { 
       style: 'currency', 
@@ -156,12 +132,12 @@ const Dashboard = ({ user }) => {
       <div className="spinner-border text-primary" role="status">
         <span className="visually-hidden">Cargando...</span>
       </div>
-      <h5 className="mt-3">Analizando finanzas...</h5>
+      <h5 className="mt-3">Analizando finanzas reales...</h5>
     </div>
   );
 
   return (
-    <div className="dashboard-container">
+    <div className="dashboard-container p-4">
       <h2 className="mb-4">📊 Resumen de Negocio</h2>
 
       {/* TARJETAS DE KPIs */}
@@ -191,7 +167,7 @@ const Dashboard = ({ user }) => {
             <div className="card-body">
               <h6 className="text-uppercase opacity-75">Total Histórico</h6>
               <h2 className="fw-bold">{formatearDinero(stats?.resumen?.total_historico)}</h2>
-              <small>{stats?.resumen?.num_pedidos} pedidos en total</small>
+              <small>{stats?.resumen?.num_pedidos} pedidos (no cancelados)</small>
             </div>
           </div>
         </div>
@@ -200,78 +176,71 @@ const Dashboard = ({ user }) => {
           <div className="card border-0 shadow-sm bg-warning text-dark h-100">
             <div className="card-body">
               <h6 className="text-uppercase opacity-75">Producto Top</h6>
-              <h5 className="fw-bold">{productoTop?.nombre || 'N/A'}</h5>
-              <small>{formatearDinero(productoTop?.precio)} por unidad</small>
+              <h5 className="fw-bold text-truncate">{stats?.producto_top?.nombre || 'Sin ventas'}</h5>
+              <small>{stats?.producto_top ? `${formatearDinero(stats.producto_top.precio)} unidad` : 'Esperando ventas'}</small>
             </div>
           </div>
         </div>
       </div>
 
-      {/* GRÁFICO + PEDIDOS POR ESTADO */}
       <div className="row g-4 mb-5">
-        <div className="col-md-8">
+        {/* GRÁFICO DE TENDENCIA */}
+        <div className="col-lg-8">
           <div className="card shadow-sm border-0 h-100">
             <div className="card-header bg-white fw-bold d-flex justify-content-between align-items-center">
               <span>📈 Tendencia de Ventas (Últimos 7 días)</span>
-              <small className="text-muted">{stats?.grafica?.length} días</small>
+              <small className="text-muted">{stats?.grafica?.length} días registrados</small>
             </div>
             <div className="card-body">
-              {Chart ? (
-                <div style={{ height: '300px' }}>
-                  <canvas ref={chartRef}></canvas>
-                </div>
-              ) : (
-                <div className="alert alert-warning">
-                  <strong>Chart.js no instalado.</strong> Ejecuta: <code>npm install chart.js</code>
-                </div>
+              <div style={{ height: '300px' }}>
+                <canvas ref={chartRef}></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* PEDIDOS POR ESTADO REALES */}
+        <div className="col-lg-4">
+          <div className="card shadow-sm border-0 h-100">
+            <div className="card-header bg-white fw-bold">📋 Pedidos por Estado</div>
+            <div className="card-body">
+              {stats?.pedidos_por_estado && Object.entries(stats.pedidos_por_estado).map(([estado, cantidad], i) => {
+                const totalPedidos = Object.values(stats.pedidos_por_estado).reduce((a, b) => a + b, 0);
+                const porcentaje = ((cantidad / totalPedidos) * 100).toFixed(0);
+                const color = coloresEstados[estado.toLowerCase()] || '#secondary';
+
+                return (
+                  <div key={i} className="mb-3">
+                    <div className="d-flex justify-content-between align-items-center mb-1">
+                      <span className="text-capitalize d-flex align-items-center">
+                        <span 
+                          className="rounded-circle me-2" 
+                          style={{ width: '12px', height: '12px', backgroundColor: color }}
+                        ></span>
+                        {estado.replace('_', ' ')}
+                      </span>
+                      <span className="fw-bold">{cantidad}</span>
+                    </div>
+                    <div className="progress" style={{ height: '8px' }}>
+                      <div 
+                        className="progress-bar" 
+                        style={{ width: `${porcentaje}%`, backgroundColor: color }}
+                        aria-valuenow={porcentaje} 
+                      ></div>
+                    </div>
+                    <small className="text-muted">{porcentaje}% del total</small>
+                  </div>
+                );
+              })}
+              {(!stats?.pedidos_por_estado || Object.keys(stats.pedidos_por_estado).length === 0) && (
+                <p className="text-center text-muted">No hay pedidos registrados.</p>
               )}
             </div>
           </div>
         </div>
-
-        <div className="col-md-4">
-          <div className="card shadow-sm border-0 h-100">
-            <div className="card-header bg-white fw-bold">📋 Pedidos por Estado</div>
-            <div className="card-body">
-              {pedidosPorEstado.map((estado, i) => (
-                <div key={i} className="mb-3">
-                  <div className="d-flex justify-content-between align-items-center mb-1">
-                    <span className="d-flex align-items-center">
-                      <span 
-                        className="rounded-circle me-2" 
-                        style={{ 
-                          width: '12px', 
-                          height: '12px', 
-                          backgroundColor: estado.color,
-                          display: 'inline-block'
-                        }}
-                      ></span>
-                      {estado.estado}
-                    </span>
-                    <span className="fw-bold">{estado.cantidad}</span>
-                  </div>
-                  <div className="progress" style={{ height: '8px' }}>
-                    <div 
-                      className="progress-bar" 
-                      role="progressbar"
-                      style={{ 
-                        width: `${estado.porcentaje}%`, 
-                        backgroundColor: estado.color 
-                      }}
-                      aria-valuenow={estado.porcentaje} 
-                      aria-valuemin="0" 
-                      aria-valuemax="100"
-                    ></div>
-                  </div>
-                  <small className="text-muted">{estado.porcentaje}% del total</small>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
       </div>
 
-      {/* TABLA DE ÚLTIMAS VENTAS CON FECHAS LEGIBLES */}
+      {/* TABLA DE ÚLTIMAS VENTAS */}
       <div className="card shadow-sm border-0">
         <div className="card-header bg-white fw-bold">📅 Detalle de Ventas Recientes</div>
         <div className="card-body">
@@ -282,34 +251,20 @@ const Dashboard = ({ user }) => {
                   <th>Fecha</th>
                   <th>Día</th>
                   <th className="text-end">Venta Total</th>
-                  <th className="text-end">Tendencia</th>
                 </tr>
               </thead>
               <tbody>
-                {stats?.grafica?.map((dia, i, arr) => {
-                  const ventaAnterior = i < arr.length - 1 ? arr[i + 1].venta : dia.venta;
-                  const diferencia = dia.venta - ventaAnterior;
-                  const esPositivo = diferencia >= 0;
-
-                  return (
-                    <tr key={i}>
-                      <td className="fw-semibold">{formatearFecha(dia.fecha)}</td>
-                      <td>
-                        <span className="badge bg-light text-dark">
-                          {formatearFechaCorta(dia.fecha)}
-                        </span>
-                      </td>
-                      <td className="text-end fw-bold text-success">{formatearDinero(dia.venta)}</td>
-                      <td className="text-end">
-                        {i < arr.length - 1 && (
-                          <span className={`badge ${esPositivo ? 'bg-success' : 'bg-danger'}`}>
-                            {esPositivo ? '↗' : '↘'} {formatearDinero(Math.abs(diferencia))}
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
+                {stats?.grafica?.map((dia, i) => (
+                  <tr key={i}>
+                    <td className="fw-semibold">{formatearFecha(dia.fecha)}</td>
+                    <td>
+                      <span className="badge bg-light text-dark">
+                        {formatearFechaCorta(dia.fecha)}
+                      </span>
+                    </td>
+                    <td className="text-end fw-bold text-success">{formatearDinero(dia.venta)}</td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
