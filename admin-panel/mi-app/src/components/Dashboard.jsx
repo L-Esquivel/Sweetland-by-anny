@@ -1,6 +1,26 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { pedidosService } from '../services/pedidosService';
-import Chart from 'chart.js/auto';
+
+// Importación modular de Chart.js para evitar errores de resolución en Vercel/Vite
+import { 
+  Chart as ChartJS, 
+  CategoryScale, 
+  LinearScale, 
+  BarElement, 
+  Title, 
+  Tooltip, 
+  Legend 
+} from 'chart.js';
+
+// Registramos los componentes que vamos a utilizar
+ChartJS.register(
+  CategoryScale, 
+  LinearScale, 
+  BarElement, 
+  Title, 
+  Tooltip, 
+  Legend
+);
 
 const Dashboard = ({ user }) => {
   const [stats, setStats] = useState(null);
@@ -35,6 +55,7 @@ const Dashboard = ({ user }) => {
   useEffect(() => {
     if (!stats?.grafica || !chartRef.current) return;
 
+    // Destruir instancia previa para evitar duplicados en memoria
     if (chartInstance.current) {
       chartInstance.current.destroy();
     }
@@ -46,7 +67,7 @@ const Dashboard = ({ user }) => {
     const labels = datosGrafica.map(d => formatearFechaCorta(d.fecha));
     const data = datosGrafica.map(d => d.venta);
 
-    chartInstance.current = new Chart(ctx, {
+    chartInstance.current = new ChartJS(ctx, {
       type: 'bar',
       data: {
         labels: labels,
@@ -207,7 +228,7 @@ const Dashboard = ({ user }) => {
               {stats?.pedidos_por_estado && Object.entries(stats.pedidos_por_estado).map(([estado, cantidad], i) => {
                 const totalPedidos = Object.values(stats.pedidos_por_estado).reduce((a, b) => a + b, 0);
                 const porcentaje = ((cantidad / totalPedidos) * 100).toFixed(0);
-                const color = coloresEstados[estado.toLowerCase()] || '#secondary';
+                const color = coloresEstados[estado.toLowerCase()] || '#6c757d';
 
                 return (
                   <div key={i} className="mb-3">
