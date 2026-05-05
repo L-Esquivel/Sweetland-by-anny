@@ -116,8 +116,11 @@ def get_pedidos():
         """)
         pedidos = [dict(row) for row in cursor.fetchall()]
         for p in pedidos:
+            # ESTANDARIZACIÓN DE ID
+            p['id_pedido'] = p.get('id_pedido') 
             p['total'] = float(p.get('total') or 0)
-            if p.get('fecha_pedido'): p['fecha_pedido'] = p['fecha_pedido'].strftime('%Y-%m-%d %H:%M')
+            if p.get('fecha_pedido'): 
+                p['fecha_pedido'] = p['fecha_pedido'].strftime('%Y-%m-%d %H:%M')
         return jsonify(pedidos)
     finally:
         cursor.close()
