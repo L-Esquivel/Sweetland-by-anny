@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { pedidosService } from '../services/pedidosService';
 
-// Importación modular de Chart.js para evitar errores de resolución en Vercel/Vite
+// Importación modular de Chart.js
 import { 
   Chart as ChartJS, 
   CategoryScale, 
@@ -12,23 +12,15 @@ import {
   Legend 
 } from 'chart.js';
 
-// Registramos los componentes que vamos a utilizar
-ChartJS.register(
-  CategoryScale, 
-  LinearScale, 
-  BarElement, 
-  Title, 
-  Tooltip, 
-  Legend
-);
+ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
-const Dashboard = ({ user }) => {
+const Dashboard = () => {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const chartRef = useRef(null);
   const chartInstance = useRef(null);
 
-  // Configuración de colores por estado
   const coloresEstados = {
     'completado': '#28a745',
     'confirmado': '#17a2b8',
@@ -37,32 +29,35 @@ const Dashboard = ({ user }) => {
     'cancelado': '#dc3545'
   };
 
+  // EFECTO 1: Carga de datos reales desde el Backend
   useEffect(() => {
-    const cargarDatos = async () => {
+    const cargarDatosReales = async () => {
       try {
+        setLoading(true);
         const statsData = await pedidosService.getStats();
         setStats(statsData);
-      } catch (error) {
-        console.error('Error cargando dashboard:', error);
+      } catch (err) {
+        console.error('Error en Dashboard:', err);
+        setError('No se pudieron cargar las estadísticas reales.');
       } finally {
         setLoading(false);
       }
     };
-    cargarDatos();
+    cargarDatosReales();
   }, []);
 
-  // Efecto para renderizar el gráfico de tendencia
+  // EFECTO 2: Renderizado del Gráfico de Ventas
   useEffect(() => {
-    if (!stats?.grafica || !chartRef.current) return;
+    // SEGURO: Si no hay datos, no hay canvas o la lista de gráfica está vacía, no hacer nada
+    if (!stats?.grafica || stats.grafica.length === 0 || !chartRef.current) return;
 
-    // Destruir instancia previa para evitar duplicados en memoria
     if (chartInstance.current) {
       chartInstance.current.destroy();
     }
 
     const ctx = chartRef.current.getContext('2d');
     
-    // Invertimos el array para que la fecha más antigua salga a la izquierda
+    // Invertimos el array para mostrar cronológicamente de izquierda a derecha
     const datosGrafica = [...stats.grafica].reverse();
     const labels = datosGrafica.map(d => formatearFechaCorta(d.fecha));
     const data = datosGrafica.map(d => d.venta);
@@ -72,223 +67,157 @@ const Dashboard = ({ user }) => {
       data: {
         labels: labels,
         datasets: [{
-          label: 'Ventas (COP)',
+          label: 'Ventas Diarias',
           data: data,
           backgroundColor: 'rgba(102, 126, 234, 0.8)',
           borderColor: 'rgba(102, 126, 234, 1)',
           borderWidth: 2,
-          borderRadius: 8,
-          borderSkipped: false,
+          borderRadius: 5
         }]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            callbacks: {
-              label: (context) => formatearDinero(context.raw)
-            }
-          }
-        },
+        plugins: { legend: { display: false } },
         scales: {
-          y: {
-            beginAtZero: true,
-            ticks: {
-              callback: (value) => formatearDineroCompacto(value)
-            }
-          },
-          x: {
-            grid: { display: false }
-          }
+          y: { beginAtZero: true, ticks: { callback: (value) => '$' + value.toLocaleString() } }
         }
       }
     });
 
     return () => {
-      if (chartInstance.current) {
-        chartInstance.current.destroy();
-      }
+      if (chartInstance.current) chartInstance.current.destroy();
     };
   }, [stats]);
 
-  const formatearDinero = (valor) => {
-    return new Intl.NumberFormat('es-CO', { 
-      style: 'currency', 
-      currency: 'COP', 
-      maximumFractionDigits: 0 
-    }).format(valor || 0);
-  };
+  // Funciones de Formateo
+  const formatearDinero = (v) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(v || 0);
+  
+  const formatearFecha = (f) => f ? new Intl.DateTimeFormat('es-CO', { dateStyle: 'long' }).format(new Date(f)) : '---';
 
-  const formatearDineroCompacto = (valor) => {
-    if (valor >= 1000000) return `$${(valor / 1000000).toFixed(1)}M`;
-    if (valor >= 1000) return `$${(valor / 1000).toFixed(0)}K`;
-    return `$${valor}`;
-  };
-
-  const formatearFecha = (fechaStr) => {
-    if (!fechaStr) return 'Fecha no disponible';
-    const fecha = new Date(fechaStr);
-    return new Intl.DateTimeFormat('es-CO', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    }).format(fecha);
-  };
-
-  const formatearFechaCorta = (fechaStr) => {
-    if (!fechaStr) return '';
-    const fecha = new Date(fechaStr);
-    return new Intl.DateTimeFormat('es-CO', {
-      weekday: 'short',
-      day: 'numeric',
-      month: 'short'
-    }).format(fecha);
+  const formatearFechaCorta = (f) => {
+    if (!f) return '';
+    const date = new Date(f);
+    return date.toLocaleDateString('es-CO', { day: 'numeric', month: 'short' });
   };
 
   if (loading) return (
     <div className="text-center p-5">
-      <div className="spinner-border text-primary" role="status">
-        <span className="visually-hidden">Cargando...</span>
-      </div>
-      <h5 className="mt-3">Analizando finanzas reales...</h5>
+      <div className="spinner-border text-primary" role="status"></div>
+      <h5 className="mt-3">Consultando base de datos en tiempo real...</h5>
     </div>
   );
 
+  if (error) return <div className="alert alert-danger m-4">{error}</div>;
+
   return (
     <div className="dashboard-container p-4">
-      <h2 className="mb-4">📊 Resumen de Negocio</h2>
+      <h2 className="mb-4">📊 Dashboard de Gestión Real</h2>
 
-      {/* TARJETAS DE KPIs */}
+      {/* TARJETAS DE DATOS REALES */}
       <div className="row g-4 mb-5">
         <div className="col-md-3">
-          <div className="card border-0 shadow-sm bg-primary text-white h-100">
-            <div className="card-body">
-              <h6 className="text-uppercase opacity-75">Ventas de Hoy</h6>
-              <h2 className="fw-bold">{formatearDinero(stats?.resumen?.hoy)}</h2>
-              <small>Pedidos procesados hoy</small>
-            </div>
+          <div className="card border-0 shadow-sm bg-primary text-white p-3">
+            <h6 className="opacity-75">VENTAS HOY</h6>
+            <h3 className="fw-bold">{formatearDinero(stats.resumen.hoy)}</h3>
+            <small>Basado en pedidos de hoy</small>
           </div>
         </div>
 
         <div className="col-md-3">
-          <div className="card border-0 shadow-sm bg-success text-white h-100">
-            <div className="card-body">
-              <h6 className="text-uppercase opacity-75">Ventas del Mes</h6>
-              <h2 className="fw-bold">{formatearDinero(stats?.resumen?.mes)}</h2>
-              <small>Total acumulado este mes</small>
-            </div>
+          <div className="card border-0 shadow-sm bg-success text-white p-3">
+            <h6 className="opacity-75">VENTAS MES</h6>
+            <h3 className="fw-bold">{formatearDinero(stats.resumen.mes)}</h3>
+            <small>Acumulado mes actual</small>
           </div>
         </div>
 
         <div className="col-md-3">
-          <div className="card border-0 shadow-sm bg-dark text-white h-100">
-            <div className="card-body">
-              <h6 className="text-uppercase opacity-75">Total Histórico</h6>
-              <h2 className="fw-bold">{formatearDinero(stats?.resumen?.total_historico)}</h2>
-              <small>{stats?.resumen?.num_pedidos} pedidos (no cancelados)</small>
-            </div>
+          <div className="card border-0 shadow-sm bg-dark text-white p-3">
+            <h6 className="opacity-75">PEDIDOS TOTALES</h6>
+            <h3 className="fw-bold">{stats.resumen.num_pedidos}</h3>
+            <small>Excluyendo cancelados</small>
           </div>
         </div>
 
         <div className="col-md-3">
-          <div className="card border-0 shadow-sm bg-warning text-dark h-100">
-            <div className="card-body">
-              <h6 className="text-uppercase opacity-75">Producto Top</h6>
-              <h5 className="fw-bold text-truncate">{stats?.producto_top?.nombre || 'Sin ventas'}</h5>
-              <small>{stats?.producto_top ? `${formatearDinero(stats.producto_top.precio)} unidad` : 'Esperando ventas'}</small>
-            </div>
+          <div className="card border-0 shadow-sm bg-warning text-dark p-3">
+            <h6 className="opacity-75">PRODUCTO MÁS VENDIDO</h6>
+            <h5 className="fw-bold text-truncate">{stats.producto_top?.nombre || 'Sin ventas aún'}</h5>
+            <small>{stats.producto_top ? `Vendidos: ${stats.producto_top.total_vendido}` : 'Esperando datos'}</small>
           </div>
         </div>
       </div>
 
       <div className="row g-4 mb-5">
-        {/* GRÁFICO DE TENDENCIA */}
+        {/* GRÁFICO REAL */}
         <div className="col-lg-8">
-          <div className="card shadow-sm border-0 h-100">
-            <div className="card-header bg-white fw-bold d-flex justify-content-between align-items-center">
-              <span>📈 Tendencia de Ventas (Últimos 7 días)</span>
-              <small className="text-muted">{stats?.grafica?.length} días registrados</small>
-            </div>
-            <div className="card-body">
-              <div style={{ height: '300px' }}>
+          <div className="card shadow-sm border-0 p-4 h-100">
+            <h6 className="fw-bold mb-4 text-muted">📈 FLUJO DE CAJA (ÚLTIMOS 7 DÍAS)</h6>
+            <div style={{ height: '300px' }}>
+              {stats.grafica.length > 0 ? (
                 <canvas ref={chartRef}></canvas>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* PEDIDOS POR ESTADO REALES */}
-        <div className="col-lg-4">
-          <div className="card shadow-sm border-0 h-100">
-            <div className="card-header bg-white fw-bold">📋 Pedidos por Estado</div>
-            <div className="card-body">
-              {stats?.pedidos_por_estado && Object.entries(stats.pedidos_por_estado).map(([estado, cantidad], i) => {
-                const totalPedidos = Object.values(stats.pedidos_por_estado).reduce((a, b) => a + b, 0);
-                const porcentaje = ((cantidad / totalPedidos) * 100).toFixed(0);
-                const color = coloresEstados[estado.toLowerCase()] || '#6c757d';
-
-                return (
-                  <div key={i} className="mb-3">
-                    <div className="d-flex justify-content-between align-items-center mb-1">
-                      <span className="text-capitalize d-flex align-items-center">
-                        <span 
-                          className="rounded-circle me-2" 
-                          style={{ width: '12px', height: '12px', backgroundColor: color }}
-                        ></span>
-                        {estado.replace('_', ' ')}
-                      </span>
-                      <span className="fw-bold">{cantidad}</span>
-                    </div>
-                    <div className="progress" style={{ height: '8px' }}>
-                      <div 
-                        className="progress-bar" 
-                        style={{ width: `${porcentaje}%`, backgroundColor: color }}
-                        aria-valuenow={porcentaje} 
-                      ></div>
-                    </div>
-                    <small className="text-muted">{porcentaje}% del total</small>
-                  </div>
-                );
-              })}
-              {(!stats?.pedidos_por_estado || Object.keys(stats.pedidos_por_estado).length === 0) && (
-                <p className="text-center text-muted">No hay pedidos registrados.</p>
+              ) : (
+                <div className="h-100 d-flex align-items-center justify-content-center text-muted italic">
+                  No hay ventas registradas en la última semana
+                </div>
               )}
             </div>
           </div>
         </div>
+
+        {/* ESTADOS REALES */}
+        <div className="col-lg-4">
+          <div className="card shadow-sm border-0 p-4 h-100">
+            <h6 className="fw-bold mb-4 text-muted">📋 ESTADO DE OPERACIONES</h6>
+            {stats.pedidos_por_estado && Object.keys(stats.pedidos_por_estado).length > 0 ? (
+              Object.entries(stats.pedidos_por_estado).map(([estado, cant], i) => {
+                const total = stats.resumen.num_pedidos || 1;
+                const porc = ((cant / total) * 100).toFixed(0);
+                return (
+                  <div key={i} className="mb-3">
+                    <div className="d-flex justify-content-between small fw-bold">
+                      <span className="text-uppercase">{estado.replace('_', ' ')}</span>
+                      <span>{cant}</span>
+                    </div>
+                    <div className="progress" style={{ height: '10px' }}>
+                      <div className="progress-bar" style={{ width: `${porc}%`, backgroundColor: coloresEstados[estado] || '#6c757d' }}></div>
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <p className="text-center text-muted my-auto">Sin historial de estados</p>
+            )}
+          </div>
+        </div>
       </div>
 
-      {/* TABLA DE ÚLTIMAS VENTAS */}
-      <div className="card shadow-sm border-0">
-        <div className="card-header bg-white fw-bold">📅 Detalle de Ventas Recientes</div>
-        <div className="card-body">
-          <div className="table-responsive">
-            <table className="table table-hover">
-              <thead className="table-light">
-                <tr>
-                  <th>Fecha</th>
-                  <th>Día</th>
-                  <th className="text-end">Venta Total</th>
+      {/* TABLA DE VENTAS DIARIAS */}
+      <div className="card shadow-sm border-0 overflow-hidden">
+        <div className="card-header bg-white py-3">
+          <h6 className="mb-0 fw-bold">📅 Detalle Cronológico de Ingresos</h6>
+        </div>
+        <div className="table-responsive">
+          <table className="table table-hover mb-0">
+            <thead className="table-light">
+              <tr>
+                <th>Fecha</th>
+                <th className="text-end">Venta Bruta</th>
+              </tr>
+            </thead>
+            <tbody>
+              {stats.grafica.map((dia, i) => (
+                <tr key={i}>
+                  <td>{formatearFecha(dia.fecha)}</td>
+                  <td className="text-end fw-bold text-success">{formatearDinero(dia.venta)}</td>
                 </tr>
-              </thead>
-              <tbody>
-                {stats?.grafica?.map((dia, i) => (
-                  <tr key={i}>
-                    <td className="fw-semibold">{formatearFecha(dia.fecha)}</td>
-                    <td>
-                      <span className="badge bg-light text-dark">
-                        {formatearFechaCorta(dia.fecha)}
-                      </span>
-                    </td>
-                    <td className="text-end fw-bold text-success">{formatearDinero(dia.venta)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+              ))}
+              {stats.grafica.length === 0 && (
+                <tr><td colSpan="2" className="text-center p-4 text-muted">No se encontraron registros de ventas</td></tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
