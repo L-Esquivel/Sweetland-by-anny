@@ -6,11 +6,23 @@ import {
   Chart as ChartJS, 
   CategoryScale, 
   LinearScale, 
+  BarController, // <--- FALTABA ESTE (El "cerebro" de las barras)
   BarElement, 
   Title, 
   Tooltip, 
   Legend 
 } from 'chart.js';
+
+// Registramos incluyendo el BarController
+ChartJS.register(
+  CategoryScale, 
+  LinearScale, 
+  BarController, // <--- REGISTRAR AQUÍ TAMBIÉN
+  BarElement, 
+  Title, 
+  Tooltip, 
+  Legend
+);
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
