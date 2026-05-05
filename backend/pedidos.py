@@ -24,7 +24,7 @@ def procesar_descuento_stock(pedido_id):
     cursor.close()
     conn.close()
 
-# ==================== STATS (Dashboard) ====================
+# ==================== STATS (Dashboard) - ACTUALIZADO ====================
 
 @pedidos_bp.route("/stats", methods=["GET"])
 @login_required
@@ -33,6 +33,7 @@ def get_stats():
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
+        # 1. Resumen de ventas (Dinero y total de pedidos)
         cursor.execute("""
             SELECT 
                 SUM(CASE WHEN DATE(fecha_pedido) = CURDATE() THEN total ELSE 0 END) as hoy,
@@ -41,19 +42,52 @@ def get_stats():
                 COUNT(id_pedido) as num_pedidos
             FROM pedidos WHERE estado != 'cancelado'
         """)
-        resumen = cursor.fetchone()
-        # Convertir Decimal a float
-        resumen = {k: float(v) if v is not None else 0 for k, v in dict(resumen).items()}
+        resumen_raw = cursor.fetchone()
+        resumen = {k: float(v) if v is not None else 0 for k, v in dict(resumen_raw).items()}
 
+        # 2. Datos para la gráfica (Últimos 7 días)
         cursor.execute("""
             SELECT DATE(fecha_pedido) as fecha, SUM(total) as venta 
             FROM pedidos WHERE estado != 'cancelado' 
             GROUP BY DATE(fecha_pedido) ORDER BY fecha DESC LIMIT 7
         """)
-        grafica = cursor.fetchall()
-        grafica = [{k: float(v) if isinstance(v, (int, float)) else str(v) for k, v in dict(row).items()} for row in grafica]
+        grafica_raw = cursor.fetchall()
+        grafica = [{k: float(v) if isinstance(v, (int, float)) else str(v) for k, v in dict(row).items()} for row in grafica_raw]
 
-        return jsonify({"resumen": resumen, "grafica": grafica})
+        # 3. Pedidos por estado (Datos Reales)
+        cursor.execute("""
+            SELECT estado, COUNT(id_pedido) as cantidad 
+            FROM pedidos 
+            GROUP BY estado
+        """)
+        estados_raw = cursor.fetchall()
+        pedidos_por_estado = {row['estado']: row['cantidad'] for row in estados_raw}
+
+        # 4. Producto Top (Basado en cantidad real vendida)
+        cursor.execute("""
+            SELECT p.nombre, p.precio, SUM(dp.cantidad) as total_vendido
+            FROM detalle_pedidos dp
+            JOIN productos p ON dp.producto_id = p.id_producto
+            GROUP BY p.id_producto
+            ORDER BY total_vendido DESC
+            LIMIT 1
+        """)
+        producto_top_raw = cursor.fetchone()
+        producto_top = None
+        if producto_top_raw:
+            producto_top = {
+                "nombre": producto_top_raw['nombre'],
+                "precio": float(producto_top_raw['precio']),
+                "total_vendido": int(producto_top_raw['total_vendido'])
+            }
+
+        return jsonify({
+            "resumen": resumen, 
+            "grafica": grafica,
+            "pedidos_por_estado": pedidos_por_estado,
+            "producto_top": producto_top
+        })
+        
     except Exception as e:
         logger.error(f"Error en get_stats: {str(e)}")
         return jsonify({"error": str(e)}), 500
@@ -76,7 +110,6 @@ def get_pedidos():
             ORDER BY p.fecha_pedido DESC
         """)
         rows = cursor.fetchall()
-        # Convertir Decimal a float para JSON
         pedidos = []
         for row in rows:
             pedido = dict(row)
@@ -113,7 +146,6 @@ def get_detalles_pedido(id):
         """, (id,))
         detalles_raw = cursor.fetchall()
 
-        # CORREGIDO: Convertir Decimal a float para evitar NaN en frontend
         detalles = []
         for row in detalles_raw:
             detalle = dict(row)
