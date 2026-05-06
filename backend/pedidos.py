@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, request
 from flask_login import login_required, current_user, login_user, logout_user
 from db import get_db_connection
-from utils import admin_required
+from utils import admin_required, registrar_log # 🛡️ Importamos la auditoría
 from werkzeug.security import generate_password_hash
 import secrets, string, logging
 
@@ -18,6 +18,7 @@ pedidos_bp = Blueprint("pedidos", __name__, url_prefix="/pedidos")
 @pedidos_bp.route("/public/mis-pedidos", methods=["OPTIONS"])
 @pedidos_bp.route("/", methods=["OPTIONS"])
 @pedidos_bp.route("/<int:id>/estado", methods=["OPTIONS"])
+@pedidos_bp.route("/<int:id>", methods=["OPTIONS"])
 def handle_pedidos_options(id=None):
     return jsonify({"status": "ok"}), 200
 
@@ -116,7 +117,6 @@ def get_pedidos():
         """)
         pedidos = [dict(row) for row in cursor.fetchall()]
         for p in pedidos:
-            # ESTANDARIZACIÓN DE ID
             p['id_pedido'] = p.get('id_pedido') 
             p['total'] = float(p.get('total') or 0)
             if p.get('fecha_pedido'): 
@@ -136,11 +136,39 @@ def update_estado_pedido(id):
     try:
         cursor.execute("SELECT estado FROM pedidos WHERE id_pedido = %s", (id,))
         actual = cursor.fetchone()
+        if not actual: return jsonify({"error": "No existe"}), 404
+
         if nuevo_estado == 'completado' and actual.get('estado') != 'completado':
             procesar_descuento_stock(id)
+
         cursor.execute("UPDATE pedidos SET estado=%s WHERE id_pedido=%s", (nuevo_estado, id))
         conn.commit()
+
+        # 🛡️ LOG: Seguimiento de estado de pedido
+        registrar_log(f"Actualizó estado pedido #{id} de '{actual.get('estado')}' a '{nuevo_estado}'")
+
         return jsonify({"mensaje": "Actualizado", "estado": nuevo_estado})
+    finally:
+        cursor.close()
+        conn.close()
+
+@pedidos_bp.route("/<int:id>", methods=["DELETE"])
+@login_required
+@admin_required
+def delete_pedido(id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("DELETE FROM detalle_pedidos WHERE pedido_id = %s", (id,))
+        cursor.execute("DELETE FROM pedidos WHERE id_pedido = %s", (id,))
+        conn.commit()
+
+        # 🛡️ LOG: Eliminación de pedido
+        registrar_log(f"Eliminó permanentemente el pedido ID {id}")
+
+        return jsonify({"mensaje": "Pedido eliminado correctamente"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
     finally:
         cursor.close()
         conn.close()
@@ -184,6 +212,10 @@ def create_pedido_public():
                 VALUES (%s, %s, %s, %s, %s)
             """, (pedido_id, item.get("id_producto"), item.get("cantidad"), item.get("precio"), item.get("subtotal")))
         conn.commit()
+
+        # 🛡️ LOG: Nuevo pedido entrante
+        registrar_log(f"Recibió nuevo pedido web: ID #{pedido_id}")
+
         return jsonify({"mensaje": "Pedido recibido", "id_pedido": pedido_id}), 201
     except Exception as e:
         conn.rollback()
@@ -199,6 +231,10 @@ def login_cliente():
     user = User.get_by_email(data.get("email"))
     if user and user.check_password(data.get("password")) and user.rol == 'cliente':
         login_user(user)
+
+        # 🛡️ LOG: Inicio de sesión de cliente
+        registrar_log(f"Cliente inició sesión: {user.email}")
+
         return jsonify({"usuario": {"id": user.id, "nombre": user.nombre, "email": user.email, "telefono": user.telefono, "direccion": user.direccion}})
     return jsonify({"error": "Credenciales inválidas"}), 401
 
@@ -216,6 +252,10 @@ def registro_cliente():
             VALUES (%s, %s, %s, %s, %s, 'cliente', NOW())
         """, (data.get("nombre"), data.get("email"), hashed, data.get("telefono"), data.get("direccion")))
         conn.commit()
+
+        # 🛡️ LOG: Registro de cliente
+        registrar_log(f"Nuevo cliente registrado: {data.get('email')}")
+
         return jsonify({"mensaje": "Registro exitoso"}), 201
     finally:
         cursor.close()
@@ -223,6 +263,7 @@ def registro_cliente():
 
 @pedidos_bp.route("/public/logout", methods=["POST"])
 def logout_cliente():
+    from flask_login import logout_user
     logout_user()
     return jsonify({"mensaje": "Sesión cerrada"})
 
