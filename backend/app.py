@@ -3,6 +3,7 @@ from flask_cors import CORS
 from flask_login import LoginManager
 from dotenv import load_dotenv
 import os
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 # Importamos las extensiones centralizadas
 from extensions import mysql, mail, limiter
@@ -12,6 +13,8 @@ from login import auth_bp, init_oauth
 load_dotenv()
 
 app = Flask(__name__)
+
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 
 # ==========================================
 # 🛡️ CONFIGURACIÓN DE SEGURIDAD Y SESIONES
