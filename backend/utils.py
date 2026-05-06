@@ -23,6 +23,7 @@ def registrar_log(accion):
     Guarda un registro de la actividad en la tabla audit_logs.
     """
     try:
+        print(f"🕵️ Intentando registrar log: {accion}")
         # Capturamos la IP manejando el proxy de Railway/Vercel
         ip = request.headers.get('X-Forwarded-For', request.remote_addr)
         
