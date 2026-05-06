@@ -9,6 +9,7 @@ from itsdangerous import URLSafeTimedSerializer
 from utils import registrar_log
 from authlib.integrations.flask_client import OAuth
 import os
+import threading
 
 auth_bp = Blueprint("auth_bp", __name__, url_prefix="/auth")
 
@@ -114,26 +115,46 @@ def login():
 @auth_bp.route("/forgot-password", methods=["POST"])
 @limiter.limit("3 per hour")
 def forgot_password():
-    data = request.get_json()
-    email = data.get("email")
-    user = User.get_by_email(email)
+    try:
+        data = request.get_json()
+        email = data.get("email")
+        
+        from models import User
+        user = User.get_by_email(email)
 
-    if user:
-        s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
-        token = s.dumps(email, salt='password-reset-salt')
-        # URL de tu landing page
-        reset_url = f"https://sweetlandbyanny.vercel.app/reset-password.html?token={token}"
+        if user:
+            from extensions import mail
+            from itsdangerous import URLSafeTimedSerializer
+            
+            s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
+            token = s.dumps(email, salt='password-reset-salt')
+            reset_url = f"https://sweetlandbyanny.vercel.app/reset-password.html?token={token}"
 
-        msg = Message("Recuperación de Contraseña - Precivox", recipients=[email])
-        msg.body = f"Hola {user.nombre},\n\nPara restablecer tu clave haz clic aquí:\n{reset_url}\n\nEl enlace expira en 1 hora."
-        try:
-            mail.send(msg)
-            registrar_log(f"Solicitó recuperación de contraseña: {email}")
-        except Exception as e:
-            current_app.logger.error(f"Error SMTP: {e}")
+            msg = Message("Recuperación de Contraseña - Precivox",
+                          recipients=[email])
+            msg.body = f"Hola {user.nombre},\n\nPara restablecer tu clave haz clic aquí:\n{reset_url}\n\nEl enlace expira en 1 hora."
+            
+            # 🚀 SOLUCIÓN TÉCNICA: Enviar en un hilo separado
+            # Esto hace que la función responda al navegador ANTES de intentar conectar con Google
+            def send_async_email(app, msg):
+                with app.app_context():
+                    try:
+                        mail.send(msg)
+                        print(f"✅ HILO: Correo enviado a {email}")
+                    except Exception as e:
+                        print(f"❌ HILO: Error enviando correo: {e}")
 
-    # Seguridad: siempre responder éxito
-    return jsonify({"mensaje": "Si el correo está registrado, recibirás un enlace pronto."}), 200
+            thread = threading.Thread(target=send_async_email, args=(current_app._get_current_object(), msg))
+            thread.start()
+            
+            registrar_log(f"Solicitó recuperación de contraseña (proceso iniciado): {email}")
+
+        # Respondemos de inmediato. El usuario ya no verá el error 500.
+        return jsonify({"mensaje": "Si el correo está registrado, recibirás un enlace pronto."}), 200
+
+    except Exception as e:
+        print(f"❌ ERROR GENERAL: {str(e)}")
+        return jsonify({"error": "Error interno del servidor"}), 500
 
 @auth_bp.route("/reset-password-confirm", methods=["POST"])
 def reset_password_confirm():
