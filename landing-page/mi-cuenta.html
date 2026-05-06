@@ -63,6 +63,7 @@
         <button class="tab-btn" onclick="switchTab('registro')">Registrarme</button>
       </div>
 
+      <!-- LOGIN -->
       <div id="tab-login" class="tab-content active">
         <div id="msg-login" class="msg"></div>
         <div class="form-group">
@@ -76,6 +77,20 @@
         <button class="btn-submit" id="btn-login" onclick="doLogin()">
           <i class="fa-solid fa-right-to-bracket"></i> Entrar
         </button>
+
+        <!-- SECCIÓN DE AUTENTICACIÓN EXTERNA (OAUTH) 🛡️ -->
+        <div style="text-align: center; margin: 25px 0 15px; position: relative;">
+          <hr style="border: 0; border-top: 1px solid #f7d5d8;">
+          <span style="background: white; padding: 0 15px; position: absolute; top: -12px; left: 50%; transform: translateX(-50%); color: #aaa; font-size: 0.85em; font-weight: 700; letter-spacing: 1px;">O TAMBIÉN</span>
+        </div>
+
+        <a href="https://sweetland-by-anny-production.up.railway.app/auth/login/google" 
+           style="display: flex; align-items: center; justify-content: center; gap: 12px; width: 100%; padding: 12px; border: 2px solid #f7d5d8; border-radius: 50px; background: white; color: #555; text-decoration: none; font-family: 'Nunito', sans-serif; font-size: 0.95em; font-weight: 700; transition: all 0.3s ease; box-shadow: 0 4px 10px rgba(0,0,0,0.05);"
+           onmouseover="this.style.borderColor='#aa1d80'; this.style.backgroundColor='#fffafa';"
+           onmouseout="this.style.borderColor='#f7d5d8'; this.style.backgroundColor='white';">
+          <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" width="18" alt="G Logo">
+          Continuar con Google
+        </a>
       </div>
 
       <div id="tab-registro" class="tab-content">
