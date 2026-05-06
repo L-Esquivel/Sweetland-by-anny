@@ -84,7 +84,12 @@
           <i class="fa-solid fa-right-to-bracket"></i> Entrar
         </button>
 
-        <!-- OAUTH SECTION 🛡️ -->
+        <!-- LINK RECUPERACIÓN DE CONTRASEÑA 🔑 -->
+        <p style="text-align: center; margin-top: 15px;">
+            <a href="#" onclick="pedirCorreoRecuperacion()" style="color: #791e7c; font-size: 0.85em; text-decoration: none; font-weight: 600;">¿Olvidaste tu contraseña?</a>
+        </p>
+
+        <!-- SECCIÓN DE AUTENTICACIÓN EXTERNA (OAUTH) 🛡️ -->
         <div style="text-align: center; margin: 25px 0 15px; position: relative;">
           <hr style="border: 0; border-top: 1px solid #f7d5d8;">
           <span style="background: white; padding: 0 15px; position: absolute; top: -12px; left: 50%; transform: translateX(-50%); color: #aaa; font-size: 0.85em; font-weight: 700;">O TAMBIÉN</span>
@@ -257,6 +262,31 @@
     } finally {
       btn.disabled = false;
       btn.innerHTML = '<i class="fa-solid fa-user-plus"></i> Crear cuenta';
+    }
+  }
+
+  // --- FUNCIÓN PARA SOLICITAR RECUPERACIÓN DE CONTRASEÑA ---
+  async function pedirCorreoRecuperacion() {
+    const email = prompt("Por favor, ingresa tu correo electrónico registrado:");
+    
+    // Si el usuario cancela o deja vacío, no hacemos nada
+    if (!email || email.trim() === "") return;
+
+    try {
+      const res = await fetch(`${API}/auth/forgot-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim() })
+      });
+      
+      const data = await res.json();
+      
+      // 🛡️ Seguridad: Siempre mostramos el mismo mensaje para evitar User Enumeration
+      alert(data.mensaje || "Si el correo está registrado, recibirás un enlace de recuperación pronto.");
+      
+    } catch (error) {
+      console.error("Error en recuperación:", error);
+      alert("Hubo un problema al conectar con el servidor. Intenta más tarde.");
     }
   }
 
