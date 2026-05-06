@@ -34,6 +34,9 @@ def registrar_log(accion):
         if current_user.is_authenticated:
             usuario_id = current_user.id
             usuario_nombre = current_user.nombre
+        else:
+            usuario_id = None
+            usuario_nombre = "Usuario Anónimo"
 
         conn = get_db_connection()
         cursor = conn.cursor()
