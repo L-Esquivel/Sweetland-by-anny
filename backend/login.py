@@ -3,10 +3,11 @@ from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.security import check_password_hash, generate_password_hash
 from db import get_db_connection
 from models import User
-from extensions import mail, limiter
+from extensions import mail, limiter, mysql # Importamos las instancias globales
 from flask_mail import Message
 from itsdangerous import URLSafeTimedSerializer
-# Nuevas librerías para OAuth
+from utils import registrar_log
+# Librerías para OAuth
 from authlib.integrations.flask_client import OAuth
 import os
 
@@ -19,33 +20,26 @@ google = oauth.register(
     client_id=os.getenv('GOOGLE_CLIENT_ID'),
     client_secret=os.getenv('GOOGLE_CLIENT_SECRET'),
     server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
-    client_kwargs={
-        'scope': 'openid email profile'
-    }
+    client_kwargs={'scope': 'openid email profile'}
 )
 
-# Inicializar oauth con la app (esto se activará mediante app.py que ya lo registra)
 def init_oauth(app):
     oauth.init_app(app)
 
 # =========================
-# RUTAS DE LOGIN CON GOOGLE 🌍
+# LOGIN CON GOOGLE 🌍
 # =========================
 
 @auth_bp.route("/login/google")
 def login_google():
-    """Redirige al usuario a Google para autenticarse."""
-    # El redirect_uri debe coincidir EXACTAMENTE con lo que pusiste en Google Cloud Console
     redirect_uri = url_for('auth_bp.google_callback', _external=True)
     return google.authorize_redirect(redirect_uri)
 
 @auth_bp.route("/login/google/callback")
 def google_callback():
-    """Recibe la respuesta de Google y gestiona el usuario."""
     try:
         token = google.authorize_access_token()
         user_info = token.get('userinfo')
-        
         if not user_info:
             return jsonify({"error": "No se pudo obtener información de Google"}), 400
 
@@ -55,46 +49,34 @@ def google_callback():
 
         conn = get_db_connection()
         cursor = conn.cursor()
-        
-        # 🔍 Verificar si el usuario ya existe por email
         cursor.execute("SELECT * FROM usuarios WHERE email = %s", (email,))
         user_row = cursor.fetchone()
 
         if user_row:
-            # Si ya existe, lo logueamos directamente
-            usuario_logueado = User(
-                id=user_row["id_usuario"],
-                nombre=user_row["nombre"],
-                email=user_row["email"],
-                password=user_row["password"],
-                rol=user_row["rol"]
-            )
-            login_user(usuario_logueado)
+            usuario = User(id=user_row["id_usuario"], nombre=user_row["nombre"], 
+                           email=user_row["email"], password=user_row["password"], rol=user_row["rol"])
+            login_user(usuario)
+            registrar_log(f"Inició sesión vía Google: {email}")
         else:
-            # ✨ SI ES NUEVO: Lo creamos como 'cliente' automáticamente
-            # Importante: google_id nos sirve para identificar que no tiene password manual
             cursor.execute("""
                 INSERT INTO usuarios (nombre, email, rol, google_id, fecha_registro)
                 VALUES (%s, %s, 'cliente', %s, NOW())
             """, (nombre, email, google_id))
             conn.commit()
-            
             new_id = cursor.lastrowid
-            usuario_nuevo = User(id=new_id, nombre=nombre, email=email, password=None, rol='cliente')
-            login_user(usuario_nuevo)
+            usuario = User(id=new_id, nombre=nombre, email=email, password=None, rol='cliente')
+            login_user(usuario)
+            registrar_log(f"Nuevo registro vía Google: {email}")
 
         cursor.close()
         conn.close()
-
-        # Redirigir al cliente a su cuenta en el Landing Page
         return redirect("https://sweetlandbyanny.vercel.app/mi-cuenta.html")
-
     except Exception as e:
         current_app.logger.error(f"Error en Google Auth: {str(e)}")
-        return jsonify({"error": "Fallo en la autenticación con Google"}), 500
+        return redirect("https://sweetlandbyanny.vercel.app/mi-cuenta.html?error=auth_failed")
 
 # =========================
-# RUTAS DE LOGIN TRADICIONAL
+# LOGIN TRADICIONAL 🔑
 # =========================
 
 @auth_bp.route("/login", methods=["POST"])
@@ -104,26 +86,75 @@ def login():
     email = data.get("email")
     password = data.get("password")
 
-    if not email or not password:
-        return jsonify({"error": "Faltan datos"}), 400
-
     user = User.get_by_email(email)
     if user and user.check_password(password):
         login_user(user)
+        registrar_log(f"Inició sesión: {email}")
         return jsonify({
             "mensaje": "Login exitoso",
-            "usuario": {
-                "id": user.id, "nombre": user.nombre, "email": user.email,
-                "telefono": user.telefono, "direccion": user.direccion, "rol": user.rol
-            }
+            "usuario": {"id": user.id, "nombre": user.nombre, "email": user.email, "rol": user.rol}
         })
+    
+    registrar_log(f"Intento de login fallido: {email}")
     return jsonify({"error": "Credenciales inválidas"}), 401
 
-# ... [Mantenemos igual tus rutas de forgot-password, logout y me] ...
+# =========================
+# RECUPERACIÓN DE CLAVE 📧
+# =========================
+
+@auth_bp.route("/forgot-password", methods=["POST"])
+@limiter.limit("3 per hour")
+def forgot_password():
+    data = request.get_json()
+    email = data.get("email")
+    user = User.get_by_email(email)
+
+    if user:
+        s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
+        token = s.dumps(email, salt='password-reset-salt')
+        reset_url = f"https://sweetlandbyanny.vercel.app/reset-password.html?token={token}"
+
+        msg = Message("Recuperación de Contraseña - Precivox", recipients=[email])
+        msg.body = f"Hola {user.nombre},\n\nPara restablecer tu clave haz clic aquí:\n{reset_url}\n\nEl enlace expira en 1 hora."
+        try:
+            mail.send(msg)
+            registrar_log(f"Solicitó recuperación de contraseña: {email}")
+        except Exception as e:
+            current_app.logger.error(f"Error SMTP: {e}")
+
+    return jsonify({"mensaje": "Si el correo está registrado, recibirás un enlace pronto."}), 200
+
+@auth_bp.route("/reset-password-confirm", methods=["POST"])
+def reset_password_confirm():
+    data = request.get_json()
+    token = data.get("token")
+    password = data.get("password")
+
+    try:
+        s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
+        email = s.loads(token, salt='password-reset-salt', max_age=3600)
+    except:
+        return jsonify({"error": "El enlace ha expirado o es inválido"}), 400
+
+    hashed_pw = generate_password_hash(password)
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE usuarios SET password = %s WHERE email = %s", (hashed_pw, email))
+    conn.commit()
+    cursor.close()
+    conn.close()
+    
+    registrar_log(f"Restableció su contraseña con éxito: {email}")
+    return jsonify({"mensaje": "Contraseña actualizada"})
+
+# =========================
+# SESIÓN Y ESTADO
+# =========================
 
 @auth_bp.route("/logout", methods=["POST"])
 @login_required
 def logout():
+    registrar_log(f"Cerró sesión")
     logout_user()
     return jsonify({"mensaje": "Sesión cerrada"})
 
@@ -132,7 +163,7 @@ def logout():
 def get_current_user():
     return jsonify({
         "usuario": {
-            "id": current_user.id, "nombre": current_user.nombre, "email": current_user.email, 
-            "telefono": current_user.telefono, "direccion": current_user.direccion, "rol": current_user.rol
+            "id": current_user.id, "nombre": current_user.nombre, 
+            "email": current_user.email, "rol": current_user.rol
         }
     })
