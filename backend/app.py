@@ -30,13 +30,14 @@ app.config.update(
     REMEMBER_COOKIE_HTTPONLY=True
 )
 
-# ==========================================
-# 📧 CONFIGURACIÓN DE CORREO (SMTP GOOGLE)
+# # ==========================================
+# 📧 CONFIGURACIÓN DE CORREO (SMTP GOOGLE SSL)
 # ==========================================
 app.config.update(
     MAIL_SERVER='smtp.gmail.com',
-    MAIL_PORT=587,
-    MAIL_USE_TLS=True,
+    MAIL_PORT=465,             # Cambiamos 587 por 465
+    MAIL_USE_TLS=False,        # Desactivamos TLS
+    MAIL_USE_SSL=True,         # Activamos SSL (Más estable en nube)
     MAIL_USERNAME=os.getenv('MAIL_USERNAME'),
     MAIL_PASSWORD=os.getenv('MAIL_PASSWORD'),
     MAIL_DEFAULT_SENDER=os.getenv('MAIL_DEFAULT_SENDER')
