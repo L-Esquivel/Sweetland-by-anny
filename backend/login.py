@@ -3,15 +3,24 @@ from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.security import check_password_hash, generate_password_hash
 from db import get_db_connection
 from models import User
-from extensions import mail, limiter, mysql # Importamos las instancias globales
+from extensions import mail, limiter, mysql 
 from flask_mail import Message
 from itsdangerous import URLSafeTimedSerializer
 from utils import registrar_log
-# Librerías para OAuth
 from authlib.integrations.flask_client import OAuth
 import os
 
 auth_bp = Blueprint("auth_bp", __name__, url_prefix="/auth")
+
+# =========================
+# MANEJO DE CORS (OPTIONS) 🛡️
+# =========================
+@auth_bp.route("/login", methods=["OPTIONS"])
+@auth_bp.route("/registrarse", methods=["OPTIONS"])
+@auth_bp.route("/forgot-password", methods=["OPTIONS"])
+@auth_bp.route("/reset-password-confirm", methods=["OPTIONS"])
+def handle_auth_options():
+    return jsonify({"status": "ok"}), 200
 
 # --- CONFIGURACIÓN DE OAUTH ---
 oauth = OAuth()
@@ -112,6 +121,7 @@ def forgot_password():
     if user:
         s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
         token = s.dumps(email, salt='password-reset-salt')
+        # URL de tu landing page
         reset_url = f"https://sweetlandbyanny.vercel.app/reset-password.html?token={token}"
 
         msg = Message("Recuperación de Contraseña - Precivox", recipients=[email])
@@ -122,6 +132,7 @@ def forgot_password():
         except Exception as e:
             current_app.logger.error(f"Error SMTP: {e}")
 
+    # Seguridad: siempre responder éxito
     return jsonify({"mensaje": "Si el correo está registrado, recibirás un enlace pronto."}), 200
 
 @auth_bp.route("/reset-password-confirm", methods=["POST"])
