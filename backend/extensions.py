@@ -1,6 +1,6 @@
 import pymysql
 import threading
-from db import get_db_connection
+from flask import current_app
 from flask_mail import Mail
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -23,7 +23,15 @@ class MySQL:
     def connection(self):
         """Devuelve la conexión del hilo actual (la crea si no existe)."""
         if not hasattr(self._local, 'conn') or self._local.conn is None:
-            self._local.conn = get_db_connection()
+            # La lógica de conexión ahora vive aquí, usando la config de la app.
+            self._local.conn = pymysql.connect(
+                host=current_app.config['MYSQL_HOST'],
+                user=current_app.config['MYSQL_USER'],
+                password=current_app.config['MYSQL_PASSWORD'],
+                db=current_app.config['MYSQL_DB'],
+                port=current_app.config['MYSQL_PORT'],
+                cursorclass=pymysql.cursors.DictCursor
+            )
         return self._local.conn
 
     def close_connection(self):
