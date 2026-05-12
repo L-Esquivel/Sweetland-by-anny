@@ -137,8 +137,9 @@ def get_empaques_producto(producto_id):
 def add_empaque_producto(producto_id):
     data = request.get_json()
     id_empaque = data.get("id_empaque")
-    # 💡 FIX: Aceptamos 'cantidad' o 'cantidad_necesaria' para ser consistentes con el form de ingredientes.
-    # Si no viene ninguno, se asume 1.
+    # 💡 FIX 2: Hacemos el backend más robusto para aceptar varios nombres comunes para la cantidad
+    # ('cantidad', 'cantidad_necesaria') y así resolver la inconsistencia con el formulario,
+    # que parece no enviar los campos esperados.
     cantidad = data.get("cantidad") or data.get("cantidad_necesaria") or 1
 
     if not id_empaque:
