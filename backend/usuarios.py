@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from flask_login import login_required
+from flask_login import login_required, current_user
 from werkzeug.security import generate_password_hash
 from extensions import mysql
 from utils import admin_required  # Importamos tu nuevo decorador
@@ -105,10 +105,12 @@ def update_usuario(id):
 @login_required
 @admin_required
 def delete_usuario(id):
+    # 🛡️ Protección: Evitar que un admin se borre a sí mismo.
+    if current_user.id == id:
+        return jsonify({"error": "No puedes eliminar tu propio usuario administrador"}), 403
+
     cursor = mysql.connection.cursor()
     try:
-        # Evitar que el admin se borre a sí mismo por error
-        # (Suponiendo que current_user.id es accesible)
         cursor.execute("DELETE FROM usuarios WHERE id_usuario=%s", (id,))
         mysql.connection.commit()
         return jsonify({"mensaje": "Usuario eliminado"})
