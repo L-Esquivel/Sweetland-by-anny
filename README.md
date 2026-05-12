@@ -7,10 +7,11 @@ Precivox is a Software-as-a-Service (SaaS) application designed to help small bu
 *   **Product & Inventory Management:** Catalog products, ingredients, and packaging.
 *   **Advanced Costing Engine:** Automatically calculate production costs, suggested sale prices based on desired profit margins, and operational overheads.
 *   **Order Management:** Track customer orders from creation to completion.
-*   **Business Intelligence Dashboard:** Interactive dashboard with sales metrics, charts, and date-range filtering.
+*   **Business Intelligence Dashboard:** An interactive dashboard with date-range filtering to visualize key metrics like Sales, Expenses, and **Net Profit**.
+*   **Expense Management:** A dedicated module to register and track fixed and operational business costs.
 *   **User & Role Management:** Secure access control with different user roles (Admin, Employee).
 *   **Secure Authentication:** Traditional email/password login, OAuth 2.0 with Google, and secure password recovery.
-
+ 
 ## 🚀 Tech Stack
 
 *   **Backend:**
@@ -108,5 +109,5 @@ The project is currently evolving from an MVP to a full-fledged multi-tenant Saa
 1.  **Identity & Access:** Finalizing secure user authentication and recovery flows.
 2.  **SaaS-ification:** Implementing a multi-tenant architecture for data isolation.
 3.  **Security Hardening:** Advanced audit logs, security headers (CSP), and input sanitization.
-4.  **Business Intelligence:** Adding modules for waste management, fixed costs, and report exporting.
+4.  **Business Intelligence:** Expanding the BI module with waste (merma) management and report exporting (PDF/Excel).
 5.  **DevOps & Quality:** API documentation (Swagger), containerization (Docker), and unit testing.
