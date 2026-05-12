@@ -1,99 +1,112 @@
-# 🎂 Sweetland by Anny | Full-Stack ERP & E-Commerce Solution
+# Precivox - SaaS Costing & Business Intelligence
 
-![Backend](https://img.shields.io/badge/Backend-Railway-blue?style=flat-square)
-![Frontend](https://img.shields.io/badge/Frontend-Vercel-black?style=flat-square)
-![Status](https://img.shields.io/badge/Status-In%20Production-brightgreen?style=flat-square)
+Precivox is a Software-as-a-Service (SaaS) application designed to help small businesses, starting with bakeries and expanding to other models, to perform detailed product costing, manage operations, and gain financial insights through a powerful dashboard.
 
-A bespoke business management platform tailored for a professional pastry business. This project integrates a robust ERP (Enterprise Resource Planning) system for internal operations with a dynamic e-commerce funnel for end customers.
+## ✨ Key Features
 
----
+*   **Product & Inventory Management:** Catalog products, ingredients, and packaging.
+*   **Advanced Costing Engine:** Automatically calculate production costs, suggested sale prices based on desired profit margins, and operational overheads.
+*   **Order Management:** Track customer orders from creation to completion.
+*   **Business Intelligence Dashboard:** Interactive dashboard with sales metrics, charts, and date-range filtering.
+*   **User & Role Management:** Secure access control with different user roles (Admin, Employee).
+*   **Secure Authentication:** Traditional email/password login, OAuth 2.0 with Google, and secure password recovery.
 
-## 🚀 Live Environment
+## 🚀 Tech Stack
 
-| Service | URL |
-|---|---|
-| Customer Landing Page | [sweetlandbyanny.vercel.app](https://sweetlandbyanny.vercel.app) |
-| Administrative Panel | [sweetland-by-anny.vercel.app](https://sweetland-by-anny.vercel.app) |
-| RESTful API | [sweetland-by-anny-production.up.railway.app](https://sweetland-by-anny-production.up.railway.app) |
+*   **Backend:**
+    *   **Framework:** Flask (Python)
+    *   **Database:** MySQL (via PyMySQL)
+    *   **Authentication:** Flask-Login
+    *   **Security:** Flask-Limiter (Rate Limiting), Flask-CORS
+*   **Frontend (Admin Panel):**
+    *   **Framework:** React
+    *   **Styling:** Bootstrap
+    *   **Charting:** Recharts
+*   **Deployment:**
+    *   **Backend:** Railway
+    *   **Frontend (Admin):** Vercel
+    *   **Frontend (Landing):** Vercel
+    *   **Image Storage:** Cloudinary
 
----
+## ⚙️ Getting Started (Local Development)
 
-## 🛠 Tech Stack & Architecture
+### Prerequisites
 
-The system follows a decoupled, three-tier architecture:
+*   Python 3.10+
+*   Node.js & npm
+*   A local MySQL database instance.
 
-- **Backend:** Python 3.12 / Flask (REST API)
-- **Database:** MySQL 8.0 (Managed via Railway)
-- **Internal Admin Panel:** React 18 / Vite / Chart.js / Bootstrap 5
-- **Public Landing Page:** Dynamic HTML5 / CSS3 / Vanilla JavaScript
-- **Storage:** Cloudinary API (Persistent Cloud Media Management)
-- **DevOps:** GitHub Actions (CI/CD), Railway (Production Backend), Vercel (Production Frontend)
+### Backend Setup
 
----
+1.  Navigate to the `backend` directory:
+    ```bash
+    cd backend
+    ```
+2.  Create and activate a virtual environment:
+    ```bash
+    python -m venv venv
+    source venv/bin/activate  # On Windows: venv\Scripts\activate
+    ```
+3.  Install dependencies:
+    ```bash
+    pip install -r requirements.txt
+    ```
+4.  Create a `.env` file in the `backend` directory and add the following environment variables:
+    ```env
+    # Flask
+    SECRET_KEY=your_super_secret_key
+    FLASK_ENV=development
 
-## 🌟 Key Features
+    # Database
+    MYSQL_HOST=localhost
+    MYSQL_USER=your_db_user
+    MYSQL_PASSWORD=your_db_password
+    MYSQL_DB=your_db_name
+    MYSQL_PORT=3306
 
-### 📊 Business Intelligence & Costing Engine
+    # Google OAuth
+    GOOGLE_CLIENT_ID=your_google_client_id
+    GOOGLE_CLIENT_SECRET=your_google_client_secret
 
-A custom-built financial algorithm that manages product pricing through a real-time 8-step logic:
+    # Cloudinary
+    CLOUDINARY_CLOUD_NAME=your_cloudinary_name
+    CLOUDINARY_API_KEY=your_cloudinary_api_key
+    CLOUDINARY_API_SECRET=your_cloudinary_api_secret
 
-- **Dynamic Costing:** Automatically calculates Suggested Retail Price (SRP) based on base ingredient costs + 35% Operating Expenses + 10% Market Depreciation + 5% Equipment Depreciation + Packaging.
-- **Automated Stock Control:** Real-time inventory deduction triggered by order fulfillment, distinguishing between stockable items and custom-made products.
-- **Financial Dashboard:** Visual analytics and KPIs providing real-time data on daily/monthly revenue and top-selling products.
-- **Supply Chain Management:** A unified "Insumos" module to track inventory and prices for both raw ingredients and packaging materials.
+    # Email (for password recovery)
+    MAIL_USERNAME=your_gmail_address@gmail.com
+    MAIL_PASSWORD=your_gmail_app_password
+    ```
+5.  Run the backend server:
+    ```bash
+    flask run
+    ```
 
-### 🛍️ Sales Funnel & Order Management
+### Frontend (Admin Panel) Setup
 
-- **Public Catalog:** Dynamically fetched from the MySQL database via REST API.
-- **Atomic Checkout:** Orders are created as complete transactions in the backend and then pushed to the owner via WhatsApp API Integration.
-- **Customer Portal:** Secure login for clients to track their order history, status, and account details in real-time.
+1.  Navigate to the `admin-panel/mi-app` directory:
+    ```bash
+    cd admin-panel/mi-app
+    ```
+2.  Install dependencies:
+    ```bash
+    npm install
+    ```
+3.  Create a `.env.local` file in the `admin-panel/mi-app` directory and add the backend URL:
+    ```env
+    VITE_API_URL=http://127.0.0.1:5000
+    ```
+4.  Run the frontend development server:
+    ```bash
+    npm run dev
+    ```
 
-### 🔒 Security Implementation (IT Focus)
+## 🗺️ Project Roadmap
 
-Designed with a security-first mindset, implementing measures to mitigate common vulnerabilities:
+The project is currently evolving from an MVP to a full-fledged multi-tenant SaaS application. Key development phases include:
 
-**Vulnerability Mitigation:**
-- **SQL Injection (SQLi):** Enforced Parameterized Queries (Prepared Statements) across all database interactions.
-- **Brute-Force Protection:** Implemented Rate-Limiting via `Flask-Limiter` on all authentication endpoints.
-- **Cross-Site Scripting (XSS):** Implemented `HttpOnly` and `Secure` cookie flags to prevent session hijacking.
-
-**Secure Access & Identity:**
-- **RBAC (Role-Based Access Control):** Granular permission system (Admin, Employee, Customer) enforced via custom Flask decorators and conditional UI rendering.
-- **Password Hashing:** Industry-standard PBKDF2 hashing with salt (Werkzeug) for all user credentials.
-- **Secure Session Management:** `SameSite=None` and `Secure=True` configuration for cross-domain cookie compatibility.
-
-**Network Security:**
-- **CORS:** Strict whitelist-based policy allowing only authorized production domains to communicate with the API.
-- **Force HTTPS:** Global redirect logic to ensure all traffic is encrypted in transit.
-
----
-
-## 📁 Project Structure
-Sweetland-by-anny/
-├── backend/              # Flask REST API (Controllers, Blueprints, Models, Utils)
-│   └── static/images/    # Managed product assets (Hybrid local/cloud storage)
-├── admin-panel/          # React SPA for internal business management
-├── landing-page/         # Client-facing dynamic website
-├── database/             # Relational schema and SQL seeding scripts
-└── shared-assets/        # Branding and raw design resources
-
----
-
-## 🛠 Local Development
-
-**1. Clone & Install Backend:**
-```bash
-cd backend
-pip install -r requirements.txt
-# Configure .env with MYSQL_URL, SECRET_KEY, MAIL_PASSWORD, and CLOUDINARY_URL
-python app.py
-2. Run Admin Panel:
-bash
-Copy
-cd admin-panel/mi-app
-npm install
-npm run dev
-⚠️ Open the landing page using Live Server (VS Code extension) to avoid CORS restrictions from the file:// protocol.
-
-
-Developed by Luis Esquivel as part of a commitment to building secure, scalable, and business-oriented software.
+1.  **Identity & Access:** Finalizing secure user authentication and recovery flows.
+2.  **SaaS-ification:** Implementing a multi-tenant architecture for data isolation.
+3.  **Security Hardening:** Advanced audit logs, security headers (CSP), and input sanitization.
+4.  **Business Intelligence:** Adding modules for waste management, fixed costs, and report exporting.
+5.  **DevOps & Quality:** API documentation (Swagger), containerization (Docker), and unit testing.
