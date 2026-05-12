@@ -134,7 +134,8 @@ export const pedidosService = {
 
   async createUsuario(usuarioData) {
     try {
-      const response = await fetch(`${API_URL}/usuarios`, {
+      // FIX: Usar la URL correcta de usuarios
+      const response = await fetch(`${USUARIOS_URL}/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -149,13 +150,24 @@ export const pedidosService = {
       console.error('Error en pedidosService.createUsuario:', error);
       throw error;
     }
-  }, // <--- AQUÍ FALTABA ESTA COMA
+  },
 
   // ==================== ESTADÍSTICAS ====================
 
-  async getStats() {
+  async getStats(fechaInicio, fechaFin) {
     try {
-      const response = await fetch(`${API_URL}/stats`, { credentials: 'include' });
+      let url = `${API_URL}/stats`;
+      
+      // Si se proveen fechas, las añadimos como query parameters
+      if (fechaInicio && fechaFin) {
+        const params = new URLSearchParams({
+          fecha_inicio: fechaInicio,
+          fecha_fin: fechaFin,
+        });
+        url += `?${params.toString()}`;
+      }
+
+      const response = await fetch(url, { credentials: 'include' });
       if (!response.ok) throw new Error('Error al cargar estadísticas');
       return await response.json();
     } catch (error) {
@@ -164,4 +176,3 @@ export const pedidosService = {
     }
   }
 };
-
