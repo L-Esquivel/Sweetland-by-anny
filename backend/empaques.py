@@ -2,6 +2,7 @@ from flask import Blueprint, jsonify, request
 from flask_login import login_required
 from extensions import mysql
 import logging
+from recetas import calcular_costo_completo # Importamos la función de costeo
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -144,7 +145,9 @@ def get_empaques_producto(producto_id):
 def add_empaque_producto(producto_id):
     data = request.get_json()
     id_empaque = data.get("id_empaque")
-    cantidad = data.get("cantidad", 1)
+    # 💡 FIX: Aceptamos 'cantidad' o 'cantidad_necesaria' para ser consistentes con el form de ingredientes.
+    # Si no viene ninguno, se asume 1.
+    cantidad = data.get("cantidad") or data.get("cantidad_necesaria") or 1
 
     if not id_empaque:
         return jsonify({"error": "id_empaque es obligatorio"}), 400
@@ -165,6 +168,10 @@ def add_empaque_producto(producto_id):
         VALUES (%s, %s, %s, %s)
     """, (producto_id, id_empaque, cantidad, subtotal))
     mysql.connection.commit()
+
+    # 💡 FIX: Recalculamos el costo del producto para que se actualice en la tabla 'productos'.
+    calcular_costo_completo(producto_id)
+
     cursor.close()
     return jsonify({"mensaje": "Empaque asignado al producto"}), 201
 
@@ -172,7 +179,19 @@ def add_empaque_producto(producto_id):
 @login_required
 def delete_empaque_producto(id):
     cursor = mysql.connection.cursor()
-    cursor.execute("DELETE FROM recetas_empaques WHERE id=%s", (id,))
-    mysql.connection.commit()
-    cursor.close()
-    return jsonify({"mensaje": "Empaque eliminado del producto"})
+    try:
+        # 💡 FIX: Obtenemos el id_producto ANTES de borrar para poder recalcular.
+        cursor.execute("SELECT id_producto FROM recetas_empaques WHERE id = %s", (id,))
+        resultado = cursor.fetchone()
+        id_producto = resultado.get('id_producto') if resultado else None
+
+        cursor.execute("DELETE FROM recetas_empaques WHERE id=%s", (id,))
+        mysql.connection.commit()
+
+        # 💡 FIX: Si se borró, recalculamos el costo del producto.
+        if id_producto:
+            calcular_costo_completo(id_producto)
+
+        return jsonify({"mensaje": "Empaque eliminado del producto"})
+    finally:
+        cursor.close()
