@@ -176,16 +176,16 @@ const RecetasList = () => {
 
                 <div className="mb-4">
                   <label className="form-label fw-bold">Utilidad Deseada (%):</label>
-                  <div className="d-flex align-items-center">
+                  <div className="input-group">
                     <input 
-                      type="range" 
-                      className="form-range me-3" 
-                      min="0" max="200" step="1"
-                      value={productoSeleccionado.utilidad_porcentaje || 40}
+                      type="number"
+                      className="form-control form-control-lg"
+                      value={productoSeleccionado.utilidad_porcentaje ?? ''}
                       onChange={(e) => actualizarCampoProducto('utilidad_porcentaje', e.target.value)}
                     />
-                    <span className="badge bg-primary fs-5">{productoSeleccionado.utilidad_porcentaje}%</span>
+                    <span className="input-group-text">%</span>
                   </div>
+                  <small className="text-muted">Porcentaje de ganancia sobre el costo total de producción.</small>
                 </div>
 
                 {isUpdating && <div className="text-primary"><span className="spinner-border spinner-border-sm me-2"></span>Recalculando...</div>}
