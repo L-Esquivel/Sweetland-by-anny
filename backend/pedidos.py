@@ -3,7 +3,7 @@ from flask_login import login_required, current_user, login_user, logout_user
 from utils import admin_required, registrar_log # 🛡️ Importamos la auditoría
 from extensions import mysql
 from werkzeug.security import generate_password_hash
-import secrets, string, logging
+import secrets, string, logging, datetime
 
 logger = logging.getLogger(__name__)
 
@@ -39,42 +39,57 @@ def procesar_descuento_stock(pedido_id):
 def get_stats():
     cursor = mysql.connection.cursor()
     try:
-        # 1. Resumen financiero
-        cursor.execute("""
-            SELECT 
-                SUM(CASE WHEN DATE(fecha_pedido) = CURDATE() THEN total ELSE 0 END) as hoy,
-                SUM(CASE WHEN MONTH(fecha_pedido) = MONTH(CURDATE()) AND YEAR(fecha_pedido) = YEAR(CURDATE()) THEN total ELSE 0 END) as mes,
-                SUM(total) as total_historico,
-                COUNT(id_pedido) as num_pedidos
-            FROM pedidos WHERE estado != 'cancelado'
-        """)
-        resumen_raw = cursor.fetchone()
-        resumen = {k: float(v or 0) for k, v in dict(resumen_raw).items()}
+        # 1. Obtener y validar rango de fechas (default: últimos 30 días)
+        end_date = datetime.datetime.now()
+        start_date = end_date - datetime.timedelta(days=29)
+        
+        fecha_inicio_str = request.args.get('fecha_inicio', start_date.strftime('%Y-%m-%d'))
+        fecha_fin_str = request.args.get('fecha_fin', end_date.strftime('%Y-%m-%d'))
+        params = (fecha_inicio_str, fecha_fin_str)
 
-        # 2. Datos para la gráfica
-        cursor.execute("""
+        # 2. Resumen financiero para el rango
+        where_pedidos = " WHERE estado != 'cancelado' AND DATE(fecha_pedido) BETWEEN %s AND %s "
+        cursor.execute(f"""
+            SELECT 
+                SUM(total) as total_ventas_rango,
+                COUNT(id_pedido) as num_pedidos_rango
+            FROM pedidos {where_pedidos}
+        """, params)
+        resumen_rango_raw = cursor.fetchone()
+        resumen = {
+            'total_ventas_rango': float(resumen_rango_raw.get('total_ventas_rango') or 0),
+            'num_pedidos_rango': int(resumen_rango_raw.get('num_pedidos_rango') or 0)
+        }
+        
+        # Añadir total histórico que no se ve afectado por el filtro
+        cursor.execute("SELECT SUM(total) as total_historico FROM pedidos WHERE estado != 'cancelado'")
+        resumen['total_historico'] = float(cursor.fetchone().get('total_historico') or 0)
+
+        # 3. Datos para la gráfica para el rango
+        cursor.execute(f"""
             SELECT DATE(fecha_pedido) as fecha, SUM(total) as venta 
-            FROM pedidos WHERE estado != 'cancelado' 
-            GROUP BY DATE(fecha_pedido) ORDER BY fecha DESC LIMIT 7
-        """)
+            FROM pedidos {where_pedidos}
+            GROUP BY DATE(fecha_pedido) ORDER BY fecha ASC
+        """, params)
         grafica_raw = cursor.fetchall()
         grafica = [{"fecha": str(row['fecha']), "venta": float(row['venta'])} for row in grafica_raw]
 
-        # 3. Pedidos por estado
-        cursor.execute("SELECT estado, COUNT(id_pedido) as cantidad FROM pedidos GROUP BY estado")
+        # 4. Pedidos por estado para el rango
+        cursor.execute(f"SELECT estado, COUNT(id_pedido) as cantidad FROM pedidos {where_pedidos} GROUP BY estado", params)
         estados_raw = cursor.fetchall()
         pedidos_por_estado = {row['estado']: row['cantidad'] for row in estados_raw}
 
-        # 4. Producto Top
-        cursor.execute("""
+        # 5. Producto Top para el rango
+        where_pedidos_aliased = " WHERE ped.estado = 'completado' AND DATE(ped.fecha_pedido) BETWEEN %s AND %s "
+        cursor.execute(f"""
             SELECT p.nombre, p.precio, SUM(dp.cantidad) as total_vendido
             FROM detalle_pedidos dp
             JOIN productos p ON dp.producto_id = p.id_producto
             JOIN pedidos ped ON dp.pedido_id = ped.id_pedido
-            WHERE ped.estado = 'completado'
+            {where_pedidos_aliased}
             GROUP BY p.id_producto
             ORDER BY total_vendido DESC LIMIT 1
-        """)
+        """, params)
         producto_top_raw = cursor.fetchone()
         producto_top = None
         if producto_top_raw:
@@ -84,7 +99,13 @@ def get_stats():
                 "total_vendido": int(producto_top_raw['total_vendido'])
             }
 
-        return jsonify({"resumen": resumen, "grafica": grafica, "pedidos_por_estado": pedidos_por_estado, "producto_top": producto_top})
+        return jsonify({
+            "resumen": resumen, 
+            "grafica": grafica, 
+            "pedidos_por_estado": pedidos_por_estado, 
+            "producto_top": producto_top,
+            "filtros_aplicados": {"fecha_inicio": fecha_inicio_str, "fecha_fin": fecha_fin_str}
+        })
     finally:
         if cursor: cursor.close()
 
