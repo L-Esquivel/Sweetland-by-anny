@@ -13,7 +13,8 @@ const Layout = () => {
     productos: { title: 'Productos', component: <Productos /> },
     pedidos: { title: 'Pedidos', component: <Pedidos /> },
     ingredientes: { title: 'Ingredientes', component: <Ingredientes /> },
-    recetas: { title: 'Recetas', component: <Recetas /> }
+    recetas: { title: 'Recetas', component: <Recetas /> },
+    gastos: { title: 'Gastos', component: <Gastos /> }
   };
 
   const handleLogout = async () => {
@@ -129,6 +130,13 @@ const Ingredientes = () => (
 const Recetas = () => (
   <div>
     <h2>Gestión de Recetas</h2>
+    <p>Esta sección estará disponible pronto.</p>
+  </div>
+);
+
+const Gastos = () => (
+  <div>
+    <h2>Gestión de Gastos</h2>
     <p>Esta sección estará disponible pronto.</p>
   </div>
 );

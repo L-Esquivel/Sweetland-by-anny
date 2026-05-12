@@ -8,6 +8,7 @@ import PedidosList from './components/pedidos/PedidosList';
 import InsumosPage from "./components/Insumos/InsumosPage";
 import RecetasList from "./components/recetas/RecetasList";
 import Dashboard from './components/Dashboard';
+import GastosList from './components/gastos/GastosList';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'https://sweetland-by-anny-production.up.railway.app';
 
@@ -116,6 +117,7 @@ function App() {
       case 'pedidos': return <PedidosList />;
       case 'insumos': return <InsumosPage />;
       case 'recetas': return <RecetasList />;
+      case 'gastos': return <GastosList />;
       case 'inicio': return <Dashboard user={user} />;
       default: return <Dashboard user={user} />;
     }
@@ -179,6 +181,12 @@ function App() {
             {user?.rol === 'admin' && (
               <li className="nav-item">
                 <button className={`nav-link w-100 text-start ${activeSection === 'recetas' ? 'active' : ''}`} onClick={() => setActiveSection('recetas')}>📋 Recetas y Costos</button>
+              </li>
+            )}
+
+            {user?.rol === 'admin' && (
+              <li className="nav-item">
+                <button className={`nav-link w-100 text-start ${activeSection === 'gastos' ? 'active' : ''}`} onClick={() => setActiveSection('gastos')}>💸 Gastos</button>
               </li>
             )}
           </ul>
