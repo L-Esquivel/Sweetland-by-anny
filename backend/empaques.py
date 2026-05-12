@@ -136,14 +136,11 @@ def get_empaques_producto(producto_id):
 @login_required
 def add_empaque_producto(producto_id):
     data = request.get_json()
-    # 🕵️‍♂️ DIAGNÓSTICO: Imprimimos los datos exactos que llegan del frontend.
-    logger.info(f"DIAGNÓSTICO EMPAQUES - Datos recibidos: {data}")
 
     id_empaque = data.get("id_empaque")
-    # 💡 FIX 2: Hacemos el backend más robusto para aceptar varios nombres comunes para la cantidad
-    # ('cantidad', 'cantidad_necesaria') y así resolver la inconsistencia con el formulario,
-    # que parece no enviar los campos esperados.
-    cantidad = data.get("cantidad") or data.get("cantidad_necesaria") or 1
+    # 💡 FIX DEFINITIVO: El log de diagnóstico reveló que el frontend envía la cantidad
+    # en el campo 'cantidad_empaque'. Se añade a la lógica para capturar el valor correctamente.
+    cantidad = data.get("cantidad_empaque") or data.get("cantidad") or data.get("cantidad_necesaria") or 1
 
     if not id_empaque:
         return jsonify({"error": "id_empaque es obligatorio"}), 400
