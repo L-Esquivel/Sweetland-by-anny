@@ -86,9 +86,10 @@ def calcular_costo_completo(id_producto, pax=None, utilidad_porcentaje=None):
             SET costo_produccion = %s,
                 precio_sugerido = %s,
                 pax = %s,
-                utilidad_porcentaje = %s
+                utilidad_porcentaje = %s,
+                precio = %s
             WHERE id_producto = %s
-        """, (total1, precio_sugerido, pax, utilidad_porcentaje, id_producto))
+        """, (total1, precio_sugerido, pax, utilidad_porcentaje, precio_sugerido, id_producto))
 
         mysql.connection.commit()
 
