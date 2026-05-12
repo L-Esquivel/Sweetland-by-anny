@@ -163,7 +163,11 @@ const RecetasList = () => {
                     <input 
                       type="number" 
                       className="form-control form-control-lg" 
-                      value={productoSeleccionado.pax || 1}
+                      // 💡 FIX: Se cambia `|| 1` por `?? ''`.
+                      // Esto permite que el campo de texto esté momentáneamente vacío
+                      // para que el usuario pueda borrar el valor y escribir uno nuevo,
+                      // en lugar de forzarlo a ser '1' inmediatamente.
+                      value={productoSeleccionado.pax ?? ''}
                       onChange={(e) => actualizarCampoProducto('pax', e.target.value)}
                     />
                   </div>
