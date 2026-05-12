@@ -68,7 +68,6 @@ const Login = ({ onLogin, onShowRegister }) => {
             fontSize: '2.5rem'
           }}>
             <img src="/logo-precivox.png" alt="Precivox Logo" style={{ height: '120px', marginBottom: '15px' }} />
-            <br/>Precivox
           </h1>
           <p style={{ 
             fontSize: '1.2rem',
