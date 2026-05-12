@@ -156,15 +156,18 @@ header {
 
 /* --- LOGO --- */
 .logo {
-  width: 300px; /* Aumentamos el tamaño */
+  width: 250px;
   display: block;
   margin: 45px auto;
-  transition: transform 0.3s ease;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2); /* sombra base */
+  border-radius: 50%; /* si deseas que la imagen se mantenga redonda */  
 }
 
 /* Al pasar el mouse */
 .logo:hover {
   transform: translateY(-5px); /* se "levanta" */
+  box-shadow: 0 12px 20px rgba(0, 0, 0, 0.3); /* sombra más intensa */
 }
 
 /* --- MENÚ --- */
