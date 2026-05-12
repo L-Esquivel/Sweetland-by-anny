@@ -95,7 +95,7 @@ const Dashboard = () => {
 
       {/* TARJETAS DE RESUMEN */}
       <div className="row">
-        <div className="col-lg-4 col-md-6 mb-4">
+        <div className="col-lg-3 col-md-6 mb-4">
           <div className="card text-white bg-success h-100">
             <div className="card-body">
               <h5 className="card-title">Ventas en Rango</h5>
@@ -103,19 +103,31 @@ const Dashboard = () => {
             </div>
           </div>
         </div>
-        <div className="col-lg-4 col-md-6 mb-4">
+        <div className="col-lg-3 col-md-6 mb-4">
+          <div className="card text-white bg-danger h-100">
+            <div className="card-body">
+              <h5 className="card-title">Gastos en Rango</h5>
+              <p className="card-text fs-2 fw-bold">{formatearMoneda(stats?.resumen?.total_gastos_rango)}</p>
+            </div>
+          </div>
+        </div>
+        <div className="col-lg-3 col-md-6 mb-4">
+          <div className="card text-white bg-primary h-100">
+            <div className="card-body">
+              <h5 className="card-title">Ganancia Neta</h5>
+              <p className="card-text fs-2 fw-bold">
+                {formatearMoneda(
+                  (stats?.resumen?.total_ventas_rango || 0) - (stats?.resumen?.total_gastos_rango || 0)
+                )}
+              </p>
+            </div>
+          </div>
+        </div>
+        <div className="col-lg-3 col-md-6 mb-4">
           <div className="card text-white bg-info h-100">
             <div className="card-body">
               <h5 className="card-title">Pedidos en Rango</h5>
               <p className="card-text fs-2 fw-bold">{stats?.resumen?.num_pedidos_rango}</p>
-            </div>
-          </div>
-        </div>
-        <div className="col-lg-4 col-md-12 mb-4">
-          <div className="card text-dark bg-light h-100">
-            <div className="card-body">
-              <h5 className="card-title">Ventas Totales Históricas</h5>
-              <p className="card-text fs-2 fw-bold">{formatearMoneda(stats?.resumen?.total_historico)}</p>
             </div>
           </div>
         </div>
