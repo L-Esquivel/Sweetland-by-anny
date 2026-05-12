@@ -9,14 +9,6 @@ logger = logging.getLogger(__name__)
 
 empaques_bp = Blueprint("empaques", __name__, url_prefix="/empaques")
 
-# ==================== PREFLIGHT ====================
-@empaques_bp.route("/", methods=["OPTIONS"])
-@empaques_bp.route("/<int:id>", methods=["OPTIONS"])
-@empaques_bp.route("/producto/<int:producto_id>", methods=["OPTIONS"])
-@empaques_bp.route("/producto/item/<int:id>", methods=["OPTIONS"])
-def handle_options(id=None, producto_id=None):
-    return jsonify({"status": "ok"}), 200
-
 # ==================== CATÁLOGO GENERAL DE EMPAQUES ====================
 # Estos son los que aparecerán en la nueva sección de "Insumos"
 

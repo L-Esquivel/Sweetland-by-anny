@@ -75,17 +75,6 @@ def force_https():
         url = request.url.replace('http://', 'https://', 1)
         return redirect(url, code=301)
 
-# Manejo de Preflight (OPTIONS) global para evitar bloqueos de CORS
-@app.before_request
-def handle_preflight():
-    if request.method == "OPTIONS":
-        res = jsonify({"status": "ok"})
-        res.headers["Access-Control-Allow-Origin"] = request.headers.get("Origin", "*")
-        res.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
-        res.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
-        res.headers["Access-Control-Allow-Credentials"] = "true"
-        return res, 200
-
 # ==========================================
 # 🛡️ MANEJADORES DE ERRORES (SANITIZACIÓN)
 # ==========================================

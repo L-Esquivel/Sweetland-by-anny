@@ -144,17 +144,6 @@ def recalcular_costos():
         return jsonify({"error": str(e)}), 500
 
 # ================================
-# PREFLIGHT OPTIONS
-# ================================
-@recetas_bp.route("/", methods=["OPTIONS"])
-@recetas_bp.route("/producto/<int:producto_id>", methods=["OPTIONS"])
-@recetas_bp.route("/<int:id>", methods=["OPTIONS"])
-@recetas_bp.route("/multiple", methods=["OPTIONS"])
-@recetas_bp.route("/recalcular", methods=["OPTIONS"])
-def handle_options(producto_id=None, id=None):
-    return jsonify({"status": "ok"}), 200
-
-# ================================
 # Obtener todas las recetas
 # ================================
 @recetas_bp.route("/", methods=["GET"])

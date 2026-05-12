@@ -9,19 +9,6 @@ logger = logging.getLogger(__name__)
 
 pedidos_bp = Blueprint("pedidos", __name__, url_prefix="/pedidos")
 
-# =========================
-# RUTAS OPTIONS PARA CORS 🛡️
-# =========================
-@pedidos_bp.route("/public/login", methods=["OPTIONS"])
-@pedidos_bp.route("/public/registro", methods=["OPTIONS"])
-@pedidos_bp.route("/public", methods=["OPTIONS"])
-@pedidos_bp.route("/public/mis-pedidos", methods=["OPTIONS"])
-@pedidos_bp.route("/", methods=["OPTIONS"])
-@pedidos_bp.route("/<int:id>/estado", methods=["OPTIONS"])
-@pedidos_bp.route("/<int:id>", methods=["OPTIONS"])
-def handle_pedidos_options(id=None):
-    return jsonify({"status": "ok"}), 200
-
 # ==================== LÓGICA DE STOCK ====================
 
 def procesar_descuento_stock(pedido_id):

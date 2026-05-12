@@ -6,14 +6,6 @@ from utils import admin_required  # Importamos tu nuevo decorador
 
 usuarios_bp = Blueprint("usuarios_bp", __name__, url_prefix="/usuarios")
 
-# =========================
-# Rutas OPTIONS para CORS
-# =========================
-@usuarios_bp.route("/", methods=["OPTIONS"])
-@usuarios_bp.route("/<int:id>", methods=["OPTIONS"])
-def handle_options(id=None):
-    return jsonify({"status": "ok"}), 200
-
 # ============================================================
 # TODAS LAS RUTAS ABAJO REQUIEREN ROL 'admin' 🛡️
 # ============================================================

@@ -9,11 +9,6 @@ logger = logging.getLogger(__name__)
 
 ingredientes_bp = Blueprint("ingredientes", __name__, url_prefix="/ingredientes")
 
-@ingredientes_bp.route("/", methods=["OPTIONS"])
-@ingredientes_bp.route("/<int:id>", methods=["OPTIONS"])
-def handle_options(id=None):
-    return jsonify({"status": "ok"}), 200
-
 @ingredientes_bp.route("/", methods=["GET"])
 @login_required
 def get_ingredientes():

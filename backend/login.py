@@ -13,16 +13,6 @@ import threading
 
 auth_bp = Blueprint("auth_bp", __name__, url_prefix="/auth")
 
-# =========================
-# MANEJO DE CORS (OPTIONS) 🛡️
-# =========================
-@auth_bp.route("/login", methods=["OPTIONS"])
-@auth_bp.route("/registrarse", methods=["OPTIONS"])
-@auth_bp.route("/forgot-password", methods=["OPTIONS"])
-@auth_bp.route("/reset-password-confirm", methods=["OPTIONS"])
-def handle_auth_options():
-    return jsonify({"status": "ok"}), 200
-
 # --- CONFIGURACIÓN DE OAUTH ---
 oauth = OAuth()
 google = oauth.register(
