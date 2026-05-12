@@ -3,7 +3,7 @@ import cloudinary
 import cloudinary.uploader
 from flask import Blueprint, request, jsonify, current_app
 from flask_login import login_required
-from db import get_db_connection
+from extensions import mysql
 from utils import admin_required, registrar_log # 🛡️ Importamos el log
 from recetas import calcular_costo_completo
 
@@ -58,13 +58,13 @@ def upload_image():
 @productos_bp.route("/", methods=["GET"])
 @login_required
 def get_productos():
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM productos")
-    rows = cursor.fetchall()
-    cursor.close()
-    conn.close()
-    return jsonify(list(rows))
+    cursor = mysql.connection.cursor()
+    try:
+        cursor.execute("SELECT * FROM productos")
+        rows = cursor.fetchall()
+        return jsonify(list(rows))
+    finally:
+        if cursor: cursor.close()
 
 @productos_bp.route("/", methods=["POST"])
 @login_required
@@ -72,23 +72,24 @@ def get_productos():
 def add_producto():
     data = request.json
     nombre = data.get("nombre")
-    conn = get_db_connection()
-    cursor = conn.cursor()
+    cursor = mysql.connection.cursor()
     try:
         cursor.execute("""
             INSERT INTO productos (nombre, categoria, descripcion, precio, imagen, stock, controla_stock)
             VALUES (%s, %s, %s, %s, %s, %s, %s)
         """, (nombre, data.get("categoria"), data.get("descripcion"), 
               data.get("precio"), data.get("imagen"), data.get("stock", 0), data.get("controla_stock", False)))
-        conn.commit()
+        mysql.connection.commit()
         
         # 🛡️ AUDITORÍA: Registro de creación
         registrar_log(f"Creó el producto: {nombre}")
         
         return jsonify({"mensaje": "Producto creado"}), 201
+    except Exception as e:
+        mysql.connection.rollback()
+        return jsonify({"error": str(e)}), 500
     finally:
-        cursor.close()
-        conn.close()
+        if cursor: cursor.close()
 
 @productos_bp.route("/<int:id>", methods=["PUT"])
 @login_required
@@ -96,8 +97,7 @@ def add_producto():
 def update_producto(id):
     data = request.json
     nombre = data.get("nombre")
-    conn = get_db_connection()
-    cursor = conn.cursor()
+    cursor = mysql.connection.cursor()
     try:
         cursor.execute("""
             UPDATE productos
@@ -107,7 +107,7 @@ def update_producto(id):
         """, (nombre, data.get("categoria"), data.get("descripcion"), 
               data.get("precio"), data.get("imagen"), data.get("pax"), 
               data.get("utilidad_porcentaje"), data.get("stock"), data.get("controla_stock"), id))
-        conn.commit()
+        mysql.connection.commit()
         calcular_costo_completo(id)
         
         # 🛡️ AUDITORÍA: Registro de actualización
@@ -115,33 +115,33 @@ def update_producto(id):
         
         return jsonify({"mensaje": "Producto actualizado"})
     finally:
-        cursor.close()
-        conn.close()
+        if cursor: cursor.close()
 
 @productos_bp.route("/<int:id>", methods=["DELETE"])
 @login_required
 @admin_required
 def delete_producto(id):
-    conn = get_db_connection()
-    cursor = conn.cursor()
+    cursor = mysql.connection.cursor()
     try:
         cursor.execute("DELETE FROM productos WHERE id_producto=%s", (id,))
-        conn.commit()
+        mysql.connection.commit()
         
         # 🛡️ AUDITORÍA: Registro de eliminación
         registrar_log(f"Eliminó el producto ID {id}")
         
         return jsonify({"mensaje": "Eliminado"})
+    except Exception as e:
+        mysql.connection.rollback()
+        return jsonify({"error": str(e)}), 500
     finally:
-        cursor.close()
-        conn.close()
+        if cursor: cursor.close()
 
 @productos_bp.route("/public", methods=["GET"])
 def get_productos_public():
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT id_producto, nombre, categoria, descripcion, precio, imagen FROM productos ORDER BY nombre")
-    productos = cursor.fetchall()
-    cursor.close()
-    conn.close()
-    return jsonify({"success": True, "productos": list(productos)})
+    cursor = mysql.connection.cursor()
+    try:
+        cursor.execute("SELECT id_producto, nombre, categoria, descripcion, precio, imagen FROM productos ORDER BY nombre")
+        productos = cursor.fetchall()
+        return jsonify({"success": True, "productos": list(productos)})
+    finally:
+        if cursor: cursor.close()
