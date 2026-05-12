@@ -129,13 +129,11 @@ function App() {
 
   if (currentView === 'login' || currentView === 'register') {
     return (
-      <div className="auth-container">
-        {currentView === 'login' ? (
-          <Login onLogin={handleLogin} onShowRegister={() => setCurrentView('register')} />
-        ) : (
-          <Register onShowLogin={() => setCurrentView('login')} />
-        )}
-      </div>
+      currentView === 'login' ? (
+        <Login onLogin={handleLogin} onShowRegister={() => setCurrentView('register')} />
+      ) : (
+        <Register onShowLogin={() => setCurrentView('login')} />
+      )
     );
   }
 

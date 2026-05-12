@@ -195,15 +195,6 @@ body {
   font-size: 1.1rem;
 }
 
-/* AUTH STYLES */
-.auth-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-}
-
 /* RESPONSIVE DESIGN */
 @media (max-width: 768px) {
   .app-body {
