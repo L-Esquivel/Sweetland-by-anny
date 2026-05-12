@@ -136,6 +136,9 @@ def get_empaques_producto(producto_id):
 @login_required
 def add_empaque_producto(producto_id):
     data = request.get_json()
+    # 🕵️‍♂️ DIAGNÓSTICO: Imprimimos los datos exactos que llegan del frontend.
+    logger.info(f"DIAGNÓSTICO EMPAQUES - Datos recibidos: {data}")
+
     id_empaque = data.get("id_empaque")
     # 💡 FIX 2: Hacemos el backend más robusto para aceptar varios nombres comunes para la cantidad
     # ('cantidad', 'cantidad_necesaria') y así resolver la inconsistencia con el formulario,
