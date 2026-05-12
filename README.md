@@ -1,6 +1,8 @@
 # Precivox - SaaS Costing & Business Intelligence
 
-**Precivox** is a Software-as-a-Service (SaaS) application designed to help small businesses (from bakeries to service-based models) to perform detailed product costing, manage operations, and gain financial insights through a powerful dashboard.
+**PRECIVOX (formerly Sweetland ERP)** is a high-precision financial intelligence engine and SaaS platform designed to automate cost analysis and optimize profitability.
+
+**Key Achievement:** Reduced operational calculation time by 95% through a custom-built dynamic pricing engine.
 
 ## 🚀 Live Demo
 
