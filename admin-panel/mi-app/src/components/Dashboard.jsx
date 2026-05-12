@@ -112,22 +112,24 @@ const Dashboard = () => {
           </div>
         </div>
         <div className="col-lg-3 col-md-6 mb-4">
-          <div className="card text-white bg-primary h-100">
+          <div className="card text-white bg-warning h-100">
             <div className="card-body">
-              <h5 className="card-title">Ganancia Neta</h5>
-              <p className="card-text fs-2 fw-bold">
-                {formatearMoneda(
-                  (stats?.resumen?.total_ventas_rango || 0) - (stats?.resumen?.total_gastos_rango || 0)
-                )}
-              </p>
+              <h5 className="card-title">Merma (Pérdidas)</h5>
+              <p className="card-text fs-2 fw-bold">{formatearMoneda(stats?.resumen?.total_merma_rango)}</p>
             </div>
           </div>
         </div>
         <div className="col-lg-3 col-md-6 mb-4">
-          <div className="card text-white bg-info h-100">
+          <div className="card text-white bg-primary h-100">
             <div className="card-body">
-              <h5 className="card-title">Pedidos en Rango</h5>
-              <p className="card-text fs-2 fw-bold">{stats?.resumen?.num_pedidos_rango}</p>
+              <h5 className="card-title">Ganancia Neta Real</h5>
+              <p className="card-text fs-2 fw-bold">
+                {formatearMoneda(
+                  (stats?.resumen?.total_ventas_rango || 0) - 
+                  (stats?.resumen?.total_gastos_rango || 0) -
+                  (stats?.resumen?.total_merma_rango || 0)
+                )}
+              </p>
             </div>
           </div>
         </div>

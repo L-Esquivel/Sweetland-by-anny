@@ -69,7 +69,15 @@ def get_stats():
         gastos_rango_raw = cursor.fetchone()
         resumen['total_gastos_rango'] = float(gastos_rango_raw.get('total_gastos_rango') or 0)
 
-        # 4. Datos para la gráfica para el rango
+        # 4. Sumar merma en el mismo rango de fechas
+        cursor.execute("""
+            SELECT SUM(costo_perdida) as total_merma_rango
+            FROM merma WHERE fecha BETWEEN %s AND %s
+        """, params)
+        merma_rango_raw = cursor.fetchone()
+        resumen['total_merma_rango'] = float(merma_rango_raw.get('total_merma_rango') or 0)
+
+        # 5. Datos para la gráfica para el rango
         cursor.execute(f"""
             SELECT DATE(fecha_pedido) as fecha, SUM(total) as venta 
             FROM pedidos {where_pedidos}
@@ -78,12 +86,12 @@ def get_stats():
         grafica_raw = cursor.fetchall()
         grafica = [{"fecha": str(row['fecha']), "venta": float(row['venta'])} for row in grafica_raw]
 
-        # 5. Pedidos por estado para el rango
+        # 6. Pedidos por estado para el rango
         cursor.execute(f"SELECT estado, COUNT(id_pedido) as cantidad FROM pedidos {where_pedidos} GROUP BY estado", params)
         estados_raw = cursor.fetchall()
         pedidos_por_estado = {row['estado']: row['cantidad'] for row in estados_raw}
 
-        # 6. Producto Top para el rango
+        # 7. Producto Top para el rango
         where_pedidos_aliased = " WHERE ped.estado = 'completado' AND DATE(ped.fecha_pedido) BETWEEN %s AND %s "
         cursor.execute(f"""
             SELECT p.nombre, p.precio, SUM(dp.cantidad) as total_vendido
