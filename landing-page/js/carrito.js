@@ -174,7 +174,7 @@ function abrirWhatsApp(id_pedido, nombreCliente, direccion, notas, total) {
 
   mensaje += `━━━━━━━━━━━━━━━━━━━━━\n`;
   mensaje += `💰 *TOTAL A PAGAR: $${total.toLocaleString('es-CO')}*\n\n`;
-  mensaje += `_Hola Anny, acabo de realizar este pedido desde la web. Quedo atento a la confirmación para el pago. ✨_`;
+  mensaje += `_Pedido generado desde la plataforma web. Quedo atento a la confirmación para el pago. ✨_`;
 
   // 💡 CIBERSEGURIDAD: encodeURIComponent asegura que el mensaje sea válido para una URL
   const url = `https://wa.me/${nroWA}?text=${encodeURIComponent(mensaje)}`;

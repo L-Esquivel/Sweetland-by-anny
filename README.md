@@ -1,6 +1,6 @@
 # Precivox - SaaS Costing & Business Intelligence
 
-Precivox is a Software-as-a-Service (SaaS) application designed to help small businesses, starting with bakeries and expanding to other models, to perform detailed product costing, manage operations, and gain financial insights through a powerful dashboard.
+**Precivox** is a Software-as-a-Service (SaaS) application designed to help small businesses (from bakeries to service-based models) to perform detailed product costing, manage operations, and gain financial insights through a powerful dashboard.
 
 ## ✨ Key Features
 

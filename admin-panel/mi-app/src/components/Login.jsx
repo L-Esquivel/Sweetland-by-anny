@@ -46,7 +46,7 @@ const Login = ({ onLogin, onShowRegister }) => {
   return (
     <div style={{
       minHeight: '100vh',
-      backgroundColor: '#0d6efd',
+      backgroundColor: '#0A192F', // Azul Navy
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -67,20 +67,21 @@ const Login = ({ onLogin, onShowRegister }) => {
             marginBottom: '20px',
             fontSize: '2.5rem'
           }}>
-            🎂 Sweetland by Anny
+            <img src="/logo-precivox.png" alt="Precivox Logo" style={{ height: '60px', marginBottom: '15px' }} />
+            <br/>Precivox
           </h1>
           <p style={{ 
             fontSize: '1.2rem',
             opacity: 0.9,
             marginBottom: '5px'
           }}>
-            Bienvenido a tu panel de gestión
+            Bienvenido a tu Panel de Control
           </p>
           <p style={{ 
             fontSize: '0.9rem',
             opacity: 0.7
           }}>
-            Sistema administrativo Sweetland By Amy
+            Inteligencia de Negocio para Emprendedores
           </p>
         </div>
 
@@ -141,7 +142,7 @@ const Login = ({ onLogin, onShowRegister }) => {
               style={{
                 width: '100%',
                 padding: '12px',
-                backgroundColor: loading ? '#6c757d' : '#0d6efd',
+                backgroundColor: loading ? '#6c757d' : '#00A896', // Color Teal
                 color: 'white',
                 border: 'none',
                 borderRadius: '6px',
