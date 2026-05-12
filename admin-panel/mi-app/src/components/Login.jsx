@@ -67,7 +67,7 @@ const Login = ({ onLogin, onShowRegister }) => {
             marginBottom: '20px',
             fontSize: '2.5rem'
           }}>
-            <img src="/logo-precivox.png" alt="Precivox Logo" style={{ height: '90px', marginBottom: '15px' }} />
+            <img src="/logo-precivox.png" alt="Precivox Logo" style={{ height: '80px', marginBottom: '15px' }} />
             <br/>Precivox
           </h1>
           <p style={{ 

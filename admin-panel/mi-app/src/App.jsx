@@ -145,7 +145,7 @@ function App() {
       <header className="app-header navbar navbar-expand-lg navbar-dark" style={{ backgroundColor: '#0A192F', padding: '0.5rem 2rem' }}>
         <div className="container-fluid">
           <a className="navbar-brand d-flex align-items-center" href="#" onClick={() => setActiveSection('inicio')}>
-            <img src="/logo-precivox.png" alt="Precivox Logo" style={{ height: '55px', marginRight: '10px' }} />
+            <img src="/logo-precivox.png" alt="Precivox Logo" style={{ height: '50px', marginRight: '10px' }} />
             <span className="fs-4 fw-bold">Precivox</span>
           </a>
           <div className="navbar-nav ms-auto">
