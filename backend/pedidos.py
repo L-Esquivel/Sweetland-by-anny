@@ -273,13 +273,38 @@ def mis_pedidos():
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
+        # 1. Obtener todos los pedidos del usuario (1ª consulta)
         cursor.execute("SELECT * FROM pedidos WHERE usuario_id = %s ORDER BY fecha_pedido DESC", (current_user.id,))
         pedidos = [dict(p) for p in cursor.fetchall()]
+
+        if not pedidos:
+            return jsonify({"pedidos": []})
+
+        # 2. Obtener TODOS los detalles para ESOS pedidos en una sola consulta (2ª consulta)
+        pedido_ids = [p['id_pedido'] for p in pedidos]
+        placeholders = ','.join(['%s'] * len(pedido_ids))
+        cursor.execute(f"""
+            SELECT dp.pedido_id, dp.cantidad, dp.subtotal, pr.nombre 
+            FROM detalle_pedidos dp JOIN productos pr ON dp.producto_id = pr.id_producto 
+            WHERE dp.pedido_id IN ({placeholders})
+        """, tuple(pedido_ids))
+        detalles_todos = cursor.fetchall()
+
+        # 3. Mapear los detalles a sus pedidos correspondientes en Python (muy rápido)
+        detalles_por_pedido = {}
+        for detalle in detalles_todos:
+            pedido_id = detalle['pedido_id']
+            if pedido_id not in detalles_por_pedido:
+                detalles_por_pedido[pedido_id] = []
+            detalles_por_pedido[pedido_id].append({
+                "nombre": detalle['nombre'], "cantidad": detalle['cantidad'], "subtotal": float(detalle['subtotal'])
+            })
+
+        # 4. Combinar los datos
         for p in pedidos:
             p['total'] = float(p['total'] or 0)
             p['fecha_pedido'] = p['fecha_pedido'].strftime('%Y-%m-%d %H:%M') if p['fecha_pedido'] else ""
-            cursor.execute("SELECT dp.*, pr.nombre FROM detalle_pedidos dp JOIN productos pr ON dp.producto_id = pr.id_producto WHERE dp.pedido_id = %s", (p['id_pedido'],))
-            p['detalles'] = [{"nombre": d['nombre'], "cantidad": d['cantidad'], "subtotal": float(d['subtotal'])} for d in cursor.fetchall()]
+            p['detalles'] = detalles_por_pedido.get(p['id_pedido'], [])
         return jsonify({"pedidos": pedidos})
     finally:
         cursor.close()
