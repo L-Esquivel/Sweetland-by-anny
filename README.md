@@ -2,17 +2,25 @@
 
 **Precivox** is a Software-as-a-Service (SaaS) application designed to help small businesses (from bakeries to service-based models) to perform detailed product costing, manage operations, and gain financial insights through a powerful dashboard.
 
+## 🚀 Live Demo
+
+*   **Admin Panel:** [https://sweetland-admin.vercel.app/](https://sweetland-admin.vercel.app/)
+*   **Public Landing Page:** [https://sweetlandbyanny.vercel.app/](https://sweetlandbyanny.vercel.app/)
+
+> **Note:** The landing page is a functional demo for a specific client use case ("Sweetland by Anny"), while the admin panel represents the core Precivox SaaS product.
+
 ## ✨ Key Features
 
 *   **Product & Inventory Management:** Catalog products, ingredients, and packaging.
 *   **Advanced Costing Engine:** Automatically calculate production costs, suggested sale prices based on desired profit margins, and operational overheads.
 *   **Order Management:** Track customer orders from creation to completion.
-*   **Business Intelligence Dashboard:** An interactive dashboard with date-range filtering to visualize key metrics like Sales, Expenses, and **Net Profit**.
+*   **Business Intelligence Dashboard:** An interactive dashboard with date-range filtering to visualize key metrics like Sales, Expenses, Waste, and **Real Net Profit**.
 *   **Expense Management:** A dedicated module to register and track fixed and operational business costs.
+*   **Waste (Merma) Management:** A module to record product or ingredient losses, providing a more accurate profitability analysis.
 *   **User & Role Management:** Secure access control with different user roles (Admin, Employee).
 *   **Secure Authentication:** Traditional email/password login, OAuth 2.0 with Google, and secure password recovery.
  
-## 🚀 Tech Stack
+## 🛠️ Tech Stack
 
 *   **Backend:**
     *   **Framework:** Flask (Python)
@@ -109,5 +117,5 @@ The project is currently evolving from an MVP to a full-fledged multi-tenant Saa
 1.  **Identity & Access:** Finalizing secure user authentication and recovery flows.
 2.  **SaaS-ification:** Implementing a multi-tenant architecture for data isolation.
 3.  **Security Hardening:** Advanced audit logs, security headers (CSP), and input sanitization.
-4.  **Business Intelligence:** Expanding the BI module with waste (merma) management and report exporting (PDF/Excel).
+4.  **Business Intelligence:** Expanding the BI module with features like report exporting (PDF/Excel).
 5.  **DevOps & Quality:** API documentation (Swagger), containerization (Docker), and unit testing.
