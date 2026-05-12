@@ -114,6 +114,7 @@ from ingredientes import ingredientes_bp
 from recetas import recetas_bp
 from empaques import empaques_bp
 from gastos import gastos_bp
+from merma import merma_bp
 
 app.register_blueprint(auth_bp)
 app.register_blueprint(usuarios_bp)
@@ -124,6 +125,7 @@ app.register_blueprint(ingredientes_bp)
 app.register_blueprint(recetas_bp)
 app.register_blueprint(empaques_bp)
 app.register_blueprint(gastos_bp)
+app.register_blueprint(merma_bp)
 
 # ==========================================
 # 🌍 RUTAS DE ARCHIVOS Y ESTADO
