@@ -1,7 +1,7 @@
 from functools import wraps
 from flask import jsonify, request
 from flask_login import current_user
-from db import get_db_connection
+from extensions import mysql
 
 # --- 1. DECORADOR ADMIN (Mantenemos la protección de roles) ---
 def admin_required(f):
@@ -38,14 +38,15 @@ def registrar_log(accion):
             usuario_id = None
             usuario_nombre = "Usuario Anónimo"
 
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("""
-            INSERT INTO audit_logs (usuario_id, usuario_nombre, accion, endpoint, metodo, ip_address)
-            VALUES (%s, %s, %s, %s, %s, %s)
-        """, (usuario_id, usuario_nombre, accion, request.path, request.method, ip))
-        conn.commit()
-        cursor.close()
-        conn.close()
+        cursor = mysql.connection.cursor()
+        try:
+            cursor.execute("""
+                INSERT INTO audit_logs (usuario_id, usuario_nombre, accion, endpoint, metodo, ip_address)
+                VALUES (%s, %s, %s, %s, %s, %s)
+            """, (usuario_id, usuario_nombre, accion, request.path, request.method, ip))
+            mysql.connection.commit()
+        finally:
+            if cursor: cursor.close()
+
     except Exception as e:
         print(f"⚠️ Alerta de Seguridad: No se pudo escribir en Audit Log: {e}")

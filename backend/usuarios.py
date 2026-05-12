@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from flask_login import login_required
-from db import get_db_connection
 from werkzeug.security import generate_password_hash
+from extensions import mysql
 from utils import admin_required  # Importamos tu nuevo decorador
 
 usuarios_bp = Blueprint("usuarios_bp", __name__, url_prefix="/usuarios")
@@ -14,27 +14,27 @@ usuarios_bp = Blueprint("usuarios_bp", __name__, url_prefix="/usuarios")
 @login_required
 @admin_required
 def get_usuarios():
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT id_usuario, nombre, email, telefono, direccion, rol FROM usuarios")
-    rows = cursor.fetchall()
-    cursor.close()
-    conn.close()
-    return jsonify(rows)
+    cursor = mysql.connection.cursor()
+    try:
+        cursor.execute("SELECT id_usuario, nombre, email, telefono, direccion, rol FROM usuarios")
+        rows = cursor.fetchall()
+        return jsonify(rows)
+    finally:
+        if cursor: cursor.close()
 
 @usuarios_bp.route("/<int:id>", methods=["GET"])
 @login_required
 @admin_required
 def get_usuario(id):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT id_usuario, nombre, email, telefono, direccion, rol FROM usuarios WHERE id_usuario = %s", (id,))
-    row = cursor.fetchone()
-    cursor.close()
-    conn.close()
-    if row:
-        return jsonify(row)
-    return jsonify({"error": "Usuario no encontrado"}), 404
+    cursor = mysql.connection.cursor()
+    try:
+        cursor.execute("SELECT id_usuario, nombre, email, telefono, direccion, rol FROM usuarios WHERE id_usuario = %s", (id,))
+        row = cursor.fetchone()
+        if row:
+            return jsonify(row)
+        return jsonify({"error": "Usuario no encontrado"}), 404
+    finally:
+        if cursor: cursor.close()
 
 @usuarios_bp.route("/", methods=["POST"])
 @login_required
@@ -52,20 +52,19 @@ def add_usuario():
         return jsonify({"error": "Faltan campos obligatorios"}), 400
 
     hashed_pw = generate_password_hash(password)
-    conn = get_db_connection()
-    cursor = conn.cursor()
+    cursor = mysql.connection.cursor()
     try:
         cursor.execute("""
             INSERT INTO usuarios (nombre, email, password, telefono, direccion, rol)
             VALUES (%s, %s, %s, %s, %s, %s)
         """, (nombre, email, hashed_pw, telefono, direccion, rol))
-        conn.commit()
+        mysql.connection.commit()
         return jsonify({"mensaje": "Usuario agregado con éxito"}), 201
     except Exception as e:
+        mysql.connection.rollback()
         return jsonify({"error": "El email ya podría estar registrado"}), 400
     finally:
-        cursor.close()
-        conn.close()
+        if cursor: cursor.close()
 
 @usuarios_bp.route("/<int:id>", methods=["PUT"])
 @login_required
@@ -79,36 +78,42 @@ def update_usuario(id):
     rol       = data.get("rol")
     password  = data.get("password")
 
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    if password:
-        hashed_pw = generate_password_hash(password)
-        cursor.execute("""
-            UPDATE usuarios
-            SET nombre=%s, email=%s, telefono=%s, direccion=%s, rol=%s, password=%s
-            WHERE id_usuario=%s
-        """, (nombre, email, telefono, direccion, rol, hashed_pw, id))
-    else:
-        cursor.execute("""
-            UPDATE usuarios
-            SET nombre=%s, email=%s, telefono=%s, direccion=%s, rol=%s
-            WHERE id_usuario=%s
-        """, (nombre, email, telefono, direccion, rol, id))
-    conn.commit()
-    cursor.close()
-    conn.close()
-    return jsonify({"mensaje": "Usuario actualizado correctamente"})
+    cursor = mysql.connection.cursor()
+    try:
+        if password:
+            hashed_pw = generate_password_hash(password)
+            cursor.execute("""
+                UPDATE usuarios
+                SET nombre=%s, email=%s, telefono=%s, direccion=%s, rol=%s, password=%s
+                WHERE id_usuario=%s
+            """, (nombre, email, telefono, direccion, rol, hashed_pw, id))
+        else:
+            cursor.execute("""
+                UPDATE usuarios
+                SET nombre=%s, email=%s, telefono=%s, direccion=%s, rol=%s
+                WHERE id_usuario=%s
+            """, (nombre, email, telefono, direccion, rol, id))
+        mysql.connection.commit()
+        return jsonify({"mensaje": "Usuario actualizado correctamente"})
+    except Exception as e:
+        mysql.connection.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        if cursor: cursor.close()
 
 @usuarios_bp.route("/<int:id>", methods=["DELETE"])
 @login_required
 @admin_required
 def delete_usuario(id):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    # Evitar que el admin se borre a sí mismo por error
-    # (Suponiendo que current_user.id es accesible)
-    cursor.execute("DELETE FROM usuarios WHERE id_usuario=%s", (id,))
-    conn.commit()
-    cursor.close()
-    conn.close()
-    return jsonify({"mensaje": "Usuario eliminado"})
+    cursor = mysql.connection.cursor()
+    try:
+        # Evitar que el admin se borre a sí mismo por error
+        # (Suponiendo que current_user.id es accesible)
+        cursor.execute("DELETE FROM usuarios WHERE id_usuario=%s", (id,))
+        mysql.connection.commit()
+        return jsonify({"mensaje": "Usuario eliminado"})
+    except Exception as e:
+        mysql.connection.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        if cursor: cursor.close()

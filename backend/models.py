@@ -1,5 +1,5 @@
 from flask_login import UserMixin
-from db import get_db_connection
+from extensions import mysql
 
 class User(UserMixin):
     def __init__(self, id, nombre, email, password, telefono=None, direccion=None, rol='cliente'):
@@ -13,43 +13,43 @@ class User(UserMixin):
 
     @staticmethod
     def get_by_email(email):
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM usuarios WHERE email = %s", (email,))
-        row = cursor.fetchone()
-        cursor.close()
-        conn.close()
-        if row:
-            return User(
-                id=row["id_usuario"],
-                nombre=row["nombre"],
-                email=row["email"],
-                password=row["password"],
-                telefono=row.get("telefono"),
-                direccion=row.get("direccion"),
-                rol=row.get("rol", "cliente")
-            )
-        return None
+        cursor = mysql.connection.cursor()
+        try:
+            cursor.execute("SELECT * FROM usuarios WHERE email = %s", (email,))
+            row = cursor.fetchone()
+            if row:
+                return User(
+                    id=row["id_usuario"],
+                    nombre=row["nombre"],
+                    email=row["email"],
+                    password=row["password"],
+                    telefono=row.get("telefono"),
+                    direccion=row.get("direccion"),
+                    rol=row.get("rol", "cliente")
+                )
+            return None
+        finally:
+            if cursor: cursor.close()
 
     @staticmethod
     def get_by_id(user_id):
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM usuarios WHERE id_usuario = %s", (user_id,))
-        row = cursor.fetchone()
-        cursor.close()
-        conn.close()
-        if row:
-            return User(
-                id=row["id_usuario"],
-                nombre=row["nombre"],
-                email=row["email"],
-                password=row["password"],
-                telefono=row.get("telefono"),
-                direccion=row.get("direccion"),
-                rol=row.get("rol", "cliente")
-            )
-        return None
+        cursor = mysql.connection.cursor()
+        try:
+            cursor.execute("SELECT * FROM usuarios WHERE id_usuario = %s", (user_id,))
+            row = cursor.fetchone()
+            if row:
+                return User(
+                    id=row["id_usuario"],
+                    nombre=row["nombre"],
+                    email=row["email"],
+                    password=row["password"],
+                    telefono=row.get("telefono"),
+                    direccion=row.get("direccion"),
+                    rol=row.get("rol", "cliente")
+                )
+            return None
+        finally:
+            if cursor: cursor.close()
 
     def check_password(self, password):
         from werkzeug.security import check_password_hash

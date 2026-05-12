@@ -1,7 +1,6 @@
 from flask import Blueprint, request, jsonify, current_app, url_for, redirect
 from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.security import check_password_hash, generate_password_hash
-from db import get_db_connection
 from models import User
 from extensions import mail, limiter, mysql 
 from flask_mail import Message
@@ -47,30 +46,29 @@ def google_callback():
         nombre = user_info['name']
         google_id = user_info['sub']
 
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM usuarios WHERE email = %s", (email,))
-        user_row = cursor.fetchone()
+        cursor = mysql.connection.cursor()
+        try:
+            cursor.execute("SELECT * FROM usuarios WHERE email = %s", (email,))
+            user_row = cursor.fetchone()
 
-        if user_row:
-            usuario = User(id=user_row["id_usuario"], nombre=user_row["nombre"], 
-                           email=user_row["email"], password=user_row["password"], rol=user_row["rol"])
-            login_user(usuario)
-            registrar_log(f"Inició sesión vía Google: {email}")
-        else:
-            cursor.execute("""
-                INSERT INTO usuarios (nombre, email, rol, google_id, fecha_registro)
-                VALUES (%s, %s, 'cliente', %s, NOW())
-            """, (nombre, email, google_id))
-            conn.commit()
-            new_id = cursor.lastrowid
-            usuario = User(id=new_id, nombre=nombre, email=email, password=None, rol='cliente')
-            login_user(usuario)
-            registrar_log(f"Nuevo registro vía Google: {email}")
-
-        cursor.close()
-        conn.close()
-        return redirect("https://sweetlandbyanny.vercel.app/mi-cuenta.html")
+            if user_row:
+                usuario = User(id=user_row["id_usuario"], nombre=user_row["nombre"], 
+                               email=user_row["email"], password=user_row["password"], rol=user_row["rol"])
+                login_user(usuario)
+                registrar_log(f"Inició sesión vía Google: {email}")
+            else:
+                cursor.execute("""
+                    INSERT INTO usuarios (nombre, email, rol, google_id, fecha_registro)
+                    VALUES (%s, %s, 'cliente', %s, NOW())
+                """, (nombre, email, google_id))
+                mysql.connection.commit()
+                new_id = cursor.lastrowid
+                usuario = User(id=new_id, nombre=nombre, email=email, password=None, rol='cliente')
+                login_user(usuario)
+                registrar_log(f"Nuevo registro vía Google: {email}")
+            return redirect("https://sweetlandbyanny.vercel.app/mi-cuenta.html")
+        finally:
+            if cursor: cursor.close()
     except Exception as e:
         current_app.logger.error(f"Error en Google Auth: {str(e)}")
         return redirect("https://sweetlandbyanny.vercel.app/mi-cuenta.html?error=auth_failed")
@@ -159,15 +157,17 @@ def reset_password_confirm():
         return jsonify({"error": "El enlace ha expirado o es inválido"}), 400
 
     hashed_pw = generate_password_hash(password)
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("UPDATE usuarios SET password = %s WHERE email = %s", (hashed_pw, email))
-    conn.commit()
-    cursor.close()
-    conn.close()
-    
-    registrar_log(f"Restableció su contraseña con éxito: {email}")
-    return jsonify({"mensaje": "Contraseña actualizada"})
+    cursor = mysql.connection.cursor()
+    try:
+        cursor.execute("UPDATE usuarios SET password = %s WHERE email = %s", (hashed_pw, email))
+        mysql.connection.commit()
+        registrar_log(f"Restableció su contraseña con éxito: {email}")
+        return jsonify({"mensaje": "Contraseña actualizada"})
+    except Exception as e:
+        mysql.connection.rollback()
+        return jsonify({"error": "Error al actualizar la contraseña"}), 500
+    finally:
+        if cursor: cursor.close()
 
 # =========================
 # SESIÓN Y ESTADO

@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, request
 from flask_login import login_required, current_user, login_user, logout_user
-from db import get_db_connection
 from utils import admin_required, registrar_log # 🛡️ Importamos la auditoría
+from extensions import mysql
 from werkzeug.security import generate_password_hash
 import secrets, string, logging
 
@@ -13,9 +13,10 @@ pedidos_bp = Blueprint("pedidos", __name__, url_prefix="/pedidos")
 
 def procesar_descuento_stock(pedido_id):
     """Resta unidades del inventario basándose en el detalle del pedido."""
-    conn = get_db_connection()
-    cursor = conn.cursor()
+    cursor = mysql.connection.cursor()
     try:
+        # Esta función es llamada desde otra que ya maneja el commit/rollback,
+        # por lo que no hacemos commit aquí para mantener la atomicidad.
         cursor.execute("SELECT producto_id, cantidad FROM detalle_pedidos WHERE pedido_id = %s", (pedido_id,))
         items = cursor.fetchall()
         for item in items:
@@ -23,12 +24,12 @@ def procesar_descuento_stock(pedido_id):
                 UPDATE productos SET stock = stock - %s 
                 WHERE id_producto = %s AND controla_stock = TRUE
             """, (item['cantidad'], item['producto_id']))
-        conn.commit()
     except Exception as e:
         logger.error(f"Error descontando stock: {e}")
+        # Propagamos la excepción para que la función llamadora haga rollback.
+        raise
     finally:
-        cursor.close()
-        conn.close()
+        if cursor: cursor.close()
 
 # ==================== STATS (Dashboard) ====================
 
@@ -36,8 +37,7 @@ def procesar_descuento_stock(pedido_id):
 @login_required
 @admin_required
 def get_stats():
-    conn = get_db_connection()
-    cursor = conn.cursor()
+    cursor = mysql.connection.cursor()
     try:
         # 1. Resumen financiero
         cursor.execute("""
@@ -86,16 +86,14 @@ def get_stats():
 
         return jsonify({"resumen": resumen, "grafica": grafica, "pedidos_por_estado": pedidos_por_estado, "producto_top": producto_top})
     finally:
-        cursor.close()
-        conn.close()
+        if cursor: cursor.close()
 
 # ==================== GESTIÓN ADMIN ====================
 
 @pedidos_bp.route("/", methods=["GET"])
 @login_required
 def get_pedidos():
-    conn = get_db_connection()
-    cursor = conn.cursor()
+    cursor = mysql.connection.cursor()
     try:
         cursor.execute("""
             SELECT p.*, u.nombre as cliente_nombre, u.telefono as cliente_telefono 
@@ -110,16 +108,14 @@ def get_pedidos():
                 p['fecha_pedido'] = p['fecha_pedido'].strftime('%Y-%m-%d %H:%M')
         return jsonify(pedidos)
     finally:
-        cursor.close()
-        conn.close()
+        if cursor: cursor.close()
 
 @pedidos_bp.route("/<int:id>/estado", methods=["PUT"])
 @login_required
 def update_estado_pedido(id):
     data = request.get_json()
     nuevo_estado = data.get("estado")
-    conn = get_db_connection()
-    cursor = conn.cursor()
+    cursor = mysql.connection.cursor()
     try:
         cursor.execute("SELECT estado FROM pedidos WHERE id_pedido = %s", (id,))
         actual = cursor.fetchone()
@@ -129,26 +125,27 @@ def update_estado_pedido(id):
             procesar_descuento_stock(id)
 
         cursor.execute("UPDATE pedidos SET estado=%s WHERE id_pedido=%s", (nuevo_estado, id))
-        conn.commit()
+        mysql.connection.commit()
 
         # 🛡️ LOG: Seguimiento de estado de pedido
         registrar_log(f"Actualizó estado pedido #{id} de '{actual.get('estado')}' a '{nuevo_estado}'")
 
         return jsonify({"mensaje": "Actualizado", "estado": nuevo_estado})
+    except Exception as e:
+        mysql.connection.rollback()
+        return jsonify({"error": str(e)}), 500
     finally:
-        cursor.close()
-        conn.close()
+        if cursor: cursor.close()
 
 @pedidos_bp.route("/<int:id>", methods=["DELETE"])
 @login_required
 @admin_required
 def delete_pedido(id):
-    conn = get_db_connection()
-    cursor = conn.cursor()
+    cursor = mysql.connection.cursor()
     try:
         cursor.execute("DELETE FROM detalle_pedidos WHERE pedido_id = %s", (id,))
         cursor.execute("DELETE FROM pedidos WHERE id_pedido = %s", (id,))
-        conn.commit()
+        mysql.connection.commit()
 
         # 🛡️ LOG: Eliminación de pedido
         registrar_log(f"Eliminó permanentemente el pedido ID {id}")
@@ -157,15 +154,14 @@ def delete_pedido(id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     finally:
-        cursor.close()
-        conn.close()
+        if cursor: cursor.close()
 
 @pedidos_bp.route("/<int:id>/detalles", methods=["GET"])
 @login_required
 def get_detalles_admin(id):
-    conn = get_db_connection()
-    cursor = conn.cursor()
+    cursor = mysql.connection.cursor()
     try:
+        # Esta ruta es ahora redundante con /detalle_pedidos/pedido/<id>, pero la mantenemos por retrocompatibilidad
         cursor.execute("""
             SELECT dp.*, p.nombre as producto_nombre 
             FROM detalle_pedidos dp JOIN productos p ON dp.producto_id = p.id_producto
@@ -177,16 +173,14 @@ def get_detalles_admin(id):
             d['precio_unitario'] = float(d.get('precio_unitario') or 0)
         return jsonify(detalles)
     finally:
-        cursor.close()
-        conn.close()
+        if cursor: cursor.close()
 
 # ==================== ENDPOINTS PÚBLICOS 🌍 ====================
 
 @pedidos_bp.route("/public", methods=["POST"])
 def create_pedido_public():
     data = request.get_json()
-    conn = get_db_connection()
-    cursor = conn.cursor()
+    cursor = mysql.connection.cursor()
     try:
         cursor.execute("""
             INSERT INTO pedidos (usuario_id, telefono, direccion, total, estado, fecha_pedido)
@@ -198,18 +192,17 @@ def create_pedido_public():
                 INSERT INTO detalle_pedidos (pedido_id, producto_id, cantidad, precio_unitario, subtotal)
                 VALUES (%s, %s, %s, %s, %s)
             """, (pedido_id, item.get("id_producto"), item.get("cantidad"), item.get("precio"), item.get("subtotal")))
-        conn.commit()
+        mysql.connection.commit()
 
         # 🛡️ LOG: Nuevo pedido entrante
         registrar_log(f"Recibió nuevo pedido web: ID #{pedido_id}")
 
         return jsonify({"mensaje": "Pedido recibido", "id_pedido": pedido_id}), 201
     except Exception as e:
-        conn.rollback()
+        mysql.connection.rollback()
         return jsonify({"error": str(e)}), 500
     finally:
-        cursor.close()
-        conn.close()
+        if cursor: cursor.close()
 
 @pedidos_bp.route("/public/login", methods=["POST"])
 def login_cliente():
@@ -228,8 +221,7 @@ def login_cliente():
 @pedidos_bp.route("/public/registro", methods=["POST"])
 def registro_cliente():
     data = request.get_json()
-    conn = get_db_connection()
-    cursor = conn.cursor()
+    cursor = mysql.connection.cursor()
     try:
         cursor.execute("SELECT id_usuario FROM usuarios WHERE email = %s", (data.get("email"),))
         if cursor.fetchone(): return jsonify({"error": "Email ya registrado"}), 400
@@ -238,15 +230,17 @@ def registro_cliente():
             INSERT INTO usuarios (nombre, email, password, telefono, direccion, rol, fecha_registro)
             VALUES (%s, %s, %s, %s, %s, 'cliente', NOW())
         """, (data.get("nombre"), data.get("email"), hashed, data.get("telefono"), data.get("direccion")))
-        conn.commit()
+        mysql.connection.commit()
 
         # 🛡️ LOG: Registro de cliente
         registrar_log(f"Nuevo cliente registrado: {data.get('email')}")
 
         return jsonify({"mensaje": "Registro exitoso"}), 201
+    except Exception as e:
+        mysql.connection.rollback()
+        return jsonify({"error": str(e)}), 500
     finally:
-        cursor.close()
-        conn.close()
+        if cursor: cursor.close()
 
 @pedidos_bp.route("/public/logout", methods=["POST"])
 def logout_cliente():
@@ -257,9 +251,9 @@ def logout_cliente():
 @pedidos_bp.route("/public/mis-pedidos", methods=["GET"])
 @login_required
 def mis_pedidos():
-    conn = get_db_connection()
-    cursor = conn.cursor()
+    cursor = mysql.connection.cursor()
     try:
+        # Esta ruta ya fue optimizada para evitar N+1, solo se cambia la conexión
         # 1. Obtener todos los pedidos del usuario (1ª consulta)
         cursor.execute("SELECT * FROM pedidos WHERE usuario_id = %s ORDER BY fecha_pedido DESC", (current_user.id,))
         pedidos = [dict(p) for p in cursor.fetchall()]
@@ -294,5 +288,4 @@ def mis_pedidos():
             p['detalles'] = detalles_por_pedido.get(p['id_pedido'], [])
         return jsonify({"pedidos": pedidos})
     finally:
-        cursor.close()
-        conn.close()
+        if cursor: cursor.close()
