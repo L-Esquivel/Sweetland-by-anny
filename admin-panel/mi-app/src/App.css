@@ -130,9 +130,9 @@ body {
 }
 
 .nav-button.active {
-  background: #3498db;
+  background: #00A896; /* Color Teal para el botón activo */
   color: white;
-  box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
+  box-shadow: 0 4px 12px rgba(0, 168, 150, 0.3);
   position: relative;
 }
 
@@ -144,7 +144,7 @@ body {
   transform: translateY(-50%);
   width: 4px;
   height: 60%;
-  background: #1abc9c;
+  background: #64ffda; /* Un teal más brillante para el indicador */
   border-radius: 0 2px 2px 0;
 }
 

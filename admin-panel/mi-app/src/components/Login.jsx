@@ -46,7 +46,7 @@ const Login = ({ onLogin, onShowRegister }) => {
   return (
     <div style={{
       minHeight: '100vh',
-      backgroundColor: '#0A192F', // Azul Navy
+      backgroundColor: '#0A192F',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -67,7 +67,7 @@ const Login = ({ onLogin, onShowRegister }) => {
             marginBottom: '20px',
             fontSize: '2.5rem'
           }}>
-            <img src="/logo-precivox.png" alt="Precivox Logo" style={{ height: '60px', marginBottom: '15px' }} />
+            <img src="/logo-precivox.png" alt="Precivox Logo" style={{ height: '80px', marginBottom: '15px' }} />
             <br/>Precivox
           </h1>
           <p style={{ 
@@ -142,7 +142,7 @@ const Login = ({ onLogin, onShowRegister }) => {
               style={{
                 width: '100%',
                 padding: '12px',
-                backgroundColor: loading ? '#6c757d' : '#00A896', // Color Teal
+                backgroundColor: loading ? '#6c757d' : '#00A896',
                 color: 'white',
                 border: 'none',
                 borderRadius: '6px',

@@ -141,13 +141,13 @@ function App() {
 
   return (
     <div className="app">
-      {/* Header con el nuevo color Azul Navy */}
-      <header className="app-header navbar navbar-expand-lg navbar-dark" style={{ backgroundColor: '#0A192F' }}>
+      {/* Header con el nuevo color Azul Navy y estilos en línea */}
+      <header className="app-header navbar navbar-expand-lg navbar-dark" style={{ backgroundColor: '#0A192F', padding: '0.5rem 2rem' }}>
         <div className="container-fluid">
-          <div className="navbar-brand d-flex align-items-center">
-            <img src="/logo-precivox.png" alt="Precivox Logo" style={{ height: '40px', marginRight: '10px' }} />
+          <a className="navbar-brand d-flex align-items-center" href="#" onClick={() => setActiveSection('inicio')}>
+            <img src="/logo-precivox.png" alt="Precivox Logo" style={{ height: '50px', marginRight: '10px' }} />
             <span className="fs-4 fw-bold">Precivox</span>
-          </div>
+          </a>
           <div className="navbar-nav ms-auto">
             {user && (
               <div className="d-flex align-items-center gap-3">
@@ -161,9 +161,10 @@ function App() {
         </div>
       </header>
 
-      {/* Sidebar con el nuevo color Azul Navy */}
+      {/* Sidebar con el nuevo color Azul Navy y estilos en línea */}
       <div className="app-body">
-        <nav className="sidebar" style={{ backgroundColor: '#0A192F', color: '#8892b0' }}>
+        {/* Se elimina bg-light para que el estilo en línea tome precedencia */}
+        <nav className="sidebar" style={{ backgroundColor: '#0A192F', color: '#ccd6f6' }}>
           <ul className="nav nav-pills flex-column p-3">
             <li className="nav-item">
               <button className={`nav-link w-100 text-start ${activeSection === 'inicio' ? 'active' : ''}`} onClick={() => setActiveSection('inicio')}>📊 Inicio / Dashboard</button>
