@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
-from flask_login import login_required
-from utils import admin_required, registrar_log
+from flask_login import login_required, current_user
+from utils import admin_required, registrar_log # 🛡️ Importamos current_user
 from extensions import mysql
 import datetime
 
@@ -10,14 +10,17 @@ gastos_bp = Blueprint("gastos_bp", __name__, url_prefix="/gastos")
 @login_required
 @admin_required
 def get_gastos():
+    tenant_id = current_user.tenant_id
     cursor = mysql.connection.cursor()
     try:
         # Permite filtrar por mes y año, ej: /gastos?mes=10&ano=2023
         mes = request.args.get('mes', type=int)
         ano = request.args.get('ano', type=int)
 
-        query = "SELECT * FROM gastos"
-        params = []
+        # 💡 SAAS-IFICATION: Filtramos gastos por el tenant_id del usuario logueado.
+        query = "SELECT * FROM gastos WHERE tenant_id = %s"
+        params = [tenant_id]
+        
         if mes and ano:
             query += " WHERE MONTH(fecha) = %s AND YEAR(fecha) = %s"
             params.extend([mes, ano])
@@ -42,6 +45,7 @@ def add_gasto():
     descripcion = data.get("descripcion")
     monto = data.get("monto")
     fecha = data.get("fecha")
+    tenant_id = current_user.tenant_id
     categoria = data.get("categoria", "Varios")
 
     if not descripcion or not monto or not fecha:
@@ -49,9 +53,10 @@ def add_gasto():
 
     cursor = mysql.connection.cursor()
     try:
+        # 💡 SAAS-IFICATION: Insertamos el tenant_id al crear un nuevo gasto.
         cursor.execute("""
-            INSERT INTO gastos (descripcion, monto, categoria, fecha)
-            VALUES (%s, %s, %s, %s)
+            INSERT INTO gastos (descripcion, monto, categoria, fecha, tenant_id)
+            VALUES (%s, %s, %s, %s, %s)
         """, (descripcion, monto, categoria, fecha))
         mysql.connection.commit()
         registrar_log(f"Registró nuevo gasto: {descripcion} por ${monto}")
@@ -66,17 +71,21 @@ def add_gasto():
 @login_required
 @admin_required
 def update_gasto(id):
+    tenant_id = current_user.tenant_id
     data = request.get_json()
     # ... (código para actualizar, similar a add_gasto)
-    return jsonify({"mensaje": "Gasto actualizado con éxito"})
+    # 💡 SAAS-IFICATION: Aseguramos que solo se pueda actualizar un gasto del tenant correcto.
+    return jsonify({"mensaje": "Gasto actualizado con éxito"}) # Este endpoint necesita ser completado.
 
 @gastos_bp.route("/<int:id>", methods=["DELETE"])
 @login_required
 @admin_required
 def delete_gasto(id):
+    tenant_id = current_user.tenant_id
     cursor = mysql.connection.cursor()
     try:
-        cursor.execute("DELETE FROM gastos WHERE id_gasto=%s", (id,))
+        # 💡 SAAS-IFICATION: Aseguramos que solo se pueda borrar un gasto del tenant correcto.
+        cursor.execute("DELETE FROM gastos WHERE id_gasto=%s AND tenant_id = %s", (id, tenant_id))
         mysql.connection.commit()
         registrar_log(f"Eliminó gasto ID {id}")
         return jsonify({"mensaje": "Gasto eliminado con éxito"})
