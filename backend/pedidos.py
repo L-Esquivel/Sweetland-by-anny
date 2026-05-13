@@ -254,19 +254,28 @@ def login_cliente():
 @pedidos_bp.route("/public/registro", methods=["POST"])
 def registro_cliente():
     data = request.get_json()
+    nombre = data.get("nombre")
+    email = data.get("email")
+    password = data.get("password")
+
+    # 💡 MEJORA: Validar que los campos esenciales no estén vacíos.
+    # Esto previene errores 500 si falta la contraseña y devuelve un 400 claro.
+    if not nombre or not email or not password:
+        return jsonify({"error": "Nombre, email y contraseña son obligatorios"}), 400
+
     cursor = mysql.connection.cursor()
     try:
-        cursor.execute("SELECT id_usuario FROM usuarios WHERE email = %s", (data.get("email"),))
+        cursor.execute("SELECT id_usuario FROM usuarios WHERE email = %s", (email,))
         if cursor.fetchone(): return jsonify({"error": "Email ya registrado"}), 400
-        hashed = generate_password_hash(data.get("password"))
+        hashed = generate_password_hash(password)
         cursor.execute("""
             INSERT INTO usuarios (nombre, email, password, telefono, direccion, rol, fecha_registro)
             VALUES (%s, %s, %s, %s, %s, 'cliente', NOW())
-        """, (data.get("nombre"), data.get("email"), hashed, data.get("telefono"), data.get("direccion")))
+        """, (nombre, email, hashed, data.get("telefono"), data.get("direccion")))
         mysql.connection.commit()
 
         # 🛡️ LOG: Registro de cliente
-        registrar_log(f"Nuevo cliente registrado: {data.get('email')}")
+        registrar_log(f"Nuevo cliente registrado: {email}")
 
         return jsonify({"mensaje": "Registro exitoso"}), 201
     except Exception as e:
