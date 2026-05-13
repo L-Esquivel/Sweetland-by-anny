@@ -237,6 +237,8 @@ def get_current_user():
     return jsonify({
         "usuario": {
             "id": current_user.id, "nombre": current_user.nombre, 
-            "email": current_user.email, "rol": current_user.rol
+            "email": current_user.email, "rol": current_user.rol,
+            "telefono": current_user.telefono,
+            "direccion": current_user.direccion
         }
     })
