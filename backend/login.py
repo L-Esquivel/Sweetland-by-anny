@@ -110,8 +110,9 @@ def forgot_password():
         from models import User
         user = User.get_by_email(email)
 
-        if user:
-            from extensions import mail
+        # English comment: Security hardening. Only allow password recovery for users with the 'cliente' role.
+        # This prevents admins or other privileged roles from using the self-service recovery flow.
+        if user and user.rol == 'cliente':
             from itsdangerous import URLSafeTimedSerializer
             
             s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
@@ -137,7 +138,9 @@ def forgot_password():
             
             registrar_log(f"Solicitó recuperación de contraseña (proceso iniciado): {email}")
 
-        # Respondemos de inmediato. El usuario ya no verá el error 500.
+        # English comment: Always return a generic success message.
+        # This prevents user enumeration attacks, as the response is the same whether the user
+        # exists, is an admin, or doesn't exist at all.
         return jsonify({"mensaje": "Si el correo está registrado, recibirás un enlace pronto."}), 200
 
     except Exception as e:
