@@ -22,7 +22,7 @@ def get_gastos():
         params = [tenant_id]
         
         if mes and ano:
-            query += " WHERE MONTH(fecha) = %s AND YEAR(fecha) = %s"
+            query += " AND MONTH(fecha) = %s AND YEAR(fecha) = %s"
             params.extend([mes, ano])
         
         query += " ORDER BY fecha DESC"
@@ -57,7 +57,7 @@ def add_gasto():
         cursor.execute("""
             INSERT INTO gastos (descripcion, monto, categoria, fecha, tenant_id)
             VALUES (%s, %s, %s, %s, %s)
-        """, (descripcion, monto, categoria, fecha))
+        """, (descripcion, monto, categoria, fecha, tenant_id))
         mysql.connection.commit()
         registrar_log(f"Registró nuevo gasto: {descripcion} por ${monto}")
         return jsonify({"mensaje": "Gasto registrado con éxito"}), 201
