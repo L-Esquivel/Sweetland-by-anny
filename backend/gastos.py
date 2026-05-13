@@ -73,9 +73,33 @@ def add_gasto():
 def update_gasto(id):
     tenant_id = current_user.tenant_id
     data = request.get_json()
-    # ... (código para actualizar, similar a add_gasto)
-    # 💡 SAAS-IFICATION: Aseguramos que solo se pueda actualizar un gasto del tenant correcto.
-    return jsonify({"mensaje": "Gasto actualizado con éxito"}) # Este endpoint necesita ser completado.
+    descripcion = data.get("descripcion")
+    monto = data.get("monto")
+    fecha = data.get("fecha")
+    categoria = data.get("categoria")
+
+    if not all([descripcion, monto, fecha, categoria]):
+        return jsonify({"error": "Descripción, monto, fecha y categoría son obligatorios"}), 400
+
+    cursor = mysql.connection.cursor()
+    try:
+        cursor.execute("""
+            UPDATE gastos 
+            SET descripcion=%s, monto=%s, categoria=%s, fecha=%s
+            WHERE id_gasto=%s AND tenant_id=%s
+        """, (descripcion, monto, categoria, fecha, id, tenant_id))
+        
+        if cursor.rowcount == 0:
+            return jsonify({"error": "Gasto no encontrado o no pertenece a tu organización"}), 404
+
+        mysql.connection.commit()
+        registrar_log(f"Actualizó gasto ID {id}: {descripcion}")
+        return jsonify({"mensaje": "Gasto actualizado con éxito"})
+    except Exception as e:
+        mysql.connection.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        if cursor: cursor.close()
 
 @gastos_bp.route("/<int:id>", methods=["DELETE"])
 @login_required
