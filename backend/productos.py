@@ -32,9 +32,12 @@ def upload_image():
         return jsonify({"error": "Nombre de archivo vacío"}), 400
 
     try:
+        # 💡 SAAS-IFICATION: Aislamos las imágenes por tenant en Cloudinary.
+        tenant_id = current_user.tenant_id
+        
         upload_result = cloudinary.uploader.upload(
             file,
-            folder="sweetland/productos",
+            folder=f"precivox/tenants/{tenant_id}/productos",
             resource_type="image"
         )
         secure_url = upload_result.get("secure_url")
@@ -59,8 +62,11 @@ def upload_image():
 @login_required
 def get_productos():
     cursor = mysql.connection.cursor()
+    tenant_id = current_user.tenant_id
+    
     try:
-        cursor.execute("SELECT * FROM productos")
+        # 💡 SAAS-IFICATION: Filtramos productos por el tenant_id del usuario logueado.
+        cursor.execute("SELECT * FROM productos WHERE tenant_id = %s", (tenant_id,))
         rows = cursor.fetchall()
         return jsonify(list(rows))
     finally:
@@ -72,13 +78,16 @@ def get_productos():
 def add_producto():
     data = request.json
     nombre = data.get("nombre")
+    tenant_id = current_user.tenant_id
+    
     cursor = mysql.connection.cursor()
     try:
+        # 💡 SAAS-IFICATION: Insertamos el tenant_id al crear un nuevo producto.
         cursor.execute("""
-            INSERT INTO productos (nombre, categoria, descripcion, precio, imagen, stock, controla_stock)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO productos (nombre, categoria, descripcion, precio, imagen, stock, controla_stock, tenant_id)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
         """, (nombre, data.get("categoria"), data.get("descripcion"), 
-              data.get("precio"), data.get("imagen"), data.get("stock", 0), data.get("controla_stock", False)))
+              data.get("precio"), data.get("imagen"), data.get("stock", 0), data.get("controla_stock", False), tenant_id))
         mysql.connection.commit()
         
         # 🛡️ AUDITORÍA: Registro de creación
@@ -97,16 +106,19 @@ def add_producto():
 def update_producto(id):
     data = request.json
     nombre = data.get("nombre")
+    tenant_id = current_user.tenant_id
+
     cursor = mysql.connection.cursor()
     try:
+        # 💡 SAAS-IFICATION: Aseguramos que solo se pueda actualizar un producto del tenant correcto.
         cursor.execute("""
             UPDATE productos
             SET nombre=%s, categoria=%s, descripcion=%s, precio=%s, imagen=%s,
                 pax=%s, utilidad_porcentaje=%s, stock=%s, controla_stock=%s
-            WHERE id_producto=%s
+            WHERE id_producto=%s AND tenant_id = %s
         """, (nombre, data.get("categoria"), data.get("descripcion"), 
               data.get("precio"), data.get("imagen"), data.get("pax"), 
-              data.get("utilidad_porcentaje"), data.get("stock"), data.get("controla_stock"), id))
+              data.get("utilidad_porcentaje"), data.get("stock"), data.get("controla_stock"), id, tenant_id))
         mysql.connection.commit()
         calcular_costo_completo(id)
         
@@ -121,9 +133,11 @@ def update_producto(id):
 @login_required
 @admin_required
 def delete_producto(id):
+    tenant_id = current_user.tenant_id
     cursor = mysql.connection.cursor()
     try:
-        cursor.execute("DELETE FROM productos WHERE id_producto=%s", (id,))
+        # 💡 SAAS-IFICATION: Aseguramos que solo se pueda borrar un producto del tenant correcto.
+        cursor.execute("DELETE FROM productos WHERE id_producto=%s AND tenant_id = %s", (id, tenant_id))
         mysql.connection.commit()
         
         # 🛡️ AUDITORÍA: Registro de eliminación
@@ -138,9 +152,18 @@ def delete_producto(id):
 
 @productos_bp.route("/public", methods=["GET"])
 def get_productos_public():
+    # ⚠️ ADVERTENCIA DE SEGURIDAD MULTI-TENANT:
+    # Este endpoint es para la landing page pública. En un sistema multi-tenant,
+    # no podemos simplemente devolver todos los productos. Necesitamos saber de qué tenant
+    # mostrar los productos.
+    #
+    # SOLUCIÓN TEMPORAL: Asumimos que la landing pública siempre corresponde al tenant con id=1 (Sweetland).
+    # La solución definitiva implicaría usar subdominios (sweetland.precivox.com) o
+    # un identificador en la URL para determinar el tenant dinámicamente.
+    tenant_id_publico = 1
     cursor = mysql.connection.cursor()
     try:
-        cursor.execute("SELECT id_producto, nombre, categoria, descripcion, precio, imagen FROM productos ORDER BY nombre")
+        cursor.execute("SELECT id_producto, nombre, categoria, descripcion, precio, imagen FROM productos WHERE tenant_id = %s ORDER BY nombre", (tenant_id_publico,))
         productos = cursor.fetchall()
         return jsonify({"success": True, "productos": list(productos)})
     finally:
