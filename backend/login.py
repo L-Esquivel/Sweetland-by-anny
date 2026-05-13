@@ -8,6 +8,8 @@ from utils import registrar_log
 from authlib.integrations.flask_client import OAuth
 import os
 import threading
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail as SendGridMail
 
 auth_bp = Blueprint("auth_bp", __name__, url_prefix="/auth")
 
@@ -118,23 +120,26 @@ def forgot_password():
             token = s.dumps(email, salt='password-reset-salt')
             reset_url = f"https://sweetlandbyanny.vercel.app/reset-password.html?token={token}"
 
-            # msg = Message("Recuperación de Contraseña - Precivox",
-            #               recipients=[email])
-            # msg.body = f"Hola {user.nombre},\n\nPara restablecer tu clave haz clic aquí:\n{reset_url}\n\nEl enlace expira en 1 hora."
-            
-            # 🚀 SOLUCIÓN TÉCNICA: Enviar en un hilo separado
-            # Esto hace que la función responda al navegador ANTES de intentar conectar con Google
-            # def send_async_email(app, msg):
-            #     with app.app_context():
-            #         try:
-            #             # mail.send(msg) # Esta línea es la que falla
-            #             app.logger.info(f"✅ HILO: Correo de recuperación enviado a {email}")
-            #         except Exception as e:
-            #             app.logger.error(f"❌ HILO: Error enviando correo de recuperación a {email}: {e}", exc_info=True)
+            # 🚀 SOLUCIÓN TÉCNICA: Usar un servicio de email transaccional (SendGrid) en un hilo separado.
+            # Esto evita bloqueos de red en plataformas como Railway y es la práctica recomendada.
+            def send_async_email_sendgrid(app, recipient, user_nombre, url_reseteo):
+                with app.app_context():
+                    # Aquí podrías usar una plantilla HTML para un correo más profesional
+                    body = f"Hola {user_nombre},\n\nPara restablecer tu clave haz clic aquí:\n{url_reseteo}\n\nEl enlace expira en 1 hora."
+                    message = SendGridMail(
+                        from_email=os.getenv('SENDER_EMAIL'),
+                        to_emails=recipient,
+                        subject="Recuperación de Contraseña - Precivox",
+                        plain_text_content=body)
+                    try:
+                        sendgrid_client = SendGridAPIClient(os.getenv('SENDGRID_API_KEY'))
+                        response = sendgrid_client.send(message)
+                        app.logger.info(f"✅ HILO: Correo de recuperación enviado a {recipient} vía SendGrid. Status: {response.status_code}")
+                    except Exception as e:
+                        app.logger.error(f"❌ HILO: Error enviando correo vía SendGrid a {recipient}: {e}", exc_info=True)
 
-            # thread = threading.Thread(target=send_async_email, args=(current_app._get_current_object(), msg))
-            # thread.start()
-            app.logger.warning(f"ENVÍO DE CORREO DESACTIVADO TEMPORALMENTE. Reset URL para {email}: {reset_url}")
+            thread = threading.Thread(target=send_async_email_sendgrid, args=(current_app._get_current_object(), email, user.nombre, reset_url))
+            thread.start()
             
             registrar_log(f"Solicitó recuperación de contraseña (proceso iniciado): {email}")
 
