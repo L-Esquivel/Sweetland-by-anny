@@ -237,59 +237,6 @@ def create_pedido_public():
     finally:
         if cursor: cursor.close()
 
-@pedidos_bp.route("/public/login", methods=["POST"])
-def login_cliente():
-    from models import User
-    data = request.get_json()
-    user = User.get_by_email(data.get("email"))
-    if user and user.check_password(data.get("password")) and user.rol == 'cliente':
-        login_user(user)
-
-        # 🛡️ LOG: Inicio de sesión de cliente
-        registrar_log(f"Cliente inició sesión: {user.email}")
-
-        return jsonify({"usuario": {"id": user.id, "nombre": user.nombre, "email": user.email, "telefono": user.telefono, "direccion": user.direccion}})
-    return jsonify({"error": "Credenciales inválidas"}), 401
-
-@pedidos_bp.route("/public/registro", methods=["POST"])
-def registro_cliente():
-    data = request.get_json()
-    nombre = data.get("nombre")
-    email = data.get("email")
-    password = data.get("password")
-
-    # 💡 MEJORA: Validar que los campos esenciales no estén vacíos.
-    # Esto previene errores 500 si falta la contraseña y devuelve un 400 claro.
-    if not nombre or not email or not password:
-        return jsonify({"error": "Nombre, email y contraseña son obligatorios"}), 400
-
-    cursor = mysql.connection.cursor()
-    try:
-        cursor.execute("SELECT id_usuario FROM usuarios WHERE email = %s", (email,))
-        if cursor.fetchone(): return jsonify({"error": "Email ya registrado"}), 400
-        hashed = generate_password_hash(password)
-        cursor.execute("""
-            INSERT INTO usuarios (nombre, email, password, telefono, direccion, rol, fecha_registro)
-            VALUES (%s, %s, %s, %s, %s, 'cliente', NOW())
-        """, (nombre, email, hashed, data.get("telefono"), data.get("direccion")))
-        mysql.connection.commit()
-
-        # 🛡️ LOG: Registro de cliente
-        registrar_log(f"Nuevo cliente registrado: {email}")
-
-        return jsonify({"mensaje": "Registro exitoso"}), 201
-    except Exception as e:
-        mysql.connection.rollback()
-        return jsonify({"error": str(e)}), 500
-    finally:
-        if cursor: cursor.close()
-
-@pedidos_bp.route("/public/logout", methods=["POST"])
-def logout_cliente():
-    from flask_login import logout_user
-    logout_user()
-    return jsonify({"mensaje": "Sesión cerrada"})
-
 @pedidos_bp.route("/public/mis-pedidos", methods=["GET"])
 @login_required
 def mis_pedidos():
