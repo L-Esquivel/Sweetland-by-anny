@@ -1,5 +1,5 @@
 from flask import Blueprint, jsonify, request
-from flask_login import login_required
+from flask_login import login_required, current_user
 from extensions import mysql
 from flask_cors import cross_origin
 import logging
@@ -16,6 +16,7 @@ detalle_pedidos_bp = Blueprint("detalle_pedidos", __name__, url_prefix="/detalle
 @login_required
 @cross_origin()
 def get_detalles():
+    tenant_id = current_user.tenant_id
     cursor = mysql.connection.cursor()
     try:
         cursor.execute("""
@@ -27,9 +28,10 @@ def get_detalles():
                 dp.precio_unitario,
                 dp.subtotal
             FROM detalle_pedidos dp
-            LEFT JOIN productos p ON dp.producto_id = p.id_producto
+            LEFT JOIN productos p ON dp.producto_id = p.id_producto AND p.tenant_id = %s
+            WHERE dp.tenant_id = %s
             ORDER BY dp.id_detalle DESC
-        """)
+        """, (tenant_id, tenant_id))
         filas = cursor.fetchall()
         detalles = [dict(fila) for fila in filas] if filas else []
 
@@ -53,6 +55,7 @@ def get_detalles():
 @login_required
 @cross_origin()
 def get_detalle(id):
+    tenant_id = current_user.tenant_id
     cursor = mysql.connection.cursor()
     try:
         cursor.execute("""
@@ -64,9 +67,9 @@ def get_detalle(id):
                 dp.precio_unitario,
                 dp.subtotal
             FROM detalle_pedidos dp
-            LEFT JOIN productos p ON dp.producto_id = p.id_producto
-            WHERE dp.id_detalle = %s
-        """, (id,))
+            LEFT JOIN productos p ON dp.producto_id = p.id_producto AND p.tenant_id = %s
+            WHERE dp.id_detalle = %s AND dp.tenant_id = %s
+        """, (tenant_id, id, tenant_id))
         fila = cursor.fetchone()
 
         if not fila:
@@ -95,6 +98,7 @@ def get_detalles_por_pedido(pedido_id):
     Obtiene todos los detalles de un pedido específico.
     Incluye info del producto para mostrar en el frontend.
     """
+    tenant_id = current_user.tenant_id
     cursor = mysql.connection.cursor()
     try:
         cursor.execute("""
@@ -108,10 +112,10 @@ def get_detalles_por_pedido(pedido_id):
                 dp.precio_unitario,
                 dp.subtotal
             FROM detalle_pedidos dp
-            LEFT JOIN productos p ON dp.producto_id = p.id_producto
-            WHERE dp.pedido_id = %s
+            LEFT JOIN productos p ON dp.producto_id = p.id_producto AND p.tenant_id = %s
+            WHERE dp.pedido_id = %s AND dp.tenant_id = %s
             ORDER BY dp.id_detalle ASC
-        """, (pedido_id,))
+        """, (tenant_id, pedido_id, tenant_id))
         filas = cursor.fetchall()
         detalles = [dict(fila) for fila in filas] if filas else []
 
@@ -136,6 +140,7 @@ def get_detalles_por_pedido(pedido_id):
 @login_required
 @cross_origin()
 def create_detalle():
+    tenant_id = current_user.tenant_id
     try:
         data = request.get_json()
 
@@ -151,9 +156,9 @@ def create_detalle():
 
         cursor = mysql.connection.cursor()
         cursor.execute("""
-            INSERT INTO detalle_pedidos (pedido_id, producto_id, cantidad, precio_unitario, subtotal)
-            VALUES (%s, %s, %s, %s, %s)
-        """, (pedido_id, producto_id, cantidad, precio_unitario, subtotal))
+            INSERT INTO detalle_pedidos (pedido_id, producto_id, cantidad, precio_unitario, subtotal, tenant_id)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """, (pedido_id, producto_id, cantidad, precio_unitario, subtotal, tenant_id))
 
         detalle_id = cursor.lastrowid
         mysql.connection.commit()
@@ -176,6 +181,7 @@ def create_detalle():
 @login_required
 @cross_origin()
 def update_detalle(id):
+    tenant_id = current_user.tenant_id
     data = request.get_json()
     cantidad = data.get("cantidad")
     precio_unitario = data.get("precio_unitario")
@@ -186,8 +192,8 @@ def update_detalle(id):
         cursor.execute("""
             UPDATE detalle_pedidos 
             SET cantidad=%s, precio_unitario=%s, subtotal=%s 
-            WHERE id_detalle=%s
-        """, (cantidad, precio_unitario, subtotal, id))
+            WHERE id_detalle=%s AND tenant_id = %s
+        """, (cantidad, precio_unitario, subtotal, id, tenant_id))
         mysql.connection.commit()
         return jsonify({"mensaje": "Detalle actualizado correctamente"})
     except Exception as e:
@@ -205,9 +211,10 @@ def update_detalle(id):
 @login_required
 @cross_origin()
 def delete_detalle(id):
+    tenant_id = current_user.tenant_id
     cursor = mysql.connection.cursor()
     try:
-        cursor.execute("DELETE FROM detalle_pedidos WHERE id_detalle = %s", (id,))
+        cursor.execute("DELETE FROM detalle_pedidos WHERE id_detalle = %s AND tenant_id = %s", (id, tenant_id))
         mysql.connection.commit()
         return jsonify({"mensaje": "Detalle eliminado correctamente"})
     except Exception as e:

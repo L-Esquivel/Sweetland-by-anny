@@ -29,11 +29,13 @@ def registrar_log(accion):
         
         usuario_id = None
         usuario_nombre = "Sistema / Invitado"
+        tenant_id = None
         
         # Si el usuario está logueado, tomamos sus datos
         if current_user.is_authenticated:
             usuario_id = current_user.id
             usuario_nombre = current_user.nombre
+            tenant_id = current_user.tenant_id
         else:
             usuario_id = None
             usuario_nombre = "Usuario Anónimo"
@@ -41,9 +43,9 @@ def registrar_log(accion):
         cursor = mysql.connection.cursor()
         try:
             cursor.execute("""
-                INSERT INTO audit_logs (usuario_id, usuario_nombre, accion, endpoint, metodo, ip_address)
-                VALUES (%s, %s, %s, %s, %s, %s)
-            """, (usuario_id, usuario_nombre, accion, request.path, request.method, ip))
+                INSERT INTO audit_logs (usuario_id, usuario_nombre, accion, endpoint, metodo, ip_address, tenant_id)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """, (usuario_id, usuario_nombre, accion, request.path, request.method, ip, tenant_id))
             mysql.connection.commit()
         finally:
             if cursor: cursor.close()

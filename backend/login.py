@@ -53,18 +53,20 @@ def google_callback():
             user_row = cursor.fetchone()
 
             if user_row:
-                usuario = User(id=user_row["id_usuario"], nombre=user_row["nombre"], 
-                               email=user_row["email"], password=user_row["password"], rol=user_row["rol"])
+                # Si el usuario ya existe, lo cargamos con todos sus datos
+                usuario = User.get_by_id(user_row["id_usuario"])
                 login_user(usuario)
                 registrar_log(f"Inició sesión vía Google: {email}")
             else:
+                # 💡 SAAS-IFICATION: Los nuevos registros de Google se asocian al tenant público (1).
+                tenant_id_publico = 1
                 cursor.execute("""
-                    INSERT INTO usuarios (nombre, email, rol, google_id, fecha_registro)
-                    VALUES (%s, %s, 'cliente', %s, NOW())
-                """, (nombre, email, google_id))
+                    INSERT INTO usuarios (nombre, email, rol, google_id, fecha_registro, tenant_id)
+                    VALUES (%s, %s, 'cliente', %s, NOW(), %s)
+                """, (nombre, email, google_id, tenant_id_publico))
                 mysql.connection.commit()
                 new_id = cursor.lastrowid
-                usuario = User(id=new_id, nombre=nombre, email=email, password=None, rol='cliente')
+                usuario = User(id=new_id, nombre=nombre, email=email, password=None, rol='cliente', tenant_id=tenant_id_publico)
                 login_user(usuario)
                 registrar_log(f"Nuevo registro vía Google: {email}")
             return redirect("https://sweetlandbyanny.vercel.app/mi-cuenta.html")
@@ -228,11 +230,13 @@ def registro_cliente():
         if cursor.fetchone():
             return jsonify({"error": "Email ya registrado"}), 400
         
+        # 💡 SAAS-IFICATION: Los nuevos registros de clientes se asocian al tenant público (1).
+        tenant_id_publico = 1
         hashed = generate_password_hash(password)
         cursor.execute("""
-            INSERT INTO usuarios (nombre, email, password, telefono, direccion, rol, fecha_registro)
-            VALUES (%s, %s, %s, %s, %s, 'cliente', NOW())
-        """, (nombre, email, hashed, data.get("telefono"), data.get("direccion")))
+            INSERT INTO usuarios (nombre, email, password, telefono, direccion, rol, fecha_registro, tenant_id)
+            VALUES (%s, %s, %s, %s, %s, 'cliente', NOW(), %s)
+        """, (nombre, email, hashed, data.get("telefono"), data.get("direccion"), tenant_id_publico))
         mysql.connection.commit()
         registrar_log(f"Nuevo cliente registrado: {email}")
         return jsonify({"mensaje": "Registro exitoso"}), 201

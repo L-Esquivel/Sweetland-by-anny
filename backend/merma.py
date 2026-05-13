@@ -1,5 +1,5 @@
 from flask import Blueprint, jsonify, request
-from flask_login import login_required
+from flask_login import login_required, current_user
 from utils import admin_required, registrar_log
 from extensions import mysql
 import datetime
@@ -10,16 +10,20 @@ merma_bp = Blueprint("merma_bp", __name__, url_prefix="/merma")
 @login_required
 @admin_required
 def get_merma_registros():
+    tenant_id = current_user.tenant_id
     cursor = mysql.connection.cursor()
     try:
         mes = request.args.get('mes', type=int)
         ano = request.args.get('ano', type=int)
 
-        query = "SELECT * FROM merma ORDER BY fecha DESC"
+        query = "SELECT * FROM merma WHERE tenant_id = %s ORDER BY fecha DESC"
+        params = [tenant_id]
+
         if mes and ano:
-            query = "SELECT * FROM merma WHERE MONTH(fecha) = %s AND YEAR(fecha) = %s ORDER BY fecha DESC"
+            query = "SELECT * FROM merma WHERE tenant_id = %s AND MONTH(fecha) = %s AND YEAR(fecha) = %s ORDER BY fecha DESC"
+            params.extend([mes, ano])
         
-        cursor.execute(query, (mes, ano) if mes and ano else ())
+        cursor.execute(query, tuple(params))
         registros = cursor.fetchall()
         for registro in registros:
             if isinstance(registro.get('fecha'), datetime.date):
@@ -38,6 +42,7 @@ def add_merma_registro():
     cantidad = data.get("cantidad")
     fecha = data.get("fecha")
     motivo = data.get("motivo")
+    tenant_id = current_user.tenant_id
 
     if not (id_producto or id_ingrediente) or not cantidad or not fecha:
         return jsonify({"error": "Se requiere un producto/ingrediente, cantidad y fecha."}), 400
@@ -47,13 +52,13 @@ def add_merma_registro():
         costo_unitario = 0
         descripcion = ""
         if id_producto:
-            cursor.execute("SELECT nombre, costo_produccion FROM productos WHERE id_producto = %s", (id_producto,))
+            cursor.execute("SELECT nombre, costo_produccion FROM productos WHERE id_producto = %s AND tenant_id = %s", (id_producto, tenant_id))
             item = cursor.fetchone()
             if not item: return jsonify({"error": "Producto no encontrado"}), 404
             costo_unitario = item.get('costo_produccion', 0)
             descripcion = f"Producto: {item.get('nombre')}"
         elif id_ingrediente:
-            cursor.execute("SELECT nombre, costo_unitario FROM ingredientes WHERE id_ingrediente = %s", (id_ingrediente,))
+            cursor.execute("SELECT nombre, costo_unitario FROM ingredientes WHERE id_ingrediente = %s AND tenant_id = %s", (id_ingrediente, tenant_id))
             item = cursor.fetchone()
             if not item: return jsonify({"error": "Ingrediente no encontrado"}), 404
             costo_unitario = item.get('costo_unitario', 0)
@@ -62,9 +67,9 @@ def add_merma_registro():
         costo_perdida = float(costo_unitario) * float(cantidad)
 
         cursor.execute("""
-            INSERT INTO merma (id_producto, id_ingrediente, descripcion, cantidad, costo_perdida, fecha, motivo)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
-        """, (id_producto, id_ingrediente, descripcion, cantidad, costo_perdida, fecha, motivo))
+            INSERT INTO merma (id_producto, id_ingrediente, descripcion, cantidad, costo_perdida, fecha, motivo, tenant_id)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        """, (id_producto, id_ingrediente, descripcion, cantidad, costo_perdida, fecha, motivo, tenant_id))
         mysql.connection.commit()
         
         registrar_log(f"Registró merma de '{descripcion}' por un costo de ${costo_perdida}")
@@ -79,9 +84,10 @@ def add_merma_registro():
 @login_required
 @admin_required
 def delete_merma_registro(id):
+    tenant_id = current_user.tenant_id
     cursor = mysql.connection.cursor()
     try:
-        cursor.execute("DELETE FROM merma WHERE id_merma=%s", (id,))
+        cursor.execute("DELETE FROM merma WHERE id_merma=%s AND tenant_id = %s", (id, tenant_id))
         mysql.connection.commit()
         if cursor.rowcount == 0:
             return jsonify({"error": "Registro de merma no encontrado"}), 404

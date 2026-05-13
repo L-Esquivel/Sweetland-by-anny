@@ -1,5 +1,5 @@
 from flask import Blueprint, jsonify, request
-from flask_login import login_required
+from flask_login import login_required, current_user
 from utils import admin_required, registrar_log # 🛡️ Importamos registrar_log
 from extensions import mysql
 import logging
@@ -12,9 +12,11 @@ ingredientes_bp = Blueprint("ingredientes", __name__, url_prefix="/ingredientes"
 @ingredientes_bp.route("/", methods=["GET"])
 @login_required
 def get_ingredientes():
+    tenant_id = current_user.tenant_id
     try:
         cursor = mysql.connection.cursor()
-        cursor.execute("SELECT * FROM ingredientes ORDER BY nombre")
+        # 💡 SAAS-IFICATION: Filtramos por tenant_id.
+        cursor.execute("SELECT * FROM ingredientes WHERE tenant_id = %s ORDER BY nombre", (tenant_id,))
         filas = cursor.fetchall()
         return jsonify(list(filas))
     except Exception as e:
@@ -27,17 +29,19 @@ def get_ingredientes():
 @login_required
 @admin_required
 def create_ingrediente():
+    tenant_id = current_user.tenant_id
     try:
         data = request.get_json() or {}
         nombre = data.get("nombre")
         if not nombre or not data.get("unidad"):
             return jsonify({"error": "Nombre y Unidad son obligatorios"}), 400
 
+        # 💡 SAAS-IFICATION: Insertamos el tenant_id.
         cursor = mysql.connection.cursor()
         cursor.execute("""
-            INSERT INTO ingredientes (nombre, unidad, cantidad, costo_unitario)
-            VALUES (%s, %s, %s, %s)
-        """, (nombre, data.get("unidad"), float(data.get("cantidad") or 0), float(data.get("costo_unitario") or 0)))
+            INSERT INTO ingredientes (nombre, unidad, cantidad, costo_unitario, tenant_id)
+            VALUES (%s, %s, %s, %s, %s)
+        """, (nombre, data.get("unidad"), float(data.get("cantidad") or 0), float(data.get("costo_unitario") or 0), tenant_id))
         mysql.connection.commit()
 
         # 🛡️ AUDITORÍA: Registro de creación
@@ -54,16 +58,18 @@ def create_ingrediente():
 @login_required
 @admin_required
 def update_ingrediente(id):
+    tenant_id = current_user.tenant_id
     try:
         data = request.get_json() or {}
         nombre = data.get("nombre")
+        # 💡 SAAS-IFICATION: Aseguramos que solo se pueda actualizar un ingrediente del tenant correcto.
         cursor = mysql.connection.cursor()
         cursor.execute("""
             UPDATE ingredientes
             SET nombre=%s, unidad=%s, cantidad=%s, costo_unitario=%s
-            WHERE id_ingrediente=%s
-        """, (nombre, data.get("unidad"), float(data.get("cantidad") or 0), 
-              float(data.get("costo_unitario") or 0), id))
+            WHERE id_ingrediente=%s AND tenant_id = %s
+        """, (nombre, data.get("unidad"), float(data.get("cantidad") or 0),
+              float(data.get("costo_unitario") or 0), id, tenant_id))
         mysql.connection.commit()
 
         # 🛡️ AUDITORÍA: Registro de actualización
@@ -80,13 +86,16 @@ def update_ingrediente(id):
 @login_required
 @admin_required
 def delete_ingrediente(id):
+    tenant_id = current_user.tenant_id
     try:
         cursor = mysql.connection.cursor()
-        cursor.execute("SELECT COUNT(*) as total FROM recetas WHERE id_ingrediente = %s", (id,))
+        # 💡 SAAS-IFICATION: La verificación de uso también debe ser por tenant.
+        cursor.execute("SELECT COUNT(*) as total FROM recetas WHERE id_ingrediente = %s AND tenant_id = %s", (id, tenant_id))
         if cursor.fetchone().get('total', 0) > 0:
             return jsonify({"error": "No se puede eliminar: está en uso en una receta"}), 400
         
-        cursor.execute("DELETE FROM ingredientes WHERE id_ingrediente = %s", (id,))
+        # 💡 SAAS-IFICATION: Aseguramos que solo se pueda borrar un ingrediente del tenant correcto.
+        cursor.execute("DELETE FROM ingredientes WHERE id_ingrediente = %s AND tenant_id = %s", (id, tenant_id))
         mysql.connection.commit()
 
         # 🛡️ AUDITORÍA: Registro de eliminación
