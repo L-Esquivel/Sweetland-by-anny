@@ -68,13 +68,6 @@ if not allowed_origins or allowed_origins == ['']:
 
 CORS(app, origins=allowed_origins, supports_credentials=True)
 
-# Forzar HTTPS en producción
-@app.before_request
-def force_https():
-    if os.getenv('FLASK_ENV') == 'production' and not request.is_secure:
-        url = request.url.replace('http://', 'https://', 1)
-        return redirect(url, code=301)
-
 # ==========================================
 # 🛡️ MANEJADORES DE ERRORES (SANITIZACIÓN)
 # ==========================================
