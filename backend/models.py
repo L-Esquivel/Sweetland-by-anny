@@ -2,7 +2,7 @@ from flask_login import UserMixin
 from extensions import mysql
 
 class User(UserMixin):
-    def __init__(self, id, nombre, email, password, telefono=None, direccion=None, rol='cliente'):
+    def __init__(self, id, nombre, email, password, telefono=None, direccion=None, rol='cliente', tenant_id=None):
         self.id = id
         self.nombre = nombre
         self.email = email
@@ -10,6 +10,7 @@ class User(UserMixin):
         self.telefono = telefono
         self.direccion = direccion
         self.rol = rol
+        self.tenant_id = tenant_id
 
     @staticmethod
     def get_by_email(email):
@@ -25,7 +26,8 @@ class User(UserMixin):
                     password=row["password"],
                     telefono=row.get("telefono"),
                     direccion=row.get("direccion"),
-                    rol=row.get("rol", "cliente")
+                    rol=row.get("rol", "cliente"),
+                    tenant_id=row.get("tenant_id")
                 )
             return None
         finally:
@@ -45,7 +47,8 @@ class User(UserMixin):
                     password=row["password"],
                     telefono=row.get("telefono"),
                     direccion=row.get("direccion"),
-                    rol=row.get("rol", "cliente")
+                    rol=row.get("rol", "cliente"),
+                    tenant_id=row.get("tenant_id")
                 )
             return None
         finally:
