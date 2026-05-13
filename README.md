@@ -116,8 +116,15 @@
 
 The project is currently evolving from an MVP to a full-fledged multi-tenant SaaS application. Key development phases include:
 
-1.  **Identity & Access:** Finalizing secure user authentication and recovery flows.
-2.  **SaaS-ification:** Implementing a multi-tenant architecture for data isolation.
+1.  **✅ Identity & Access:** Finalizing secure user authentication and recovery flows.
+    *   *Status: Completed. Password recovery migrated to a robust API-based service (SendGrid).*
+
+2.  **✅ SaaS-ification:** Implementing a multi-tenant architecture for data isolation.
+    *   *Status: Completed. The database schema and backend logic now support full data isolation between tenants.*
+
 3.  **Security Hardening:** Advanced audit logs, security headers (CSP), and input sanitization.
+    *   *Status: Next up. Focus on enhancing security layers.*
+
 4.  **Business Intelligence:** Expanding the BI module with features like report exporting (PDF/Excel).
+
 5.  **DevOps & Quality:** API documentation (Swagger), containerization (Docker), and unit testing.
