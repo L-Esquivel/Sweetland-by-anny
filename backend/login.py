@@ -129,9 +129,9 @@ def forgot_password():
                 with app.app_context():
                     try:
                         mail.send(msg)
-                        print(f"✅ HILO: Correo enviado a {email}")
+                        app.logger.info(f"✅ HILO: Correo de recuperación enviado a {email}")
                     except Exception as e:
-                        print(f"❌ HILO: Error enviando correo: {e}")
+                        app.logger.error(f"❌ HILO: Error enviando correo de recuperación a {email}: {e}", exc_info=True)
 
             thread = threading.Thread(target=send_async_email, args=(current_app._get_current_object(), msg))
             thread.start()
@@ -144,7 +144,7 @@ def forgot_password():
         return jsonify({"mensaje": "Si el correo está registrado, recibirás un enlace pronto."}), 200
 
     except Exception as e:
-        print(f"❌ ERROR GENERAL: {str(e)}")
+        current_app.logger.error(f"❌ ERROR GENERAL en forgot-password: {e}", exc_info=True)
         return jsonify({"error": "Error interno del servidor"}), 500
 
 @auth_bp.route("/reset-password-confirm", methods=["POST"])
