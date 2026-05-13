@@ -2,8 +2,7 @@ from flask import Blueprint, request, jsonify, current_app, url_for, redirect
 from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.security import check_password_hash, generate_password_hash
 from models import User
-from extensions import mail, limiter, mysql 
-from flask_mail import Message
+from extensions import limiter, mysql 
 from itsdangerous import URLSafeTimedSerializer
 from utils import registrar_log
 from authlib.integrations.flask_client import OAuth
@@ -119,22 +118,23 @@ def forgot_password():
             token = s.dumps(email, salt='password-reset-salt')
             reset_url = f"https://sweetlandbyanny.vercel.app/reset-password.html?token={token}"
 
-            msg = Message("Recuperación de Contraseña - Precivox",
-                          recipients=[email])
-            msg.body = f"Hola {user.nombre},\n\nPara restablecer tu clave haz clic aquí:\n{reset_url}\n\nEl enlace expira en 1 hora."
+            # msg = Message("Recuperación de Contraseña - Precivox",
+            #               recipients=[email])
+            # msg.body = f"Hola {user.nombre},\n\nPara restablecer tu clave haz clic aquí:\n{reset_url}\n\nEl enlace expira en 1 hora."
             
             # 🚀 SOLUCIÓN TÉCNICA: Enviar en un hilo separado
             # Esto hace que la función responda al navegador ANTES de intentar conectar con Google
-            def send_async_email(app, msg):
-                with app.app_context():
-                    try:
-                        mail.send(msg)
-                        app.logger.info(f"✅ HILO: Correo de recuperación enviado a {email}")
-                    except Exception as e:
-                        app.logger.error(f"❌ HILO: Error enviando correo de recuperación a {email}: {e}", exc_info=True)
+            # def send_async_email(app, msg):
+            #     with app.app_context():
+            #         try:
+            #             # mail.send(msg) # Esta línea es la que falla
+            #             app.logger.info(f"✅ HILO: Correo de recuperación enviado a {email}")
+            #         except Exception as e:
+            #             app.logger.error(f"❌ HILO: Error enviando correo de recuperación a {email}: {e}", exc_info=True)
 
-            thread = threading.Thread(target=send_async_email, args=(current_app._get_current_object(), msg))
-            thread.start()
+            # thread = threading.Thread(target=send_async_email, args=(current_app._get_current_object(), msg))
+            # thread.start()
+            app.logger.warning(f"ENVÍO DE CORREO DESACTIVADO TEMPORALMENTE. Reset URL para {email}: {reset_url}")
             
             registrar_log(f"Solicitó recuperación de contraseña (proceso iniciado): {email}")
 

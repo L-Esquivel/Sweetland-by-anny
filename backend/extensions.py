@@ -3,7 +3,6 @@ import threading
 from flask import current_app
 import os
 import urllib.parse as urlparse
-from flask_mail import Mail
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
@@ -63,7 +62,6 @@ class MySQL:
 
 # --- INSTANCIAS GLOBALES ---
 mysql = MySQL()
-mail = Mail()
 limiter = Limiter(
     key_func=get_remote_address,
     default_limits=["500 per day", "100 per hour"],

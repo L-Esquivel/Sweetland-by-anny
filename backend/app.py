@@ -6,7 +6,7 @@ import os
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 # Importamos las extensiones centralizadas
-from extensions import mysql, mail, limiter
+from extensions import mysql, limiter
 # Importamos el Blueprint de auth y la función de inicialización de OAuth
 from login import auth_bp, init_oauth
 
@@ -30,19 +30,6 @@ app.config.update(
     REMEMBER_COOKIE_HTTPONLY=True
 )
 
-# # ==========================================
-# 📧 CONFIGURACIÓN DE CORREO (SMTP GOOGLE SSL)
-# ==========================================
-app.config.update(
-    MAIL_SERVER='smtp.gmail.com',
-    MAIL_PORT=int(os.getenv('MAIL_PORT', 587)),
-    MAIL_USE_TLS=os.getenv('MAIL_USE_TLS', 'True').lower() == 'true',
-    MAIL_USE_SSL=os.getenv('MAIL_USE_SSL', 'False').lower() == 'true',
-    MAIL_USERNAME=os.getenv('MAIL_USERNAME'),
-    MAIL_PASSWORD=os.getenv('MAIL_PASSWORD'),
-    MAIL_DEFAULT_SENDER=os.getenv('MAIL_DEFAULT_SENDER')
-)
-
 # ==========================================
 # 🗄️ CONFIGURACIÓN DE BASE DE DATOS
 # ==========================================
@@ -56,7 +43,6 @@ app.config['MYSQL_PORT'] = int(os.getenv('MYSQL_PORT') or 3306)
 # 🚀 INICIALIZACIÓN DE EXTENSIONES
 # ==========================================
 mysql.init_app(app)
-mail.init_app(app)
 limiter.init_app(app)
 # Inicializamos OAuth para Google Login
 init_oauth(app)
