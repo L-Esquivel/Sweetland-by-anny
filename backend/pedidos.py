@@ -1,9 +1,8 @@
 from flask import Blueprint, jsonify, request
-from flask_login import login_required, current_user, login_user, logout_user
+from flask_login import login_required, current_user
 from utils import admin_required, registrar_log # 🛡️ Importamos la auditoría
 from extensions import mysql
-from werkzeug.security import generate_password_hash
-import secrets, string, logging, datetime
+import logging, datetime
 
 logger = logging.getLogger(__name__)
 
@@ -11,19 +10,19 @@ pedidos_bp = Blueprint("pedidos", __name__, url_prefix="/pedidos")
 
 # ==================== LÓGICA DE STOCK ====================
 
-def procesar_descuento_stock(pedido_id):
+def procesar_descuento_stock(pedido_id, tenant_id):
     """Resta unidades del inventario basándose en el detalle del pedido."""
     cursor = mysql.connection.cursor()
     try:
         # Esta función es llamada desde otra que ya maneja el commit/rollback,
         # por lo que no hacemos commit aquí para mantener la atomicidad.
-        cursor.execute("SELECT producto_id, cantidad FROM detalle_pedidos WHERE pedido_id = %s", (pedido_id,))
+        cursor.execute("SELECT producto_id, cantidad FROM detalle_pedidos WHERE pedido_id = %s AND tenant_id = %s", (pedido_id, tenant_id))
         items = cursor.fetchall()
         for item in items:
             cursor.execute("""
                 UPDATE productos SET stock = stock - %s 
-                WHERE id_producto = %s AND controla_stock = TRUE
-            """, (item['cantidad'], item['producto_id']))
+                WHERE id_producto = %s AND controla_stock = TRUE AND tenant_id = %s
+            """, (item['cantidad'], item['producto_id'], tenant_id))
     except Exception as e:
         logger.error(f"Error descontando stock: {e}")
         # Propagamos la excepción para que la función llamadora haga rollback.
@@ -37,24 +36,26 @@ def procesar_descuento_stock(pedido_id):
 @login_required
 @admin_required
 def get_stats():
+    tenant_id = current_user.tenant_id
     cursor = mysql.connection.cursor()
     try:
         # 1. Obtener y validar rango de fechas (default: últimos 30 días)
         end_date = datetime.datetime.now()
         start_date = end_date - datetime.timedelta(days=29)
-        
+
         fecha_inicio_str = request.args.get('fecha_inicio', start_date.strftime('%Y-%m-%d'))
         fecha_fin_str = request.args.get('fecha_fin', end_date.strftime('%Y-%m-%d'))
-        params = (fecha_inicio_str, fecha_fin_str)
+        params_with_tenant = (tenant_id, fecha_inicio_str, fecha_fin_str)
 
         # 2. Resumen financiero para el rango
-        where_pedidos = " WHERE estado != 'cancelado' AND DATE(fecha_pedido) BETWEEN %s AND %s "
+        # 💡 SAAS-IFICATION: Todas las consultas ahora filtran por tenant_id.
+        where_pedidos = " WHERE tenant_id = %s AND estado != 'cancelado' AND DATE(fecha_pedido) BETWEEN %s AND %s "
         cursor.execute(f"""
             SELECT 
                 SUM(total) as total_ventas_rango,
                 COUNT(id_pedido) as num_pedidos_rango
             FROM pedidos {where_pedidos}
-        """, params)
+        """, params_with_tenant)
         resumen_rango_raw = cursor.fetchone()
         resumen = {
             'total_ventas_rango': float(resumen_rango_raw.get('total_ventas_rango') or 0),
@@ -64,16 +65,16 @@ def get_stats():
         # 3. Sumar gastos en el mismo rango de fechas
         cursor.execute("""
             SELECT SUM(monto) as total_gastos_rango
-            FROM gastos WHERE fecha BETWEEN %s AND %s
-        """, params)
+            FROM gastos WHERE tenant_id = %s AND fecha BETWEEN %s AND %s
+        """, params_with_tenant)
         gastos_rango_raw = cursor.fetchone()
         resumen['total_gastos_rango'] = float(gastos_rango_raw.get('total_gastos_rango') or 0)
 
         # 4. Sumar merma en el mismo rango de fechas
         cursor.execute("""
             SELECT SUM(costo_perdida) as total_merma_rango
-            FROM merma WHERE fecha BETWEEN %s AND %s
-        """, params)
+            FROM merma WHERE tenant_id = %s AND fecha BETWEEN %s AND %s
+        """, params_with_tenant)
         merma_rango_raw = cursor.fetchone()
         resumen['total_merma_rango'] = float(merma_rango_raw.get('total_merma_rango') or 0)
 
@@ -82,17 +83,17 @@ def get_stats():
             SELECT DATE(fecha_pedido) as fecha, SUM(total) as venta 
             FROM pedidos {where_pedidos}
             GROUP BY DATE(fecha_pedido) ORDER BY fecha ASC
-        """, params)
+        """, params_with_tenant)
         grafica_raw = cursor.fetchall()
         grafica = [{"fecha": str(row['fecha']), "venta": float(row['venta'])} for row in grafica_raw]
 
         # 6. Pedidos por estado para el rango
-        cursor.execute(f"SELECT estado, COUNT(id_pedido) as cantidad FROM pedidos {where_pedidos} GROUP BY estado", params)
+        cursor.execute(f"SELECT estado, COUNT(id_pedido) as cantidad FROM pedidos {where_pedidos} GROUP BY estado", params_with_tenant)
         estados_raw = cursor.fetchall()
         pedidos_por_estado = {row['estado']: row['cantidad'] for row in estados_raw}
 
         # 7. Producto Top para el rango
-        where_pedidos_aliased = " WHERE ped.estado = 'completado' AND DATE(ped.fecha_pedido) BETWEEN %s AND %s "
+        where_pedidos_aliased = " WHERE ped.tenant_id = %s AND ped.estado = 'completado' AND DATE(ped.fecha_pedido) BETWEEN %s AND %s "
         cursor.execute(f"""
             SELECT p.nombre, p.precio, SUM(dp.cantidad) as total_vendido
             FROM detalle_pedidos dp
@@ -101,7 +102,7 @@ def get_stats():
             {where_pedidos_aliased}
             GROUP BY p.id_producto
             ORDER BY total_vendido DESC LIMIT 1
-        """, params)
+        """, params_with_tenant)
         producto_top_raw = cursor.fetchone()
         producto_top = None
         if producto_top_raw:
@@ -126,13 +127,15 @@ def get_stats():
 @pedidos_bp.route("/", methods=["GET"])
 @login_required
 def get_pedidos():
+    tenant_id = current_user.tenant_id
     cursor = mysql.connection.cursor()
     try:
         cursor.execute("""
             SELECT p.*, u.nombre as cliente_nombre, u.telefono as cliente_telefono 
             FROM pedidos p LEFT JOIN usuarios u ON p.usuario_id = u.id_usuario 
+            WHERE p.tenant_id = %s
             ORDER BY p.fecha_pedido DESC
-        """)
+        """, (tenant_id,))
         pedidos = [dict(row) for row in cursor.fetchall()]
         for p in pedidos:
             p['id_pedido'] = p.get('id_pedido') 
@@ -148,16 +151,17 @@ def get_pedidos():
 def update_estado_pedido(id):
     data = request.get_json()
     nuevo_estado = data.get("estado")
+    tenant_id = current_user.tenant_id
     cursor = mysql.connection.cursor()
     try:
-        cursor.execute("SELECT estado FROM pedidos WHERE id_pedido = %s", (id,))
+        cursor.execute("SELECT estado FROM pedidos WHERE id_pedido = %s AND tenant_id = %s", (id, tenant_id))
         actual = cursor.fetchone()
         if not actual: return jsonify({"error": "No existe"}), 404
 
         if nuevo_estado == 'completado' and actual.get('estado') != 'completado':
-            procesar_descuento_stock(id)
+            procesar_descuento_stock(id, tenant_id)
 
-        cursor.execute("UPDATE pedidos SET estado=%s WHERE id_pedido=%s", (nuevo_estado, id))
+        cursor.execute("UPDATE pedidos SET estado=%s WHERE id_pedido=%s AND tenant_id = %s", (nuevo_estado, id, tenant_id))
         mysql.connection.commit()
 
         # 🛡️ LOG: Seguimiento de estado de pedido
@@ -174,10 +178,11 @@ def update_estado_pedido(id):
 @login_required
 @admin_required
 def delete_pedido(id):
+    tenant_id = current_user.tenant_id
     cursor = mysql.connection.cursor()
     try:
-        cursor.execute("DELETE FROM detalle_pedidos WHERE pedido_id = %s", (id,))
-        cursor.execute("DELETE FROM pedidos WHERE id_pedido = %s", (id,))
+        cursor.execute("DELETE FROM detalle_pedidos WHERE pedido_id = %s AND tenant_id = %s", (id, tenant_id))
+        cursor.execute("DELETE FROM pedidos WHERE id_pedido = %s AND tenant_id = %s", (id, tenant_id))
         mysql.connection.commit()
 
         # 🛡️ LOG: Eliminación de pedido
@@ -192,14 +197,15 @@ def delete_pedido(id):
 @pedidos_bp.route("/<int:id>/detalles", methods=["GET"])
 @login_required
 def get_detalles_admin(id):
+    tenant_id = current_user.tenant_id
     cursor = mysql.connection.cursor()
     try:
         # Esta ruta es ahora redundante con /detalle_pedidos/pedido/<id>, pero la mantenemos por retrocompatibilidad
         cursor.execute("""
             SELECT dp.*, p.nombre as producto_nombre 
             FROM detalle_pedidos dp JOIN productos p ON dp.producto_id = p.id_producto
-            WHERE dp.pedido_id = %s
-        """, (id,))
+            WHERE dp.pedido_id = %s AND dp.tenant_id = %s
+        """, (id, tenant_id))
         detalles = [dict(d) for d in cursor.fetchall()]
         for d in detalles:
             d['subtotal'] = float(d['subtotal'] or 0)
@@ -213,18 +219,20 @@ def get_detalles_admin(id):
 @pedidos_bp.route("/public", methods=["POST"])
 def create_pedido_public():
     data = request.get_json()
+    # 💡 SAAS-IFICATION: Los pedidos públicos se asocian al tenant 1 (Sweetland).
+    tenant_id_publico = 1
     cursor = mysql.connection.cursor()
     try:
         cursor.execute("""
-            INSERT INTO pedidos (usuario_id, telefono, direccion, total, estado, fecha_pedido)
-            VALUES (%s, %s, %s, %s, 'pendiente', NOW())
-        """, (data.get("usuario_id"), data.get("telefono"), data.get("direccion"), data.get("total", 0)))
+            INSERT INTO pedidos (usuario_id, telefono, direccion, total, estado, fecha_pedido, tenant_id)
+            VALUES (%s, %s, %s, %s, 'pendiente', NOW(), %s)
+        """, (data.get("usuario_id"), data.get("telefono"), data.get("direccion"), data.get("total", 0), tenant_id_publico))
         pedido_id = cursor.lastrowid
         for item in data.get("items", []):
             cursor.execute("""
-                INSERT INTO detalle_pedidos (pedido_id, producto_id, cantidad, precio_unitario, subtotal)
-                VALUES (%s, %s, %s, %s, %s)
-            """, (pedido_id, item.get("id_producto"), item.get("cantidad"), item.get("precio"), item.get("subtotal")))
+                INSERT INTO detalle_pedidos (pedido_id, producto_id, cantidad, precio_unitario, subtotal, tenant_id)
+                VALUES (%s, %s, %s, %s, %s, %s)
+            """, (pedido_id, item.get("id_producto"), item.get("cantidad"), item.get("precio"), item.get("subtotal"), tenant_id_publico))
         mysql.connection.commit()
 
         # 🛡️ LOG: Nuevo pedido entrante
@@ -240,11 +248,12 @@ def create_pedido_public():
 @pedidos_bp.route("/public/mis-pedidos", methods=["GET"])
 @login_required
 def mis_pedidos():
+    tenant_id = current_user.tenant_id
     cursor = mysql.connection.cursor()
     try:
         # Esta ruta ya fue optimizada para evitar N+1, solo se cambia la conexión
         # 1. Obtener todos los pedidos del usuario (1ª consulta)
-        cursor.execute("SELECT * FROM pedidos WHERE usuario_id = %s ORDER BY fecha_pedido DESC", (current_user.id,))
+        cursor.execute("SELECT * FROM pedidos WHERE usuario_id = %s AND tenant_id = %s ORDER BY fecha_pedido DESC", (current_user.id, tenant_id))
         pedidos = [dict(p) for p in cursor.fetchall()]
 
         if not pedidos:
@@ -255,9 +264,9 @@ def mis_pedidos():
         placeholders = ','.join(['%s'] * len(pedido_ids))
         cursor.execute(f"""
             SELECT dp.pedido_id, dp.cantidad, dp.subtotal, pr.nombre 
-            FROM detalle_pedidos dp JOIN productos pr ON dp.producto_id = pr.id_producto 
-            WHERE dp.pedido_id IN ({placeholders})
-        """, tuple(pedido_ids))
+            FROM detalle_pedidos dp JOIN productos pr ON dp.producto_id = pr.id_producto
+            WHERE dp.pedido_id IN ({placeholders}) AND dp.tenant_id = %s
+        """, tuple(pedido_ids) + (tenant_id,))
         detalles_todos = cursor.fetchall()
 
         # 3. Mapear los detalles a sus pedidos correspondientes en Python (muy rápido)
