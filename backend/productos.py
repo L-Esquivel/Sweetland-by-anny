@@ -117,10 +117,10 @@ def update_producto(id):
                 pax=%s, utilidad_porcentaje=%s, stock=%s, controla_stock=%s
             WHERE id_producto=%s AND tenant_id = %s
         """, (nombre, data.get("categoria"), data.get("descripcion"), 
-              data.get("precio"), data.get("imagen"), data.get("pax"), 
+              data.get("precio"), data.get("imagen"), data.get("pax"),
               data.get("utilidad_porcentaje"), data.get("stock"), data.get("controla_stock"), id, tenant_id))
         mysql.connection.commit()
-        calcular_costo_completo(id)
+        calcular_costo_completo(id, tenant_id)
         
         # 🛡️ AUDITORÍA: Registro de actualización
         registrar_log(f"Actualizó el producto ID {id}: {nombre}")
