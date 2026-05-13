@@ -126,11 +126,28 @@ def forgot_password():
                 with app.app_context():
                     # Aquí podrías usar una plantilla HTML para un correo más profesional
                     body = f"Hola {user_nombre},\n\nPara restablecer tu clave haz clic aquí:\n{url_reseteo}\n\nEl enlace expira en 1 hora."
+                    # 💡 MEJORA: Usar una plantilla HTML para un correo más profesional y con mejor entregabilidad.
+                    html_content = f"""
+                    <div style="font-family: sans-serif; padding: 20px; background-color: #f4f4f4;">
+                        <div style="max-width: 600px; margin: auto; background-color: white; padding: 30px; border-radius: 10px;">
+                            <h2 style="color: #333;">Recuperación de Contraseña</h2>
+                            <p>Hola {user_nombre},</p>
+                            <p>Hemos recibido una solicitud para restablecer la contraseña de tu cuenta. Haz clic en el siguiente botón para continuar:</p>
+                            <a href="{url_reseteo}" style="display: inline-block; padding: 12px 25px; margin: 20px 0; background-color: #aa1d80; color: white; text-decoration: none; border-radius: 5px;">
+                                Restablecer Contraseña
+                            </a>
+                            <p>Si no solicitaste esto, puedes ignorar este correo de forma segura.</p>
+                            <hr style="border: none; border-top: 1px solid #eee; margin-top: 20px;">
+                            <p style="font-size: 0.8em; color: #999;">El enlace expirará en 1 hora.</p>
+                        </div>
+                    </div>
+                    """
                     message = SendGridMail(
                         from_email=os.getenv('SENDER_EMAIL'),
                         to_emails=recipient,
                         subject="Recuperación de Contraseña - Precivox",
-                        plain_text_content=body)
+                        plain_text_content=body,
+                        html_content=html_content)
                     try:
                         sendgrid_client = SendGridAPIClient(os.getenv('SENDGRID_API_KEY'))
                         response = sendgrid_client.send(message)
