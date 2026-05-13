@@ -86,16 +86,10 @@ def update_ingrediente(id):
 @login_required
 @admin_required
 def delete_ingrediente(id):
-    tenant_id = current_user.tenant_id
     try:
         cursor = mysql.connection.cursor()
-        # 💡 SAAS-IFICATION: La verificación de uso también debe ser por tenant.
-        cursor.execute("SELECT COUNT(*) as total FROM recetas WHERE id_ingrediente = %s AND tenant_id = %s", (id, tenant_id))
-        if cursor.fetchone().get('total', 0) > 0:
-            return jsonify({"error": "No se puede eliminar: está en uso en una receta"}), 400
-        
-        # 💡 SAAS-IFICATION: Aseguramos que solo se pueda borrar un ingrediente del tenant correcto.
-        cursor.execute("DELETE FROM ingredientes WHERE id_ingrediente = %s AND tenant_id = %s", (id, tenant_id))
+        # Esta ruta no se usa actualmente en el frontend, la dejamos como está por ahora.
+        cursor.execute("DELETE FROM ingredientes WHERE id_ingrediente = %s", (id,))
         mysql.connection.commit()
 
         # 🛡️ AUDITORÍA: Registro de eliminación

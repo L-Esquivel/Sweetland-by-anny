@@ -156,9 +156,9 @@ def create_detalle():
 
         cursor = mysql.connection.cursor()
         cursor.execute("""
-            INSERT INTO detalle_pedidos (pedido_id, producto_id, cantidad, precio_unitario, subtotal, tenant_id)
-            VALUES (%s, %s, %s, %s, %s, %s)
-        """, (pedido_id, producto_id, cantidad, precio_unitario, subtotal, tenant_id))
+            INSERT INTO detalle_pedidos (pedido_id, producto_id, cantidad, precio_unitario, subtotal)
+            VALUES (%s, %s, %s, %s, %s)
+        """, (pedido_id, producto_id, cantidad, precio_unitario, subtotal))
 
         detalle_id = cursor.lastrowid
         mysql.connection.commit()
