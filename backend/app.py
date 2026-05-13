@@ -150,6 +150,14 @@ def add_header(response):
     response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0'
     response.headers['Pragma'] = 'no-cache'
     response.headers['Expires'] = '-1'
+
+    # 🕵️‍♂️ INICIO: LOGGING DE DIAGNÓSTICO DE COOKIES
+    # Verificamos si Flask-Login está intentando establecer una cookie de sesión.
+    if 'Set-Cookie' in response.headers:
+        app.logger.info(f"===== SET-COOKIE_DEBUG =====")
+        app.logger.info(f"Path: {request.path}")
+        app.logger.info(f"Set-Cookie Header: {response.headers.get('Set-Cookie')}")
+        app.logger.info(f"==========================")
     return response
 
 if __name__ == "__main__":
