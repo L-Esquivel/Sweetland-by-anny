@@ -260,11 +260,11 @@ def add_recetas_multiple():
     try:
         for ing in ingredientes:
             cursor.execute("""
-                INSERT INTO recetas (id_producto, id_ingrediente, cantidad_necesaria)
-                VALUES (%s, %s, %s)
-            """, (id_producto, ing.get("id_ingrediente"), ing.get("cantidad_necesaria")))
+                INSERT INTO recetas (id_producto, id_ingrediente, cantidad_necesaria, tenant_id)
+                VALUES (%s, %s, %s, %s)
+            """, (id_producto, ing.get("id_ingrediente"), ing.get("cantidad_necesaria"), tenant_id))
         mysql.connection.commit()
-        calcular_costo_completo(id_producto, current_user.tenant_id)
+        calcular_costo_completo(id_producto, tenant_id)
         return jsonify({"mensaje": "Ingredientes agregados correctamente"}), 201
     except Exception as e:
         mysql.connection.rollback()
@@ -275,6 +275,7 @@ def add_recetas_multiple():
 @recetas_bp.route("/<int:id>", methods=["PUT"])
 @login_required
 def update_receta(id):
+    tenant_id = current_user.tenant_id
     data = request.get_json()
     id_producto = data.get("id_producto")
     id_ingrediente = data.get("id_ingrediente")
@@ -287,11 +288,11 @@ def update_receta(id):
             SET id_producto = %s,
                 id_ingrediente = %s,
                 cantidad_necesaria = %s
-            WHERE id_receta = %s
-        """, (id_producto, id_ingrediente, cantidad_necesaria, id))
+            WHERE id_receta = %s AND tenant_id = %s
+        """, (id_producto, id_ingrediente, cantidad_necesaria, id, tenant_id))
         mysql.connection.commit()
         if id_producto:
-            calcular_costo_completo(id_producto, current_user.tenant_id)
+            calcular_costo_completo(id_producto, tenant_id)
         return jsonify({"mensaje": "Receta actualizada correctamente"})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -301,17 +302,18 @@ def update_receta(id):
 @recetas_bp.route("/<int:id>", methods=["DELETE"])
 @login_required
 def delete_receta(id):
+    tenant_id = current_user.tenant_id
     cursor = mysql.connection.cursor()
     try:
-        cursor.execute("SELECT id_producto FROM recetas WHERE id_receta = %s", (id,))
+        cursor.execute("SELECT id_producto FROM recetas WHERE id_receta = %s AND tenant_id = %s", (id, tenant_id))
         resultado = cursor.fetchone()
         id_producto = resultado.get('id_producto') if resultado else None
 
-        cursor.execute("DELETE FROM recetas WHERE id_receta = %s", (id,))
+        cursor.execute("DELETE FROM recetas WHERE id_receta = %s AND tenant_id = %s", (id, tenant_id))
         mysql.connection.commit()
 
         if id_producto:
-            calcular_costo_completo(id_producto, current_user.tenant_id)
+            calcular_costo_completo(id_producto, tenant_id)
 
         return jsonify({"mensaje": "Receta eliminada correctamente"})
     except Exception as e:
@@ -322,11 +324,12 @@ def delete_receta(id):
 @recetas_bp.route("/producto/<int:producto_id>", methods=["DELETE"])
 @login_required
 def delete_recetas_producto(producto_id):
+    tenant_id = current_user.tenant_id
     cursor = mysql.connection.cursor()
     try:
-        cursor.execute("DELETE FROM recetas WHERE id_producto = %s", (producto_id,))
+        cursor.execute("DELETE FROM recetas WHERE id_producto = %s AND tenant_id = %s", (producto_id, tenant_id))
         mysql.connection.commit()
-        calcular_costo_completo(producto_id, current_user.tenant_id)
+        calcular_costo_completo(producto_id, tenant_id)
         return jsonify({"mensaje": "Todas las recetas del producto fueron eliminadas"})
     except Exception as e:
         return jsonify({"error": str(e)}), 500

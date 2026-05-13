@@ -169,13 +169,13 @@ def add_empaque_producto(producto_id):
     
     # 💡 SAAS-IFICATION: Insertamos el tenant_id.
     cursor.execute("""
-        INSERT INTO recetas_empaques (id_producto, id_empaque, cantidad, subtotal)
-        VALUES (%s, %s, %s, %s)
-    """, (producto_id, id_empaque, cantidad, subtotal))
+        INSERT INTO recetas_empaques (id_producto, id_empaque, cantidad, subtotal, tenant_id)
+        VALUES (%s, %s, %s, %s, %s)
+    """, (producto_id, id_empaque, cantidad, subtotal, tenant_id))
     mysql.connection.commit()
 
     # 💡 FIX: Recalculamos el costo del producto para que se actualice en la tabla 'productos'.
-    calcular_costo_completo(producto_id, current_user.tenant_id)
+    calcular_costo_completo(producto_id, tenant_id)
 
     cursor.close()
     return jsonify({"mensaje": "Empaque asignado al producto"}), 201
@@ -183,20 +183,21 @@ def add_empaque_producto(producto_id):
 @empaques_bp.route("/producto/item/<int:id>", methods=["DELETE"])
 @login_required
 def delete_empaque_producto(id):
+    tenant_id = current_user.tenant_id
     cursor = mysql.connection.cursor()
     try:
         # 💡 FIX: Obtenemos el id_producto ANTES de borrar para poder recalcular.
         # 💡 SAAS-IFICATION: Aseguramos que solo se pueda borrar un item del tenant correcto.
-        cursor.execute("SELECT id_producto FROM recetas_empaques WHERE id = %s AND tenant_id = %s", (id, current_user.tenant_id))
+        cursor.execute("SELECT id_producto FROM recetas_empaques WHERE id = %s AND tenant_id = %s", (id, tenant_id))
         resultado = cursor.fetchone()
         id_producto = resultado.get('id_producto') if resultado else None
 
-        cursor.execute("DELETE FROM recetas_empaques WHERE id=%s", (id,))
+        cursor.execute("DELETE FROM recetas_empaques WHERE id=%s AND tenant_id = %s", (id, tenant_id))
         mysql.connection.commit()
 
         # 💡 FIX: Si se borró, recalculamos el costo del producto.
         if id_producto:
-            calcular_costo_completo(id_producto, current_user.tenant_id)
+            calcular_costo_completo(id_producto, tenant_id)
 
         return jsonify({"mensaje": "Empaque eliminado del producto"})
     finally:
