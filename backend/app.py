@@ -102,6 +102,15 @@ def load_user(user_id):
 @login_manager.unauthorized_handler
 def unauthorized():
     return jsonify({"error": "No autorizado", "mensaje": "Debes iniciar sesión para realizar esta acción."}), 401
+    # 🕵️‍♂️ INICIO: LOGGING DE DIAGNÓSTICO TEMPORAL
+    # Este bloque nos ayudará a cazar el bug del 401 intermitente.
+    # Registraremos las cabeceras para ver si el proxy está funcionando bien.
+    app.logger.warning(f"===== UNAUTHORIZED_HANDLER_DEBUG =====")
+    app.logger.warning(f"Request URL: {request.url}")
+    app.logger.warning(f"Request is_secure: {request.is_secure}")
+    app.logger.warning(f"Request Headers: {request.headers}")
+    app.logger.warning(f"======================================")
+    return jsonify({"error": "No autorizado", "mensaje": "Debes iniciar sesión para realizar esta acción."}), 401
 
 # ==========================================
 # 📦 REGISTRO DE BLUEPRINTS
