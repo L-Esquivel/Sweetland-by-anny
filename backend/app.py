@@ -94,14 +94,6 @@ def load_user(user_id):
 
 @login_manager.unauthorized_handler
 def unauthorized():
-    # 🕵️‍♂️ INICIO: LOGGING DE DIAGNÓSTICO ACTIVO
-    # Este bloque nos ayudará a cazar el bug del 401 intermitente. Registraremos
-    # las cabeceras para ver si el proxy de producción está configurado correctamente.
-    app.logger.warning(f"===== UNAUTHORIZED_HANDLER_DEBUG =====")
-    app.logger.warning(f"Request URL: {request.url}")
-    app.logger.warning(f"Request is_secure: {request.is_secure}")
-    app.logger.warning(f"Request Headers: {request.headers}")
-    app.logger.warning(f"======================================")
     return jsonify({"error": "No autorizado", "mensaje": "Debes iniciar sesión para realizar esta acción."}), 401
 
 # ==========================================
@@ -150,14 +142,6 @@ def add_header(response):
     response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0'
     response.headers['Pragma'] = 'no-cache'
     response.headers['Expires'] = '-1'
-
-    # 🕵️‍♂️ INICIO: LOGGING DE DIAGNÓSTICO DE COOKIES
-    # Verificamos si Flask-Login está intentando establecer una cookie de sesión.
-    if 'Set-Cookie' in response.headers:
-        app.logger.info(f"===== SET-COOKIE_DEBUG =====")
-        app.logger.info(f"Path: {request.path}")
-        app.logger.info(f"Set-Cookie Header: {response.headers.get('Set-Cookie')}")
-        app.logger.info(f"==========================")
     return response
 
 if __name__ == "__main__":
