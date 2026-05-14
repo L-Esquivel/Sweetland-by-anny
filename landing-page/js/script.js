@@ -1,6 +1,6 @@
 // CONFIGURACIÓN GLOBAL
-// ⚠️ IMPORTANTE: Reemplaza esta URL por la de tu backend en Render
-const API_BASE_URL = "https://tu-backend-en-render.onrender.com";
+// 💡 URL del backend. Debería coincidir con la que usa el panel de administración.
+const API_BASE_URL = "https://sweetland-by-anny-production.up.railway.app";
 
 // --- 1. LÓGICA DEL MENÚ (Scroll) ---
 let prevScrollpos = window.pageYOffset;

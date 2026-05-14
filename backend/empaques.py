@@ -1,6 +1,7 @@
 from flask import Blueprint, jsonify, request
 from flask_login import login_required, current_user
-from extensions import mysql
+from backend.db import get_db # 🟢 Importamos el nuevo gestor de DB
+from psycopg2.extras import DictCursor # 🟢 Para obtener resultados como diccionarios
 import logging
 from recetas import calcular_costo_completo # Importamos la función de costeo
 
@@ -16,16 +17,16 @@ empaques_bp = Blueprint("empaques", __name__, url_prefix="/empaques")
 @login_required
 def get_empaques():
     tenant_id = current_user.tenant_id
+    conn = get_db()
     try:
-        cursor = mysql.connection.cursor()
-        # 💡 SAAS-IFICATION: Filtramos por tenant_id.
-        cursor.execute("SELECT id_empaque, nombre, descripcion, precio FROM empaques WHERE tenant_id = %s ORDER BY nombre", (tenant_id,))
-        filas = cursor.fetchall()
-        cursor.close()
-        return jsonify([dict(f) for f in filas])
+        with conn.cursor(cursor_factory=DictCursor) as cursor:
+            # 💡 SAAS-IFICATION: Filtramos por tenant_id.
+            cursor.execute("SELECT id_empaque, nombre, descripcion, precio FROM empaques WHERE tenant_id = %s ORDER BY nombre", (tenant_id,))
+            empaques = cursor.fetchall()
+            return jsonify(empaques)
     except Exception as e:
         logger.error(f"Error en get_empaques: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "Error al obtener el catálogo de empaques"}), 500
 
 @empaques_bp.route("/", methods=["POST"])
 @login_required
@@ -41,18 +42,23 @@ def add_empaque():
         if not nombre:
             return jsonify({"error": "El nombre es obligatorio"}), 400
 
-        # 💡 SAAS-IFICATION: Insertamos el tenant_id.
-        cursor = mysql.connection.cursor()
-        cursor.execute(
-            "INSERT INTO empaques (nombre, descripcion, precio, tenant_id) VALUES (%s, %s, %s, %s)",
-            (nombre, descripcion, precio, tenant_id)
-        )
-        mysql.connection.commit()
-        cursor.close()
-        return jsonify({"mensaje": "Empaque creado en el catálogo"}), 201
+        conn = get_db()
+        try:
+            with conn.cursor() as cursor:
+                # 💡 SAAS-IFICATION: Insertamos el tenant_id.
+                cursor.execute(
+                    "INSERT INTO empaques (nombre, descripcion, precio, tenant_id) VALUES (%s, %s, %s, %s)",
+                    (nombre, descripcion, precio, tenant_id)
+                )
+                conn.commit()
+                return jsonify({"mensaje": "Empaque creado en el catálogo"}), 201
+        except Exception as e:
+            get_db().rollback()
+            logger.error(f"Error en add_empaque: {str(e)}")
+            return jsonify({"error": "Error al crear el empaque"}), 500
     except Exception as e:
         logger.error(f"Error en add_empaque: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "Error al procesar los datos del empaque"}), 500
 
 @empaques_bp.route("/<int:id>", methods=["PUT"])
 @login_required
@@ -67,42 +73,47 @@ def update_empaque(id):
         if not nombre:
             return jsonify({"error": "El nombre es obligatorio"}), 400
 
-        # 💡 SAAS-IFICATION: Aseguramos que solo se pueda actualizar un empaque del tenant correcto.
-        cursor = mysql.connection.cursor()
-        cursor.execute(
-            "UPDATE empaques SET nombre=%s, descripcion=%s, precio=%s WHERE id_empaque=%s AND tenant_id = %s",
-            (nombre, descripcion, precio, id, tenant_id)
-        )
-        mysql.connection.commit()
-        cursor.close()
-        return jsonify({"mensaje": "Empaque actualizado correctamente"})
+        conn = get_db()
+        try:
+            with conn.cursor() as cursor:
+                # 💡 SAAS-IFICATION: Aseguramos que solo se pueda actualizar un empaque del tenant correcto.
+                cursor.execute(
+                    "UPDATE empaques SET nombre=%s, descripcion=%s, precio=%s WHERE id_empaque=%s AND tenant_id = %s",
+                    (nombre, descripcion, precio, id, tenant_id)
+                )
+                conn.commit()
+                return jsonify({"mensaje": "Empaque actualizado correctamente"})
+        except Exception as e:
+            get_db().rollback()
+            logger.error(f"Error en update_empaque: {str(e)}")
+            return jsonify({"error": "Error al actualizar el empaque"}), 500
     except Exception as e:
         logger.error(f"Error en update_empaque: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "Error al procesar los datos del empaque"}), 500
 
 @empaques_bp.route("/<int:id>", methods=["DELETE"])
 @login_required
 def delete_empaque(id):
     tenant_id = current_user.tenant_id
     try:
-        cursor = mysql.connection.cursor()
-        
-        # VERIFICACIÓN: ¿Está este empaque en uso por algún producto?
-        # 💡 SAAS-IFICATION: La verificación de uso también debe ser por tenant.
-        cursor.execute("SELECT COUNT(*) as total FROM recetas_empaques WHERE id_empaque = %s AND tenant_id = %s", (id, tenant_id))
-        uso = cursor.fetchone()
-        
-        if uso and uso.get('total', 0) > 0:
-            cursor.close()
-            return jsonify({"error": "No se puede eliminar: el empaque está asignado a productos en la sección de Recetas"}), 400
-        # 💡 SAAS-IFICATION: Aseguramos que solo se pueda borrar un empaque del tenant correcto.
-        cursor.execute("DELETE FROM empaques WHERE id_empaque=%s AND tenant_id = %s", (id, tenant_id))
-        mysql.connection.commit()
-        cursor.close()
-        return jsonify({"mensaje": "Empaque eliminado del catálogo"})
+        conn = get_db()
+        with conn.cursor(cursor_factory=DictCursor) as cursor:
+            # VERIFICACIÓN: ¿Está este empaque en uso por algún producto?
+            # 💡 SAAS-IFICATION: La verificación de uso también debe ser por tenant.
+            cursor.execute("SELECT COUNT(*) as total FROM recetas_empaques WHERE id_empaque = %s AND tenant_id = %s", (id, tenant_id))
+            uso = cursor.fetchone()
+            
+            if uso and uso['total'] > 0:
+                return jsonify({"error": "No se puede eliminar: el empaque está asignado a productos en la sección de Recetas"}), 400
+            
+            # 💡 SAAS-IFICATION: Aseguramos que solo se pueda borrar un empaque del tenant correcto.
+            cursor.execute("DELETE FROM empaques WHERE id_empaque=%s AND tenant_id = %s", (id, tenant_id))
+            conn.commit()
+            return jsonify({"mensaje": "Empaque eliminado del catálogo"})
     except Exception as e:
+        get_db().rollback()
         logger.error(f"Error en delete_empaque: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "Error al eliminar el empaque"}), 500
 
 # ==================== EMPAQUES ASIGNADOS A PRODUCTOS ====================
 # Estos se usan específicamente dentro de la sección de recetas de cada producto
@@ -111,94 +122,109 @@ def delete_empaque(id):
 @login_required
 def get_empaques_producto(producto_id):
     tenant_id = current_user.tenant_id
-    cursor = mysql.connection.cursor()
-    cursor.execute("""
-        SELECT re.id, re.id_empaque, re.cantidad, re.subtotal,
-               e.nombre, e.precio
-        FROM recetas_empaques re
-        LEFT JOIN empaques e ON re.id_empaque = e.id_empaque
-        WHERE re.id_producto = %s AND re.tenant_id = %s
-    """, (producto_id, tenant_id))
-    filas = cursor.fetchall()
-    cursor.close()
+    conn = get_db()
+    try:
+        with conn.cursor(cursor_factory=DictCursor) as cursor:
+            cursor.execute("""
+                SELECT re.id, re.id_empaque, re.cantidad, re.subtotal,
+                       e.nombre, e.precio
+                FROM recetas_empaques re
+                LEFT JOIN empaques e ON re.id_empaque = e.id_empaque
+                WHERE re.id_producto = %s AND re.tenant_id = %s
+            """, (producto_id, tenant_id))
+            filas = cursor.fetchall()
 
-    items = []
-    costo_total = 0
-    for f in filas:
-        precio_unitario = float(f.get("precio") or 0)
-        cantidad = int(f.get("cantidad") or 1)
-        subtotal = float(f.get("subtotal") or (precio_unitario * cantidad))
-        
-        costo_total += subtotal
-        items.append({
-            "id":         f.get("id"),
-            "id_empaque": f.get("id_empaque"),
-            "cantidad":   cantidad,
-            "subtotal":   subtotal,
-            "nombre":     f.get("nombre"),
-            "precio":     precio_unitario
-        })
+            items = []
+            costo_total = 0
+            for f in filas:
+                precio_unitario = float(f["precio"] or 0)
+                cantidad = int(f["cantidad"] or 1)
+                subtotal = float(f["subtotal"] or (precio_unitario * cantidad))
+                
+                costo_total += subtotal
+                items.append({
+                    "id":         f["id"],
+                    "id_empaque": f["id_empaque"],
+                    "cantidad":   cantidad,
+                    "subtotal":   subtotal,
+                    "nombre":     f["nombre"],
+                    "precio":     precio_unitario
+                })
 
-    return jsonify({"empaques": items, "costo_total_empaque": costo_total})
+            return jsonify({"empaques": items, "costo_total_empaque": costo_total})
+    except Exception as e:
+        logger.error(f"Error en get_empaques_producto: {str(e)}")
+        return jsonify({"error": "Error al obtener empaques del producto"}), 500
 
 @empaques_bp.route("/producto/<int:producto_id>", methods=["POST"])
 @login_required
 def add_empaque_producto(producto_id):
     tenant_id = current_user.tenant_id
     data = request.get_json()
+    conn = get_db()
 
     id_empaque = data.get("id_empaque")
     # 💡 FIX DEFINITIVO: El log de diagnóstico reveló que el frontend envía la cantidad
     # en el campo 'cantidad_empaque'. Se añade a la lógica para capturar el valor correctamente.
     cantidad = data.get("cantidad_empaque") or data.get("cantidad") or data.get("cantidad_necesaria") or 1
 
-    if not id_empaque:
-        return jsonify({"error": "id_empaque es obligatorio"}), 400
+    try:
+        with conn.cursor(cursor_factory=DictCursor) as cursor:
+            if not id_empaque:
+                return jsonify({"error": "id_empaque es obligatorio"}), 400
 
-    cursor = mysql.connection.cursor()
-    # 💡 SAAS-IFICATION: Obtenemos el precio del empaque del tenant correcto.
-    cursor.execute("SELECT precio FROM empaques WHERE id_empaque=%s AND tenant_id = %s", (id_empaque, current_user.tenant_id))
-    row = cursor.fetchone()
-    
-    if not row:
-        cursor.close()
-        return jsonify({"error": "Empaque no encontrado"}), 404
+            # 💡 SAAS-IFICATION: Obtenemos el precio del empaque del tenant correcto.
+            cursor.execute("SELECT precio FROM empaques WHERE id_empaque=%s AND tenant_id = %s", (id_empaque, current_user.tenant_id))
+            row = cursor.fetchone()
+            
+            if not row:
+                return jsonify({"error": "Empaque no encontrado"}), 404
 
-    precio_empaque = float(row.get("precio") or 0)
-    subtotal = precio_empaque * int(cantidad)
-    
-    # 💡 SAAS-IFICATION: Insertamos el tenant_id.
-    cursor.execute("""
-        INSERT INTO recetas_empaques (id_producto, id_empaque, cantidad, subtotal, tenant_id)
-        VALUES (%s, %s, %s, %s, %s)
-    """, (producto_id, id_empaque, cantidad, subtotal, tenant_id))
-    mysql.connection.commit()
+            precio_empaque = float(row["precio"] or 0)
+            subtotal = precio_empaque * int(cantidad)
+            
+            # 💡 SAAS-IFICATION: Insertamos el tenant_id.
+            cursor.execute("""
+                INSERT INTO recetas_empaques (id_producto, id_empaque, cantidad, subtotal, tenant_id)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (producto_id, id_empaque, cantidad, subtotal, tenant_id))
+            conn.commit()
 
-    # 💡 FIX: Recalculamos el costo del producto para que se actualice en la tabla 'productos'.
-    calcular_costo_completo(producto_id, tenant_id)
+        # 💡 FIX: Recalculamos el costo del producto para que se actualice en la tabla 'productos'.
+        calcular_costo_completo(producto_id, tenant_id)
 
-    cursor.close()
-    return jsonify({"mensaje": "Empaque asignado al producto"}), 201
+        return jsonify({"mensaje": "Empaque asignado al producto"}), 201
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Error en add_empaque_producto: {str(e)}")
+        return jsonify({"error": "Error al asignar el empaque"}), 500
 
 @empaques_bp.route("/producto/item/<int:id>", methods=["DELETE"])
 @login_required
 def delete_empaque_producto(id):
     tenant_id = current_user.tenant_id
-    cursor = mysql.connection.cursor()
+    conn = get_db()
+    id_producto = None
     try:
-        # 💡 FIX: Obtenemos el id_producto ANTES de borrar para poder recalcular.
-        # 💡 SAAS-IFICATION: Aseguramos que solo se pueda borrar un item del tenant correcto.
-        cursor.execute("SELECT id_producto FROM recetas_empaques WHERE id = %s AND tenant_id = %s", (id, tenant_id))
-        resultado = cursor.fetchone()
-        id_producto = resultado.get('id_producto') if resultado else None
-
-        cursor.execute("DELETE FROM recetas_empaques WHERE id=%s AND tenant_id = %s", (id, tenant_id))
-        mysql.connection.commit()
+        with conn.cursor(cursor_factory=DictCursor) as cursor:
+            # 💡 FIX: Obtenemos el id_producto ANTES de borrar para poder recalcular.
+            # 💡 SAAS-IFICATION: Aseguramos que solo se pueda borrar un item del tenant correcto.
+            cursor.execute("SELECT id_producto FROM recetas_empaques WHERE id = %s AND tenant_id = %s", (id, tenant_id))
+            resultado = cursor.fetchone()
+            
+            if resultado:
+                id_producto = resultado['id_producto']
+                cursor.execute("DELETE FROM recetas_empaques WHERE id=%s AND tenant_id = %s", (id, tenant_id))
+                conn.commit()
+            else:
+                return jsonify({"mensaje": "Item de empaque no encontrado"}), 404
 
         # 💡 FIX: Si se borró, recalculamos el costo del producto.
         if id_producto:
             calcular_costo_completo(id_producto, tenant_id)
 
         return jsonify({"mensaje": "Empaque eliminado del producto"})
-    finally:
-        cursor.close()
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Error en delete_empaque_producto: {str(e)}")
+        return jsonify({"error": "Error al eliminar el empaque del producto"}), 500
