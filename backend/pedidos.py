@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, request, current_app
 from flask_login import login_required, current_user
 from utils import admin_required, registrar_log # 🛡️ Importamos la auditoría
-from backend.db import get_db # 🟢 Importamos el nuevo gestor de DB
+from db import get_db # 🟢 Importamos el nuevo gestor de DB
 from psycopg2.extras import DictCursor # 🟢 Para obtener resultados como diccionarios
 import logging, datetime
 

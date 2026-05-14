@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, request
 from flask_login import login_required, current_user
 from utils import admin_required, registrar_log
-from backend.db import get_db # 🟢 Importamos el nuevo gestor de DB
+from db import get_db # 🟢 Importamos el nuevo gestor de DB
 from psycopg2.extras import DictCursor # 🟢 Para obtener resultados como diccionarios
 import datetime
 
@@ -18,13 +18,15 @@ def get_merma_registros():
             mes = request.args.get('mes', type=int)
             ano = request.args.get('ano', type=int)
 
-            query = "SELECT * FROM merma WHERE tenant_id = %s ORDER BY fecha DESC"
+            query = "SELECT * FROM merma WHERE tenant_id = %s"
             params = [tenant_id]
 
             if mes and ano:
-                query = "SELECT * FROM merma WHERE tenant_id = %s AND EXTRACT(MONTH FROM fecha) = %s AND EXTRACT(YEAR FROM fecha) = %s ORDER BY fecha DESC"
+                query += " AND EXTRACT(MONTH FROM fecha) = %s AND EXTRACT(YEAR FROM fecha) = %s"
                 params.extend([mes, ano])
             
+            query += " ORDER BY fecha DESC"
+
             cursor.execute(query, tuple(params))
             registros = cursor.fetchall()
             for registro in registros:

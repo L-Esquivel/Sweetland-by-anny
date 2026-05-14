@@ -3,7 +3,7 @@ from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.security import check_password_hash, generate_password_hash
 from models import User
 from extensions import limiter
-from backend.db import get_db # 🟢 Importamos el nuevo gestor de DB
+from db import get_db # 🟢 Importamos el nuevo gestor de DB
 from psycopg2.extras import DictCursor # 🟢 Para obtener resultados como diccionarios
 from utils import registrar_log
 from authlib.integrations.flask_client import OAuth

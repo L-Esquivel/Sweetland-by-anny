@@ -5,7 +5,7 @@ from flask import Blueprint, request, jsonify, current_app
 from flask_login import login_required, current_user # 🟢 Importamos current_user
 from psycopg2.extras import DictCursor # 🟢 Para obtener resultados como diccionarios
 
-from backend.db import get_db # 🟢 Importamos el nuevo gestor de DB
+from db import get_db # 🟢 Importamos el nuevo gestor de DB
 from utils import admin_required, registrar_log # 🛡️ Importamos el log
 from recetas import calcular_costo_completo # Asegúrate que este archivo también se migre
 

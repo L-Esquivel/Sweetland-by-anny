@@ -1,7 +1,7 @@
 from functools import wraps
 from flask import jsonify, request, current_app
 from flask_login import current_user
-from backend.db import get_db # 🟢 Importamos el nuevo gestor de DB
+from db import get_db # 🟢 Importamos el nuevo gestor de DB
 
 # --- 1. DECORADOR ADMIN (Mantenemos la protección de roles) ---
 def admin_required(f):

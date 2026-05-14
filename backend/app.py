@@ -6,7 +6,7 @@ import os
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 # 1. 🟢 Importamos el nuevo gestor de DB y las otras extensiones
-from backend import db
+import db
 from extensions import limiter
 # Importamos el Blueprint de auth y la función de inicialización de OAuth
 from login import auth_bp, init_oauth
