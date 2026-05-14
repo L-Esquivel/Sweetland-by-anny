@@ -1,5 +1,6 @@
 // ==================== CONFIGURACIÓN ====================
-const API_BASE = 'https://sweetland-by-anny-production.up.railway.app';
+// ⚠️ IMPORTANTE: Reemplaza esta URL por la de tu backend en Render
+const API_BASE = 'https://tu-backend-en-render.onrender.com';
 
 // El carrito y la sesión los tomamos de localStorage para que sean persistentes
 let cart = JSON.parse(localStorage.getItem("sweetland_cart")) || [];

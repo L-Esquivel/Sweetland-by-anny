@@ -1,5 +1,6 @@
 // CONFIGURACIÓN GLOBAL
-const URL_RAILWAY = "https://sweetland-by-anny-production.up.railway.app";
+// ⚠️ IMPORTANTE: Reemplaza esta URL por la de tu backend en Render
+const API_BASE_URL = "https://tu-backend-en-render.onrender.com";
 
 // --- 1. LÓGICA DEL MENÚ (Scroll) ---
 let prevScrollpos = window.pageYOffset;
@@ -36,7 +37,7 @@ async function cargarProductos(categoria) {
     }
 
     try {
-        const response = await fetch(`${URL_RAILWAY}/productos/public`);
+        const response = await fetch(`${API_BASE_URL}/productos/public`);
         const data = await response.json();
 
         if (data.success) {
@@ -58,7 +59,7 @@ async function cargarProductos(categoria) {
                     // Si no, es un nombre de archivo que debe buscarse en la carpeta static del backend.
                     const imgUrl = (producto.imagen && producto.imagen.startsWith('http'))
                         ? producto.imagen
-                        : `${URL_RAILWAY}/static/images/${producto.imagen}`;
+                        : `${API_BASE_URL}/static/images/${producto.imagen}`;
                     
                     div.innerHTML = `
                         <div class="img-wrapper">
