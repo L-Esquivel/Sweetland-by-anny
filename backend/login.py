@@ -7,6 +7,7 @@ from backend.db import get_db # 🟢 Importamos el nuevo gestor de DB
 from psycopg2.extras import DictCursor # 🟢 Para obtener resultados como diccionarios
 from utils import registrar_log
 from authlib.integrations.flask_client import OAuth
+from itsdangerous import URLSafeTimedSerializer
 import os
 import threading
 from sendgrid import SendGridAPIClient
@@ -49,34 +50,33 @@ def google_callback():
         google_id = user_info['sub']
 
         conn = get_db()
-        try:
-            with conn.cursor(cursor_factory=DictCursor) as cursor:
-                cursor.execute("SELECT * FROM usuarios WHERE email = %s", (email,))
-                user_row = cursor.fetchone()
+        with conn.cursor(cursor_factory=DictCursor) as cursor:
+            cursor.execute("SELECT * FROM usuarios WHERE email = %s", (email,))
+            user_row = cursor.fetchone()
 
-                if user_row:
-                    # Si el usuario ya existe, lo cargamos con todos sus datos
-                    usuario = User.get_by_id(user_row["id_usuario"])
+            if user_row:
+                # Si el usuario ya existe, lo cargamos con todos sus datos
+                usuario = User.get_by_id(user_row["id_usuario"])
+                login_user(usuario)
+                registrar_log(f"Inició sesión vía Google: {email}")
+            else:
+                # 💡 SAAS-IFICATION: Los nuevos registros de Google se asocian al tenant público (1).
+                tenant_id_publico = 1
+                cursor.execute("""
+                    INSERT INTO usuarios (nombre, email, rol, google_id, tenant_id)
+                    VALUES (%s, %s, 'cliente', %s, %s)
+                    RETURNING id_usuario
+                """, (nombre, email, google_id, tenant_id_publico))
+                new_id = cursor.fetchone()[0]
+                conn.commit()
+                
+                # Cargamos el nuevo usuario desde la DB para asegurar consistencia
+                usuario = User.get_by_id(new_id)
+                if usuario:
                     login_user(usuario)
-                    registrar_log(f"Inició sesión vía Google: {email}")
-                else:
-                    # 💡 SAAS-IFICATION: Los nuevos registros de Google se asocian al tenant público (1).
-                    tenant_id_publico = 1
-                    cursor.execute("""
-                        INSERT INTO usuarios (nombre, email, rol, google_id, tenant_id)
-                        VALUES (%s, %s, 'cliente', %s, %s)
-                        RETURNING id_usuario
-                    """, (nombre, email, google_id, tenant_id_publico))
-                    new_id = cursor.fetchone()[0]
-                    conn.commit()
-                    
-                    # Cargamos el nuevo usuario desde la DB para asegurar consistencia
-                    usuario = User.get_by_id(new_id)
-                    if usuario:
-                        login_user(usuario)
-                        registrar_log(f"Nuevo registro vía Google: {email}")
+                    registrar_log(f"Nuevo registro vía Google: {email}")
 
-                return redirect("https://sweetlandbyanny.vercel.app/mi-cuenta.html")
+            return redirect("https://sweetlandbyanny.vercel.app/mi-cuenta.html")
     except Exception as e:
         current_app.logger.error(f"Error en Google Auth: {str(e)}")
         return redirect("https://sweetlandbyanny.vercel.app/mi-cuenta.html?error=auth_failed")
@@ -121,8 +121,6 @@ def forgot_password():
         # English comment: Security hardening. Only allow password recovery for users with the 'cliente' role.
         # This prevents admins or other privileged roles from using the self-service recovery flow.
         if user and user.rol == 'cliente':
-            from itsdangerous import URLSafeTimedSerializer
-            
             s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
             token = s.dumps(email, salt='password-reset-salt')
             reset_url = f"https://sweetlandbyanny.vercel.app/reset-password.html?token={token}"
