@@ -76,10 +76,13 @@ def google_callback():
                     login_user(usuario)
                     registrar_log(f"Nuevo registro vía Google: {email}")
 
-            return redirect("https://sweetlandbyanny.vercel.app/mi-cuenta.html")
+            # 💡 MEJORA: Usar una variable de entorno para la URL del frontend.
+            frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:3000')
+            return redirect(f"{frontend_url}/mi-cuenta.html")
     except Exception as e:
         current_app.logger.error(f"Error en Google Auth: {str(e)}")
-        return redirect("https://sweetlandbyanny.vercel.app/mi-cuenta.html?error=auth_failed")
+        frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:3000')
+        return redirect(f"{frontend_url}/mi-cuenta.html?error=auth_failed")
 
 # =========================
 # LOGIN TRADICIONAL 🔑
@@ -123,7 +126,9 @@ def forgot_password():
         if user and user.rol == 'cliente':
             s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
             token = s.dumps(email, salt='password-reset-salt')
-            reset_url = f"https://sweetlandbyanny.vercel.app/reset-password.html?token={token}"
+            # 💡 MEJORA: Usar una variable de entorno para la URL del frontend.
+            frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:3000')
+            reset_url = f"{frontend_url}/reset-password.html?token={token}"
 
             # 🚀 SOLUCIÓN TÉCNICA: Usar un servicio de email transaccional (SendGrid) en un hilo separado.
             # Esto evita bloqueos de red en plataformas como Railway y es la práctica recomendada.

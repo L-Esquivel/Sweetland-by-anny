@@ -37,7 +37,8 @@ def get_gastos():
                     gasto['fecha'] = gasto['fecha'].isoformat()
             return jsonify(gastos)
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        current_app.logger.error(f"Error en get_gastos: {e}")
+        return jsonify({"error": "Error al obtener los gastos"}), 500
 
 @gastos_bp.route("/", methods=["POST"])
 @login_required
@@ -66,7 +67,8 @@ def add_gasto():
             return jsonify({"mensaje": "Gasto registrado con éxito"}), 201
     except Exception as e:
         conn.rollback()
-        return jsonify({"error": str(e)}), 500
+        current_app.logger.error(f"Error en add_gasto: {e}")
+        return jsonify({"error": "Error al registrar el gasto"}), 500
 
 @gastos_bp.route("/<int:id>", methods=["PUT"])
 @login_required
@@ -99,7 +101,8 @@ def update_gasto(id):
             return jsonify({"mensaje": "Gasto actualizado con éxito"})
     except Exception as e:
         conn.rollback()
-        return jsonify({"error": str(e)}), 500
+        current_app.logger.error(f"Error en update_gasto: {e}")
+        return jsonify({"error": "Error al actualizar el gasto"}), 500
 
 @gastos_bp.route("/<int:id>", methods=["DELETE"])
 @login_required
@@ -116,4 +119,5 @@ def delete_gasto(id):
             return jsonify({"mensaje": "Gasto eliminado con éxito"})
     except Exception as e:
         conn.rollback()
-        return jsonify({"error": str(e)}), 500
+        current_app.logger.error(f"Error en delete_gasto: {e}")
+        return jsonify({"error": "Error al eliminar el gasto"}), 500

@@ -32,7 +32,8 @@ def get_merma_registros():
                     registro['fecha'] = registro['fecha'].isoformat()
             return jsonify(registros)
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        current_app.logger.error(f"Error en get_merma_registros: {e}")
+        return jsonify({"error": "Error al obtener registros de merma"}), 500
 
 @merma_bp.route("/", methods=["POST"])
 @login_required
@@ -79,7 +80,8 @@ def add_merma_registro():
             return jsonify({"mensaje": "Registro de merma añadido con éxito"}), 201
     except Exception as e:
         conn.rollback()
-        return jsonify({"error": str(e)}), 500
+        current_app.logger.error(f"Error en add_merma_registro: {e}")
+        return jsonify({"error": "Error al añadir registro de merma"}), 500
 
 @merma_bp.route("/<int:id>", methods=["DELETE"])
 @login_required
@@ -97,4 +99,5 @@ def delete_merma_registro(id):
             return jsonify({"mensaje": "Registro de merma eliminado"})
     except Exception as e:
         conn.rollback()
-        return jsonify({"error": str(e)}), 500
+        current_app.logger.error(f"Error en delete_merma_registro: {e}")
+        return jsonify({"error": "Error al eliminar registro de merma"}), 500
