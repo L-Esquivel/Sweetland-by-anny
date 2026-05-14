@@ -49,15 +49,27 @@ def create_admin_user():
 
         with conn.cursor() as cursor:
             # 1. Create a new Tenant first
-            # We'll assume the first admin creates the first tenant.
-            tenant_name = f"Organización de {admin_name}"
-            print(f"Creating a new tenant: '{tenant_name}'...")
-            cursor.execute(
-                "INSERT INTO tenants (nombre) VALUES (%s) RETURNING id_tenant",
-                (tenant_name,)
-            )
-            tenant_id = cursor.fetchone()[0]
-            print(f"✅ Tenant created with ID: {tenant_id}")
+            # 💡 MEJORA: Lógica diferenciada para superadmin y admin normal.
+            if admin_role == 'superadmin':
+                tenant_name = "Precivox Platform" # Nombre fijo para el tenant de la plataforma.
+            else: # Es un 'admin'
+                tenant_name = input("Enter the organization's name (e.g., Sweetland): ")
+                if not tenant_name:
+                    print("\n❌ Error: Organization name cannot be empty for an 'admin' role.")
+                    return
+            
+            # Buscamos si el tenant ya existe para reutilizarlo, si no, lo creamos.
+            cursor.execute("SELECT id_tenant FROM tenants WHERE nombre = %s", (tenant_name,))
+            tenant_row = cursor.fetchone()
+
+            if tenant_row:
+                tenant_id = tenant_row[0]
+                print(f"✅ Using existing tenant '{tenant_name}' with ID: {tenant_id}")
+            else:
+                print(f"Creating new tenant: '{tenant_name}'...")
+                cursor.execute("INSERT INTO tenants (nombre) VALUES (%s) RETURNING id_tenant", (tenant_name,))
+                tenant_id = cursor.fetchone()[0]
+                print(f"✅ Tenant created with ID: {tenant_id}")
 
             # 2. Create the Admin User associated with the new tenant
             print(f"Creating user '{admin_email}' with role '{admin_role}' for tenant ID {tenant_id}...")
@@ -70,7 +82,7 @@ def create_admin_user():
             )
 
             conn.commit()
-            print("\n🎉 Success! Admin user and tenant have been created in the database.")
+            print("\n🎉 Success! User and tenant have been created in the database.")
             print("You can now log in to the admin panel with these credentials.")
 
     except psycopg2.errors.UniqueViolation:

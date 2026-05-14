@@ -33,16 +33,21 @@ def create_ingrediente():
     try:
         data = request.get_json() or {}
         nombre = data.get("nombre")
-        if not nombre or not data.get("unidad"):
-            return jsonify({"error": "Nombre y Unidad son obligatorios"}), 400
+        # 💡 STANDARDIZATION: Using consistent column names from schema.sql
+        unidad_medida = data.get("unidad_medida")
+        stock = data.get("stock", 0)
+        costo_por_unidad = data.get("costo_por_unidad", 0)
+
+        if not nombre or not unidad_medida:
+            return jsonify({"error": "Nombre y Unidad de Medida son obligatorios"}), 400
 
         conn = get_db()
         with conn.cursor() as cursor:
             # 💡 SAAS-IFICATION: Insertamos el tenant_id.
             cursor.execute("""
-                INSERT INTO ingredientes (nombre, unidad, cantidad, costo_unitario, tenant_id)
+                INSERT INTO ingredientes (nombre, unidad_medida, stock, costo_por_unidad, tenant_id)
                 VALUES (%s, %s, %s, %s, %s)
-            """, (nombre, data.get("unidad"), float(data.get("cantidad") or 0), float(data.get("costo_unitario") or 0), tenant_id))
+            """, (nombre, unidad_medida, float(stock), float(costo_por_unidad), tenant_id))
             conn.commit()
 
         # �️ AUDITORÍA: Registro de creación
@@ -62,15 +67,19 @@ def update_ingrediente(id):
     try:
         data = request.get_json() or {}
         nombre = data.get("nombre")
+        # 💡 STANDARDIZATION: Using consistent column names from schema.sql
+        unidad_medida = data.get("unidad_medida")
+        stock = data.get("stock")
+        costo_por_unidad = data.get("costo_por_unidad")
+
         conn = get_db()
         with conn.cursor() as cursor:
             # 💡 SAAS-IFICATION: Aseguramos que solo se pueda actualizar un ingrediente del tenant correcto.
             cursor.execute("""
                 UPDATE ingredientes
-                SET nombre=%s, unidad=%s, cantidad=%s, costo_unitario=%s
+                SET nombre=%s, unidad_medida=%s, stock=%s, costo_por_unidad=%s
                 WHERE id_ingrediente=%s AND tenant_id = %s
-            """, (nombre, data.get("unidad"), float(data.get("cantidad") or 0),
-                  float(data.get("costo_unitario") or 0), id, tenant_id))
+            """, (nombre, unidad_medida, float(stock or 0), float(costo_por_unidad or 0), id, tenant_id))
             conn.commit()
 
         # �️ AUDITORÍA: Registro de actualización
