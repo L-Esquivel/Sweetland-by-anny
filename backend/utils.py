@@ -12,8 +12,22 @@ def admin_required(f):
         if not current_user.is_authenticated:
             return jsonify({"error": "No autenticado"}), 401
         user_role = str(current_user.rol).lower().strip() if current_user.rol else ""
-        if user_role != 'admin':
+        # 💡 MEJORA: Un superadmin también tiene permisos de admin.
+        if user_role not in ('admin', 'superadmin'):
             return jsonify({"error": "Acceso denegado"}), 403
+        return f(*args, **kwargs)
+    return decorated_function
+
+def superadmin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if request.method == 'OPTIONS':
+            return f(*args, **kwargs)
+        if not current_user.is_authenticated:
+            return jsonify({"error": "No autenticado"}), 401
+        user_role = str(current_user.rol).lower().strip() if current_user.rol else ""
+        if user_role != 'superadmin':
+            return jsonify({"error": "Acceso de superadmin requerido"}), 403
         return f(*args, **kwargs)
     return decorated_function
 

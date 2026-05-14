@@ -3,7 +3,7 @@ from flask_login import login_required, current_user
 from werkzeug.security import generate_password_hash
 from db import get_db # 🟢 Importamos el nuevo gestor de DB
 from psycopg2.extras import DictCursor # 🟢 Para obtener resultados como diccionarios
-from utils import admin_required
+from utils import admin_required, superadmin_required
 
 usuarios_bp = Blueprint("usuarios_bp", __name__, url_prefix="/usuarios")
 
@@ -18,7 +18,8 @@ def get_usuarios():
     conn = get_db()
     try:
         with conn.cursor(cursor_factory=DictCursor) as cursor:
-            # 💡 SAAS-IFICATION: Un admin solo puede ver los usuarios de su propio tenant.
+            # 💡 SAAS-IFICATION: Un admin (o superadmin) solo puede ver los usuarios de su propio tenant.
+            # Esto previene que el superadmin vea datos privados de otras organizaciones.
             cursor.execute(
                 "SELECT id_usuario, nombre, email, telefono, direccion, rol FROM usuarios WHERE tenant_id = %s", 
                 (current_user.tenant_id,)

@@ -10,6 +10,7 @@ import RecetasList from "./components/recetas/RecetasList";
 import Dashboard from './components/Dashboard';
 import GastosList from './components/gastos/GastosList';
 import MermaList from './components/merma/MermaList';
+import TenantsList from './components/tenants/TenantsList'; // 1. Importamos el nuevo componente
 
 // 🚀 URL del backend en producción (Render)
 const API_BASE = import.meta.env.VITE_API_URL || 'https://precivox-backend.onrender.com';
@@ -121,6 +122,7 @@ function App() {
       case 'recetas': return <RecetasList />;
       case 'gastos': return <GastosList />;
       case 'merma': return <MermaList />;
+      case 'tenants': return <TenantsList />; // 2. Añadimos el nuevo caso
       case 'inicio': return <Dashboard user={user} />;
       default: return <Dashboard user={user} />;
     }
@@ -167,6 +169,13 @@ function App() {
             <li className="nav-item">
               <button className={`nav-link w-100 text-start ${activeSection === 'inicio' ? 'active' : ''}`} onClick={() => setActiveSection('inicio')}>📊 Inicio / Dashboard</button>
             </li>
+
+            {/* 3. Botón visible solo para Super Admin */}
+            {user?.rol === 'superadmin' && (
+              <li className="nav-item">
+                <button className={`nav-link w-100 text-start ${activeSection === 'tenants' ? 'active' : ''}`} onClick={() => setActiveSection('tenants')}>🏢 Tenants</button>
+              </li>
+            )}
 
             {user?.rol === 'admin' && (
               <li className="nav-item">
