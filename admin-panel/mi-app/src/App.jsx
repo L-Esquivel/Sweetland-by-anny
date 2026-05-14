@@ -11,6 +11,7 @@ import Dashboard from './components/Dashboard';
 import GastosList from './components/gastos/GastosList';
 import MermaList from './components/merma/MermaList';
 import TenantsList from './components/tenants/TenantsList';
+import SupportModal from './components/support/SupportModal';
 
 // 🚀 URL del backend en producción (Render)
 const API_BASE = import.meta.env.VITE_API_URL || 'https://precivox-backend.onrender.com';
@@ -29,6 +30,7 @@ function App() {
   });
 
   const [loading, setLoading] = useState(true);
+  const [showSupportModal, setShowSupportModal] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -176,39 +178,36 @@ function App() {
                 <button className={`nav-link w-100 text-start ${activeSection === 'tenants' ? 'active' : ''}`} onClick={() => setActiveSection('tenants')}>🏢 Tenants</button>
               </li>
             )}
-
+            
+            {/* 4. Botones visibles solo para Admin de Tenant */}
             {user?.rol === 'admin' && (
-              <li className="nav-item">
-                <button className={`nav-link w-100 text-start ${activeSection === 'usuarios' ? 'active' : ''}`} onClick={() => setActiveSection('usuarios')}>👥 Usuarios</button>
-              </li>
-            )}
-
-            <li className="nav-item">
-              <button className={`nav-link w-100 text-start ${activeSection === 'productos' ? 'active' : ''}`} onClick={() => setActiveSection('productos')}>🎂 Productos</button>
-            </li>
-            <li className="nav-item">
-              <button className={`nav-link w-100 text-start ${activeSection === 'pedidos' ? 'active' : ''}`} onClick={() => setActiveSection('pedidos')}>📦 Pedidos</button>
-            </li>
-            <li className="nav-item">
-              <button className={`nav-link w-100 text-start ${activeSection === 'insumos' ? 'active' : ''}`} onClick={() => setActiveSection('insumos')}>📦 Insumos</button>
-            </li>
-
-            {user?.rol === 'admin' && (
-              <li className="nav-item">
-                <button className={`nav-link w-100 text-start ${activeSection === 'recetas' ? 'active' : ''}`} onClick={() => setActiveSection('recetas')}>📋 Recetas y Costos</button>
-              </li>
-            )}
-
-            {user?.rol === 'admin' && (
-              <li className="nav-item">
-                <button className={`nav-link w-100 text-start ${activeSection === 'gastos' ? 'active' : ''}`} onClick={() => setActiveSection('gastos')}>💸 Gastos</button>
-              </li>
-            )}
-
-            {user?.rol === 'admin' && (
-              <li className="nav-item">
-                <button className={`nav-link w-100 text-start ${activeSection === 'merma' ? 'active' : ''}`} onClick={() => setActiveSection('merma')}>📉 Merma</button>
-              </li>
+              <>
+                <li className="nav-item">
+                  <button className={`nav-link w-100 text-start ${activeSection === 'usuarios' ? 'active' : ''}`} onClick={() => setActiveSection('usuarios')}>👥 Usuarios</button>
+                </li>
+                <li className="nav-item">
+                  <button className={`nav-link w-100 text-start ${activeSection === 'productos' ? 'active' : ''}`} onClick={() => setActiveSection('productos')}>🎂 Productos</button>
+                </li>
+                <li className="nav-item">
+                  <button className={`nav-link w-100 text-start ${activeSection === 'pedidos' ? 'active' : ''}`} onClick={() => setActiveSection('pedidos')}>📦 Pedidos</button>
+                </li>
+                <li className="nav-item">
+                  <button className={`nav-link w-100 text-start ${activeSection === 'insumos' ? 'active' : ''}`} onClick={() => setActiveSection('insumos')}>📦 Insumos</button>
+                </li>
+                <li className="nav-item">
+                  <button className={`nav-link w-100 text-start ${activeSection === 'recetas' ? 'active' : ''}`} onClick={() => setActiveSection('recetas')}>📋 Recetas y Costos</button>
+                </li>
+                <li className="nav-item">
+                  <button className={`nav-link w-100 text-start ${activeSection === 'gastos' ? 'active' : ''}`} onClick={() => setActiveSection('gastos')}>💸 Gastos</button>
+                </li>
+                <li className="nav-item">
+                  <button className={`nav-link w-100 text-start ${activeSection === 'merma' ? 'active' : ''}`} onClick={() => setActiveSection('merma')}>📉 Merma</button>
+                </li>
+                <hr className="text-white-50" />
+                <li className="nav-item">
+                  <button className="nav-link w-100 text-start" onClick={() => setShowSupportModal(true)}>❓ Soporte</button>
+                </li>
+              </>
             )}
           </ul>
         </nav>
@@ -216,6 +215,8 @@ function App() {
         <main className="main-content p-4">
           {renderSection()}
         </main>
+
+        <SupportModal show={showSupportModal} onClose={() => setShowSupportModal(false)} />
       </div>
     </div>
   );
