@@ -47,7 +47,12 @@ init_oauth(app)
 # --- CORS DINÁMICO ---
 allowed_origins = os.getenv('ALLOWED_ORIGINS', '').split(',')
 if not allowed_origins or allowed_origins == ['']:
-    allowed_origins = ["https://sweetland-by-anny.vercel.app", "https://sweetlandbyanny.vercel.app"]
+    # 💡 FIX: Añadimos el nuevo dominio del frontend de Vercel a la lista de fallback.
+    allowed_origins = [
+        "https://sweetland-by-anny.vercel.app", 
+        "https://sweetlandbyanny.vercel.app",
+        "https://precivox.vercel.app" # Nuevo dominio del panel de admin
+    ]
 
 CORS(app, origins=allowed_origins, supports_credentials=True)
 
