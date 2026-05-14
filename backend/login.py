@@ -80,7 +80,7 @@ def google_callback():
             frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:3000')
             return redirect(f"{frontend_url}/mi-cuenta.html")
     except Exception as e:
-        current_app.logger.error(f"Error en Google Auth: {str(e)}")
+        current_app.logger.error(f"Error en Google Auth: {e}", exc_info=True)
         frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:3000')
         return redirect(f"{frontend_url}/mi-cuenta.html?error=auth_failed")
 

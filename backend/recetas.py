@@ -143,7 +143,7 @@ def recalcular_costos():
         })
     except Exception as e:
         logger.error(f"Error en recalcular_costos: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "Error al recalcular los costos"}), 500
 
 # ================================
 # Obtener todas las recetas
@@ -167,7 +167,7 @@ def get_recetas():
             return jsonify(filas if filas else [])
     except Exception as e:
         logger.error(f"Error en get_recetas: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "Error al obtener las recetas"}), 500
 
 # ================================
 # Obtener recetas + empaques + costos de un producto
@@ -210,7 +210,7 @@ def get_recetas_por_producto(producto_id):
             })
     except Exception as e:
         logger.error(f"Error en get_recetas_por_producto: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "Error al obtener los datos de la receta"}), 500
 
 # ================================
 # CRUD Recetas
@@ -249,7 +249,8 @@ def add_receta():
             return jsonify({"mensaje": "Receta agregada correctamente"}), 201
     except Exception as e:
         if conn: conn.rollback()
-        return jsonify({"error": str(e)}), 500
+        logger.error(f"Error en add_receta: {e}", exc_info=True)
+        return jsonify({"error": "Error al agregar el ingrediente a la receta"}), 500
 
 @recetas_bp.route("/multiple", methods=["POST"])
 @login_required
@@ -285,7 +286,8 @@ def add_recetas_multiple():
             return jsonify({"mensaje": "Ingredientes agregados correctamente"}), 201
     except Exception as e:
         if conn: conn.rollback()
-        return jsonify({"error": str(e)}), 500
+        logger.error(f"Error en add_recetas_multiple: {e}", exc_info=True)
+        return jsonify({"error": "Error al agregar los ingredientes"}), 500
 
 @recetas_bp.route("/<int:id>", methods=["PUT"])
 @login_required
@@ -317,7 +319,8 @@ def update_receta(id):
             return jsonify({"mensaje": "Receta actualizada correctamente"})
     except Exception as e:
         if conn: conn.rollback()
-        return jsonify({"error": str(e)}), 500
+        logger.error(f"Error en update_receta: {e}", exc_info=True)
+        return jsonify({"error": "Error al actualizar la receta"}), 500
 
 @recetas_bp.route("/<int:id>", methods=["DELETE"])
 @login_required
@@ -339,7 +342,8 @@ def delete_receta(id):
             return jsonify({"mensaje": "Receta eliminada correctamente"})
     except Exception as e:
         if conn: conn.rollback()
-        return jsonify({"error": str(e)}), 500
+        logger.error(f"Error en delete_receta: {e}", exc_info=True)
+        return jsonify({"error": "Error al eliminar la receta"}), 500
 
 @recetas_bp.route("/producto/<int:producto_id>", methods=["DELETE"])
 @login_required
@@ -354,4 +358,5 @@ def delete_recetas_producto(producto_id):
             return jsonify({"mensaje": "Todas las recetas del producto fueron eliminadas"})
     except Exception as e:
         if conn: conn.rollback()
-        return jsonify({"error": str(e)}), 500
+        logger.error(f"Error en delete_recetas_producto: {e}", exc_info=True)
+        return jsonify({"error": "Error al eliminar las recetas del producto"}), 500

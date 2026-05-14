@@ -90,3 +90,14 @@ function closeNotification() {
     const notification = document.getElementById('cart-notification');
     if (notification) notification.classList.add('hidden');
 }
+
+// --- 5. INICIALIZACIÓN DE ENLACES DINÁMICOS ---
+document.addEventListener('DOMContentLoaded', () => {
+    // 💡 FIX: Aseguramos que el enlace de login con Google siempre apunte al backend correcto.
+    // Asumimos que el enlace o botón tiene el id "google-login-link".
+    // Si tiene otro id, solo hay que cambiarlo aquí.
+    const googleLoginLink = document.getElementById('google-login-link');
+    if (googleLoginLink) {
+        googleLoginLink.href = `${API_BASE_URL}/auth/login/google`;
+    }
+});

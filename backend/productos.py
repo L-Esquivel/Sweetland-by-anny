@@ -103,7 +103,7 @@ def add_producto():
     except Exception as e:
         conn.rollback() # 🔵 Rollback sobre la conexión
         current_app.logger.error(f"Error en add_producto: {e}")
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "Error al crear el producto"}), 500
 
 @productos_bp.route("/<int:id>", methods=["PUT"])
 @login_required
@@ -133,7 +133,7 @@ def update_producto(id):
     except Exception as e:
         conn.rollback()
         current_app.logger.error(f"Error en update_producto: {e}")
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "Error al actualizar el producto"}), 500
 
 @productos_bp.route("/<int:id>", methods=["DELETE"])
 @login_required
@@ -154,7 +154,7 @@ def delete_producto(id):
     except Exception as e:
         conn.rollback()
         current_app.logger.error(f"Error en delete_producto: {e}")
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "Error al eliminar el producto"}), 500
 
 @productos_bp.route("/public", methods=["GET"])
 def get_productos_public():

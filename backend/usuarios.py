@@ -111,7 +111,8 @@ def update_usuario(id):
             return jsonify({"mensaje": "Usuario actualizado correctamente"})
     except Exception as e:
         conn.rollback()
-        return jsonify({"error": str(e)}), 500
+        current_app.logger.error(f"Error en update_usuario: {e}", exc_info=True)
+        return jsonify({"error": "Error al actualizar el usuario"}), 500
 
 @usuarios_bp.route("/<int:id>", methods=["DELETE"])
 @login_required
@@ -129,4 +130,5 @@ def delete_usuario(id):
             return jsonify({"mensaje": "Usuario eliminado"})
     except Exception as e:
         conn.rollback()
-        return jsonify({"error": str(e)}), 500
+        current_app.logger.error(f"Error en delete_usuario: {e}", exc_info=True)
+        return jsonify({"error": "Error al eliminar el usuario"}), 500

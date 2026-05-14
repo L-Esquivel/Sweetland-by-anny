@@ -43,8 +43,8 @@ def get_detalles():
 
             return jsonify(detalles)
     except Exception as e:
-        logger.error(f"Error en get_detalles: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+        logger.error(f"Error en get_detalles: {e}", exc_info=True)
+        return jsonify({"error": "Error al obtener los detalles de pedidos"}), 500
 
 
 # ========================================
@@ -80,8 +80,8 @@ def get_detalle(id):
 
             return jsonify(detalle)
     except Exception as e:
-        logger.error(f"Error en get_detalle: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+        logger.error(f"Error en get_detalle: {e}", exc_info=True)
+        return jsonify({"error": "Error al obtener el detalle del pedido"}), 500
 
 
 # ========================================
@@ -124,8 +124,8 @@ def get_detalles_por_pedido(pedido_id):
 
             return jsonify(detalles)
     except Exception as e:
-        logger.error(f"Error en get_detalles_por_pedido: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+        logger.error(f"Error en get_detalles_por_pedido: {e}", exc_info=True)
+        return jsonify({"error": "Error al obtener los detalles del pedido"}), 500
 
 
 # ========================================
@@ -165,8 +165,8 @@ def create_detalle():
             }), 201
     except Exception as e:
         conn.rollback()
-        logger.error(f"Error en create_detalle: {str(e)}")
-        return jsonify({"error": f"Error del servidor: {str(e)}"}), 500
+        logger.error(f"Error en create_detalle: {e}", exc_info=True)
+        return jsonify({"error": "Error al crear el detalle del pedido"}), 500
 
 
 # ========================================
@@ -194,7 +194,8 @@ def update_detalle(id):
             return jsonify({"mensaje": "Detalle actualizado correctamente"})
     except Exception as e:
         conn.rollback()
-        return jsonify({"error": str(e)}), 500
+        logger.error(f"Error en update_detalle: {e}", exc_info=True)
+        return jsonify({"error": "Error al actualizar el detalle"}), 500
 
 
 # ========================================

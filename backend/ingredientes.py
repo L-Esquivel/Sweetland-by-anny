@@ -22,8 +22,8 @@ def get_ingredientes():
             ingredientes = cursor.fetchall()
             return jsonify(ingredientes)
     except Exception as e:
-        logger.error(f"Error en get_ingredientes: {str(e)}")
-        return jsonify({"error": "Error al obtener ingredientes"}), 500
+        logger.error(f"Error en get_ingredientes: {e}", exc_info=True)
+        return jsonify({"error": "Error al obtener los insumos"}), 500
 
 @ingredientes_bp.route("/", methods=["POST"])
 @login_required
@@ -51,7 +51,8 @@ def create_ingrediente():
         return jsonify({"mensaje": "Ingrediente creado correctamente"}), 201
     except Exception as e:
         get_db().rollback()
-        return jsonify({"error": "Error interno al guardar"}), 500
+        logger.error(f"Error en create_ingrediente: {e}", exc_info=True)
+        return jsonify({"error": "Error al crear el insumo"}), 500
 
 @ingredientes_bp.route("/<int:id>", methods=["PUT"])
 @login_required
@@ -78,7 +79,8 @@ def update_ingrediente(id):
         return jsonify({"mensaje": "Ingrediente actualizado"})
     except Exception as e:
         get_db().rollback()
-        return jsonify({"error": str(e)}), 500
+        logger.error(f"Error en update_ingrediente: {e}", exc_info=True)
+        return jsonify({"error": "Error al actualizar el insumo"}), 500
 
 @ingredientes_bp.route("/<int:id>", methods=["DELETE"])
 @login_required
@@ -107,4 +109,5 @@ def delete_ingrediente(id):
         return jsonify({"mensaje": "Eliminado correctamente"})
     except Exception as e:
         get_db().rollback()
-        return jsonify({"error": str(e)}), 500
+        logger.error(f"Error en delete_ingrediente: {e}", exc_info=True)
+        return jsonify({"error": "Error al eliminar el insumo"}), 500

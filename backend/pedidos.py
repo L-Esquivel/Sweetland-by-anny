@@ -174,7 +174,8 @@ def update_estado_pedido(id):
         return jsonify({"mensaje": "Actualizado", "estado": nuevo_estado})
     except Exception as e:
         conn.rollback()
-        return jsonify({"error": str(e)}), 500
+        current_app.logger.error(f"Error en update_estado_pedido: {e}", exc_info=True)
+        return jsonify({"error": "Error al actualizar el estado del pedido"}), 500
 
 @pedidos_bp.route("/<int:id>", methods=["DELETE"])
 @login_required
@@ -194,7 +195,8 @@ def delete_pedido(id):
         return jsonify({"mensaje": "Pedido eliminado correctamente"})
     except Exception as e:
         conn.rollback()
-        return jsonify({"error": str(e)}), 500
+        current_app.logger.error(f"Error en delete_pedido: {e}", exc_info=True)
+        return jsonify({"error": "Error al eliminar el pedido"}), 500
 
 @pedidos_bp.route("/<int:id>/detalles", methods=["GET"])
 @login_required
@@ -248,7 +250,8 @@ def create_pedido_public():
         return jsonify({"mensaje": "Pedido recibido", "id_pedido": pedido_id}), 201
     except Exception as e:
         conn.rollback()
-        return jsonify({"error": str(e)}), 500
+        current_app.logger.error(f"Error en create_pedido_public: {e}", exc_info=True)
+        return jsonify({"error": "Error al procesar el pedido"}), 500
 
 @pedidos_bp.route("/public/mis-pedidos", methods=["GET"])
 @login_required
