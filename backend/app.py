@@ -5,8 +5,9 @@ from dotenv import load_dotenv
 import os
 from werkzeug.middleware.proxy_fix import ProxyFix
 
-# Importamos las extensiones centralizadas
-from extensions import mysql, limiter
+# 1. 🟢 Importamos el nuevo gestor de DB y las otras extensiones
+from backend import db
+from extensions import limiter
 # Importamos el Blueprint de auth y la función de inicialización de OAuth
 from login import auth_bp, init_oauth
 
@@ -33,16 +34,12 @@ app.config.update(
 # ==========================================
 # 🗄️ CONFIGURACIÓN DE BASE DE DATOS
 # ==========================================
-app.config['MYSQL_HOST'] = os.getenv('MYSQL_HOST')
-app.config['MYSQL_USER'] = os.getenv('MYSQL_USER')
-app.config['MYSQL_PASSWORD'] = os.getenv('MYSQL_PASSWORD')
-app.config['MYSQL_DB'] = os.getenv('MYSQL_DB')
-app.config['MYSQL_PORT'] = int(os.getenv('MYSQL_PORT') or 3306)
+# 🔴 La configuración de la base de datos ahora se gestiona con la variable DATABASE_URL en el archivo .env
 
 # ==========================================
 # 🚀 INICIALIZACIÓN DE EXTENSIONES
 # ==========================================
-mysql.init_app(app)
+db.init_app(app) # 2. 🟢 Inicializamos el nuevo gestor de base de datos PostgreSQL
 limiter.init_app(app)
 # Inicializamos OAuth para Google Login
 init_oauth(app)

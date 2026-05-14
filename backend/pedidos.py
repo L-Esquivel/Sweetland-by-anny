@@ -1,7 +1,8 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, current_app
 from flask_login import login_required, current_user
 from utils import admin_required, registrar_log # 🛡️ Importamos la auditoría
-from extensions import mysql
+from backend.db import get_db # 🟢 Importamos el nuevo gestor de DB
+from psycopg2.extras import DictCursor # 🟢 Para obtener resultados como diccionarios
 import logging, datetime
 
 logger = logging.getLogger(__name__)
@@ -10,9 +11,8 @@ pedidos_bp = Blueprint("pedidos", __name__, url_prefix="/pedidos")
 
 # ==================== LÓGICA DE STOCK ====================
 
-def procesar_descuento_stock(pedido_id, tenant_id):
+def procesar_descuento_stock(cursor, pedido_id, tenant_id):
     """Resta unidades del inventario basándose en el detalle del pedido."""
-    cursor = mysql.connection.cursor()
     try:
         # Esta función es llamada desde otra que ya maneja el commit/rollback,
         # por lo que no hacemos commit aquí para mantener la atomicidad.
@@ -27,8 +27,6 @@ def procesar_descuento_stock(pedido_id, tenant_id):
         logger.error(f"Error descontando stock: {e}")
         # Propagamos la excepción para que la función llamadora haga rollback.
         raise
-    finally:
-        if cursor: cursor.close()
 
 # ==================== STATS (Dashboard) ====================
 
@@ -37,7 +35,8 @@ def procesar_descuento_stock(pedido_id, tenant_id):
 @admin_required
 def get_stats():
     tenant_id = current_user.tenant_id
-    cursor = mysql.connection.cursor()
+    conn = get_db()
+    cursor = conn.cursor(cursor_factory=DictCursor)
     try:
         # 1. Obtener y validar rango de fechas (default: últimos 30 días)
         end_date = datetime.datetime.now()
@@ -119,8 +118,9 @@ def get_stats():
             "producto_top": producto_top,
             "filtros_aplicados": {"fecha_inicio": fecha_inicio_str, "fecha_fin": fecha_fin_str}
         })
-    finally:
-        if cursor: cursor.close()
+    except Exception as e:
+        current_app.logger.error(f"Error en get_stats: {e}")
+        return jsonify({"error": "Error al obtener estadísticas"}), 500
 
 # ==================== GESTIÓN ADMIN ====================
 
@@ -128,7 +128,8 @@ def get_stats():
 @login_required
 def get_pedidos():
     tenant_id = current_user.tenant_id
-    cursor = mysql.connection.cursor()
+    conn = get_db()
+    cursor = conn.cursor(cursor_factory=DictCursor)
     try:
         cursor.execute("""
             SELECT p.*, u.nombre as cliente_nombre, u.telefono as cliente_telefono 
@@ -137,14 +138,16 @@ def get_pedidos():
             ORDER BY p.fecha_pedido DESC
         """, (tenant_id,))
         pedidos = [dict(row) for row in cursor.fetchall()]
+        # Formateo de datos para el frontend
         for p in pedidos:
             p['id_pedido'] = p.get('id_pedido') 
             p['total'] = float(p.get('total') or 0)
             if p.get('fecha_pedido'): 
                 p['fecha_pedido'] = p['fecha_pedido'].strftime('%Y-%m-%d %H:%M')
         return jsonify(pedidos)
-    finally:
-        if cursor: cursor.close()
+    except Exception as e:
+        current_app.logger.error(f"Error en get_pedidos: {e}")
+        return jsonify({"error": "Error al obtener pedidos"}), 500
 
 @pedidos_bp.route("/<int:id>/estado", methods=["PUT"])
 @login_required
@@ -152,53 +155,53 @@ def update_estado_pedido(id):
     data = request.get_json()
     nuevo_estado = data.get("estado")
     tenant_id = current_user.tenant_id
-    cursor = mysql.connection.cursor()
+    conn = get_db()
+    cursor = conn.cursor(cursor_factory=DictCursor)
     try:
         cursor.execute("SELECT estado FROM pedidos WHERE id_pedido = %s AND tenant_id = %s", (id, tenant_id))
         actual = cursor.fetchone()
         if not actual: return jsonify({"error": "No existe"}), 404
 
         if nuevo_estado == 'completado' and actual.get('estado') != 'completado':
-            procesar_descuento_stock(id, tenant_id)
+            procesar_descuento_stock(cursor, id, tenant_id)
 
         cursor.execute("UPDATE pedidos SET estado=%s WHERE id_pedido=%s AND tenant_id = %s", (nuevo_estado, id, tenant_id))
-        mysql.connection.commit()
+        conn.commit()
 
         # 🛡️ LOG: Seguimiento de estado de pedido
         registrar_log(f"Actualizó estado pedido #{id} de '{actual.get('estado')}' a '{nuevo_estado}'")
 
         return jsonify({"mensaje": "Actualizado", "estado": nuevo_estado})
     except Exception as e:
-        mysql.connection.rollback()
+        conn.rollback()
         return jsonify({"error": str(e)}), 500
-    finally:
-        if cursor: cursor.close()
 
 @pedidos_bp.route("/<int:id>", methods=["DELETE"])
 @login_required
 @admin_required
 def delete_pedido(id):
     tenant_id = current_user.tenant_id
-    cursor = mysql.connection.cursor()
+    conn = get_db()
+    cursor = conn.cursor()
     try:
         cursor.execute("DELETE FROM detalle_pedidos WHERE pedido_id = %s AND tenant_id = %s", (id, tenant_id))
         cursor.execute("DELETE FROM pedidos WHERE id_pedido = %s AND tenant_id = %s", (id, tenant_id))
-        mysql.connection.commit()
+        conn.commit()
 
         # 🛡️ LOG: Eliminación de pedido
         registrar_log(f"Eliminó permanentemente el pedido ID {id}")
 
         return jsonify({"mensaje": "Pedido eliminado correctamente"})
     except Exception as e:
+        conn.rollback()
         return jsonify({"error": str(e)}), 500
-    finally:
-        if cursor: cursor.close()
 
 @pedidos_bp.route("/<int:id>/detalles", methods=["GET"])
 @login_required
 def get_detalles_admin(id):
     tenant_id = current_user.tenant_id
-    cursor = mysql.connection.cursor()
+    conn = get_db()
+    cursor = conn.cursor(cursor_factory=DictCursor)
     try:
         # Esta ruta es ahora redundante con /detalle_pedidos/pedido/<id>, pero la mantenemos por retrocompatibilidad
         cursor.execute("""
@@ -211,8 +214,9 @@ def get_detalles_admin(id):
             d['subtotal'] = float(d['subtotal'] or 0)
             d['precio_unitario'] = float(d.get('precio_unitario') or 0)
         return jsonify(detalles)
-    finally:
-        if cursor: cursor.close()
+    except Exception as e:
+        current_app.logger.error(f"Error en get_detalles_admin: {e}")
+        return jsonify({"error": "Error al obtener detalles"}), 500
 
 # ==================== ENDPOINTS PÚBLICOS 🌍 ====================
 
@@ -221,35 +225,37 @@ def create_pedido_public():
     data = request.get_json()
     # 💡 SAAS-IFICATION: Los pedidos públicos se asocian al tenant 1 (Sweetland).
     tenant_id_publico = 1
-    cursor = mysql.connection.cursor()
+    conn = get_db()
+    cursor = conn.cursor()
     try:
         cursor.execute("""
-            INSERT INTO pedidos (usuario_id, telefono, direccion, total, estado, fecha_pedido, tenant_id)
-            VALUES (%s, %s, %s, %s, 'pendiente', NOW(), %s)
+            INSERT INTO pedidos (usuario_id, telefono, direccion, total, estado, tenant_id)
+            VALUES (%s, %s, %s, %s, 'pendiente', %s)
+            RETURNING id_pedido
         """, (data.get("usuario_id"), data.get("telefono"), data.get("direccion"), data.get("total", 0), tenant_id_publico))
-        pedido_id = cursor.lastrowid
+        pedido_id = cursor.fetchone()[0]
+
         for item in data.get("items", []):
             cursor.execute("""
                 INSERT INTO detalle_pedidos (pedido_id, producto_id, cantidad, precio_unitario, subtotal, tenant_id)
                 VALUES (%s, %s, %s, %s, %s, %s)
             """, (pedido_id, item.get("id_producto"), item.get("cantidad"), item.get("precio"), item.get("subtotal"), tenant_id_publico))
-        mysql.connection.commit()
+        conn.commit()
 
         # 🛡️ LOG: Nuevo pedido entrante
         registrar_log(f"Recibió nuevo pedido web: ID #{pedido_id}")
 
         return jsonify({"mensaje": "Pedido recibido", "id_pedido": pedido_id}), 201
     except Exception as e:
-        mysql.connection.rollback()
+        conn.rollback()
         return jsonify({"error": str(e)}), 500
-    finally:
-        if cursor: cursor.close()
 
 @pedidos_bp.route("/public/mis-pedidos", methods=["GET"])
 @login_required
 def mis_pedidos():
     tenant_id = current_user.tenant_id
-    cursor = mysql.connection.cursor()
+    conn = get_db()
+    cursor = conn.cursor(cursor_factory=DictCursor)
     try:
         # Esta ruta ya fue optimizada para evitar N+1, solo se cambia la conexión
         # 1. Obtener todos los pedidos del usuario (1ª consulta)
@@ -285,5 +291,6 @@ def mis_pedidos():
             p['fecha_pedido'] = p['fecha_pedido'].strftime('%Y-%m-%d %H:%M') if p['fecha_pedido'] else ""
             p['detalles'] = detalles_por_pedido.get(p['id_pedido'], [])
         return jsonify({"pedidos": pedidos})
-    finally:
-        if cursor: cursor.close()
+    except Exception as e:
+        current_app.logger.error(f"Error en mis_pedidos: {e}")
+        return jsonify({"error": "Error al obtener tus pedidos"}), 500

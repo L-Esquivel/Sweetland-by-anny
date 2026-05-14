@@ -2,8 +2,9 @@ from flask import Blueprint, request, jsonify, current_app, url_for, redirect
 from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.security import check_password_hash, generate_password_hash
 from models import User
-from extensions import limiter, mysql 
-from itsdangerous import URLSafeTimedSerializer
+from extensions import limiter
+from backend.db import get_db # 🟢 Importamos el nuevo gestor de DB
+from psycopg2.extras import DictCursor # 🟢 Para obtener resultados como diccionarios
 from utils import registrar_log
 from authlib.integrations.flask_client import OAuth
 import os
@@ -47,31 +48,35 @@ def google_callback():
         nombre = user_info['name']
         google_id = user_info['sub']
 
-        cursor = mysql.connection.cursor()
+        conn = get_db()
         try:
-            cursor.execute("SELECT * FROM usuarios WHERE email = %s", (email,))
-            user_row = cursor.fetchone()
+            with conn.cursor(cursor_factory=DictCursor) as cursor:
+                cursor.execute("SELECT * FROM usuarios WHERE email = %s", (email,))
+                user_row = cursor.fetchone()
 
-            if user_row:
-                # Si el usuario ya existe, lo cargamos con todos sus datos
-                usuario = User.get_by_id(user_row["id_usuario"])
-                login_user(usuario)
-                registrar_log(f"Inició sesión vía Google: {email}")
-            else:
-                # 💡 SAAS-IFICATION: Los nuevos registros de Google se asocian al tenant público (1).
-                tenant_id_publico = 1
-                cursor.execute("""
-                    INSERT INTO usuarios (nombre, email, rol, google_id, fecha_registro, tenant_id)
-                    VALUES (%s, %s, 'cliente', %s, NOW(), %s)
-                """, (nombre, email, google_id, tenant_id_publico))
-                mysql.connection.commit()
-                new_id = cursor.lastrowid
-                usuario = User(id=new_id, nombre=nombre, email=email, password=None, rol='cliente', tenant_id=tenant_id_publico)
-                login_user(usuario)
-                registrar_log(f"Nuevo registro vía Google: {email}")
-            return redirect("https://sweetlandbyanny.vercel.app/mi-cuenta.html")
-        finally:
-            if cursor: cursor.close()
+                if user_row:
+                    # Si el usuario ya existe, lo cargamos con todos sus datos
+                    usuario = User.get_by_id(user_row["id_usuario"])
+                    login_user(usuario)
+                    registrar_log(f"Inició sesión vía Google: {email}")
+                else:
+                    # 💡 SAAS-IFICATION: Los nuevos registros de Google se asocian al tenant público (1).
+                    tenant_id_publico = 1
+                    cursor.execute("""
+                        INSERT INTO usuarios (nombre, email, rol, google_id, tenant_id)
+                        VALUES (%s, %s, 'cliente', %s, %s)
+                        RETURNING id_usuario
+                    """, (nombre, email, google_id, tenant_id_publico))
+                    new_id = cursor.fetchone()[0]
+                    conn.commit()
+                    
+                    # Cargamos el nuevo usuario desde la DB para asegurar consistencia
+                    usuario = User.get_by_id(new_id)
+                    if usuario:
+                        login_user(usuario)
+                        registrar_log(f"Nuevo registro vía Google: {email}")
+
+                return redirect("https://sweetlandbyanny.vercel.app/mi-cuenta.html")
     except Exception as e:
         current_app.logger.error(f"Error en Google Auth: {str(e)}")
         return redirect("https://sweetlandbyanny.vercel.app/mi-cuenta.html?error=auth_failed")
@@ -184,17 +189,16 @@ def reset_password_confirm():
         return jsonify({"error": "El enlace ha expirado o es inválido"}), 400
 
     hashed_pw = generate_password_hash(password)
-    cursor = mysql.connection.cursor()
+    conn = get_db()
     try:
-        cursor.execute("UPDATE usuarios SET password = %s WHERE email = %s", (hashed_pw, email))
-        mysql.connection.commit()
-        registrar_log(f"Restableció su contraseña con éxito: {email}")
-        return jsonify({"mensaje": "Contraseña actualizada"})
+        with conn.cursor() as cursor:
+            cursor.execute("UPDATE usuarios SET password = %s WHERE email = %s", (hashed_pw, email))
+            conn.commit()
+            registrar_log(f"Restableció su contraseña con éxito: {email}")
+            return jsonify({"mensaje": "Contraseña actualizada"})
     except Exception as e:
-        mysql.connection.rollback()
+        conn.rollback()
         return jsonify({"error": "Error al actualizar la contraseña"}), 500
-    finally:
-        if cursor: cursor.close()
 
 # =========================
 # LOGIN/REGISTRO PÚBLICO (CLIENTES) 🙋‍♀️
@@ -224,27 +228,26 @@ def registro_cliente():
     if not nombre or not email or not password:
         return jsonify({"error": "Nombre, email y contraseña son obligatorios"}), 400
 
-    cursor = mysql.connection.cursor()
+    conn = get_db()
     try:
-        cursor.execute("SELECT id_usuario FROM usuarios WHERE email = %s", (email,))
-        if cursor.fetchone():
-            return jsonify({"error": "Email ya registrado"}), 400
-        
-        # 💡 SAAS-IFICATION: Los nuevos registros de clientes se asocian al tenant público (1).
-        tenant_id_publico = 1
-        hashed = generate_password_hash(password)
-        cursor.execute("""
-            INSERT INTO usuarios (nombre, email, password, telefono, direccion, rol, fecha_registro, tenant_id)
-            VALUES (%s, %s, %s, %s, %s, 'cliente', NOW(), %s)
-        """, (nombre, email, hashed, data.get("telefono"), data.get("direccion"), tenant_id_publico))
-        mysql.connection.commit()
-        registrar_log(f"Nuevo cliente registrado: {email}")
-        return jsonify({"mensaje": "Registro exitoso"}), 201
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT id_usuario FROM usuarios WHERE email = %s", (email,))
+            if cursor.fetchone():
+                return jsonify({"error": "Email ya registrado"}), 400
+            
+            # 💡 SAAS-IFICATION: Los nuevos registros de clientes se asocian al tenant público (1).
+            tenant_id_publico = 1
+            hashed = generate_password_hash(password)
+            cursor.execute("""
+                INSERT INTO usuarios (nombre, email, password, telefono, direccion, rol, tenant_id)
+                VALUES (%s, %s, %s, %s, %s, 'cliente', %s)
+            """, (nombre, email, hashed, data.get("telefono"), data.get("direccion"), tenant_id_publico))
+            conn.commit()
+            registrar_log(f"Nuevo cliente registrado: {email}")
+            return jsonify({"mensaje": "Registro exitoso"}), 201
     except Exception as e:
-        mysql.connection.rollback()
+        conn.rollback()
         return jsonify({"error": str(e)}), 500
-    finally:
-        if cursor: cursor.close()
 
 # =========================
 # SESIÓN Y ESTADO

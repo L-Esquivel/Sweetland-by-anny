@@ -1,7 +1,7 @@
 from functools import wraps
-from flask import jsonify, request
+from flask import jsonify, request, current_app
 from flask_login import current_user
-from extensions import mysql
+from backend.db import get_db # 🟢 Importamos el nuevo gestor de DB
 
 # --- 1. DECORADOR ADMIN (Mantenemos la protección de roles) ---
 def admin_required(f):
@@ -20,35 +20,26 @@ def admin_required(f):
 # --- 2. FUNCIÓN DE REGISTRO DE LOGS 🛡️ ---
 def registrar_log(accion):
     """
-    Guarda un registro de la actividad en la tabla audit_logs.
+    Guarda un registro de la actividad en la tabla 'logs'.
     """
     try:
-        print(f"🕵️ Intentando registrar log: {accion}")
-        # Capturamos la IP manejando el proxy de Railway/Vercel
-        ip = request.headers.get('X-Forwarded-For', request.remote_addr)
-        
         usuario_id = None
-        usuario_nombre = "Sistema / Invitado"
         tenant_id = None
         
         # Si el usuario está logueado, tomamos sus datos
         if current_user.is_authenticated:
             usuario_id = current_user.id
-            usuario_nombre = current_user.nombre
             tenant_id = current_user.tenant_id
-        else:
-            usuario_id = None
-            usuario_nombre = "Usuario Anónimo"
 
-        cursor = mysql.connection.cursor()
-        try:
+        conn = get_db()
+        with conn.cursor() as cursor:
+            # La nueva tabla 'logs' tiene una estructura más simple.
             cursor.execute("""
-                INSERT INTO audit_logs (usuario_id, usuario_nombre, accion, endpoint, metodo, ip_address, tenant_id)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
-            """, (usuario_id, usuario_nombre, accion, request.path, request.method, ip, tenant_id))
-            mysql.connection.commit()
-        finally:
-            if cursor: cursor.close()
+                INSERT INTO logs (usuario_id, accion, tenant_id)
+                VALUES (%s, %s, %s)
+            """, (usuario_id, accion, tenant_id))
+            conn.commit()
 
     except Exception as e:
-        print(f"⚠️ Alerta de Seguridad: No se pudo escribir en Audit Log: {e}")
+        # Usamos el logger de la aplicación para un registro de errores consistente.
+        current_app.logger.error(f"⚠️ Alerta de Seguridad: No se pudo escribir en el Log: {e}")
