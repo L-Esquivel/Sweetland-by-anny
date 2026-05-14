@@ -1,5 +1,6 @@
 // src/services/api.js
-const API_BASE = import.meta.env.VITE_API_URL || 'https://sweetland-by-anny-production.up.railway.app';
+// 🚀 URL del backend en producción (Render)
+const API_BASE = import.meta.env.VITE_API_URL || 'https://precivox-backend.onrender.com';
 
 // Función básica para hacer peticiones al backend
 const fetchAPI = async (endpoint, options = {}) => {

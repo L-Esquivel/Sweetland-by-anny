@@ -1,4 +1,5 @@
-const BASE = import.meta.env.VITE_API_URL || 'https://sweetland-by-anny-production.up.railway.app';
+// 🚀 URL del backend en producción (Render)
+const BASE = import.meta.env.VITE_API_URL || 'https://precivox-backend.onrender.com';
 const GASTOS_URL = `${BASE.replace(/\/$/, '')}/gastos`;
 
 export const gastosService = {

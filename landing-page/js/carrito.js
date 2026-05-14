@@ -1,6 +1,6 @@
 // ==================== CONFIGURACIÓN ====================
-// 💡 URL del backend. Debería coincidir con la que usa el panel de administración.
-const API_BASE = 'https://sweetland-by-anny-production.up.railway.app';
+// 🚀 URL del backend en producción (Render)
+const API_BASE = 'https://precivox-backend.onrender.com';
 
 // El carrito y la sesión los tomamos de localStorage para que sean persistentes
 let cart = JSON.parse(localStorage.getItem("sweetland_cart")) || [];

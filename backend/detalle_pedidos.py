@@ -1,7 +1,8 @@
 from flask import Blueprint, jsonify, request
 from flask_login import login_required, current_user
-from extensions import mysql
+from backend.db import get_db # 🟢 Importamos el nuevo gestor de DB
 from flask_cors import cross_origin
+from psycopg2.extras import DictCursor # 🟢 Para obtener resultados como diccionarios
 import logging
 
 logging.basicConfig(level=logging.DEBUG)
@@ -17,9 +18,10 @@ detalle_pedidos_bp = Blueprint("detalle_pedidos", __name__, url_prefix="/detalle
 @cross_origin()
 def get_detalles():
     tenant_id = current_user.tenant_id
-    cursor = mysql.connection.cursor()
+    conn = get_db()
     try:
-        cursor.execute("""
+        with conn.cursor(cursor_factory=DictCursor) as cursor:
+            cursor.execute("""
             SELECT 
                 dp.id_detalle, 
                 dp.pedido_id, 
@@ -31,21 +33,18 @@ def get_detalles():
             LEFT JOIN productos p ON dp.producto_id = p.id_producto AND p.tenant_id = %s
             WHERE dp.tenant_id = %s
             ORDER BY dp.id_detalle DESC
-        """, (tenant_id, tenant_id))
-        filas = cursor.fetchall()
-        detalles = [dict(fila) for fila in filas] if filas else []
+            """, (tenant_id, tenant_id))
+            detalles = cursor.fetchall()
 
-        # Asegurar que precio_unitario y subtotal sean float
-        for d in detalles:
-            d["precio_unitario"] = float(d.get("precio_unitario", 0) or 0)
-            d["subtotal"] = float(d.get("subtotal", 0) or 0)
+            # Asegurar que precio_unitario y subtotal sean float
+            for d in detalles:
+                d["precio_unitario"] = float(d.get("precio_unitario", 0) or 0)
+                d["subtotal"] = float(d.get("subtotal", 0) or 0)
 
-        return jsonify(detalles)
+            return jsonify(detalles)
     except Exception as e:
         logger.error(f"Error en get_detalles: {str(e)}")
         return jsonify({"error": str(e)}), 500
-    finally:
-        cursor.close()
 
 
 # ========================================
@@ -56,9 +55,10 @@ def get_detalles():
 @cross_origin()
 def get_detalle(id):
     tenant_id = current_user.tenant_id
-    cursor = mysql.connection.cursor()
+    conn = get_db()
     try:
-        cursor.execute("""
+        with conn.cursor(cursor_factory=DictCursor) as cursor:
+            cursor.execute("""
             SELECT 
                 dp.id_detalle, 
                 dp.pedido_id, 
@@ -69,22 +69,19 @@ def get_detalle(id):
             FROM detalle_pedidos dp
             LEFT JOIN productos p ON dp.producto_id = p.id_producto AND p.tenant_id = %s
             WHERE dp.id_detalle = %s AND dp.tenant_id = %s
-        """, (tenant_id, id, tenant_id))
-        fila = cursor.fetchone()
+            """, (tenant_id, id, tenant_id))
+            detalle = cursor.fetchone()
 
-        if not fila:
-            return jsonify({"error": "Detalle no encontrado"}), 404
+            if not detalle:
+                return jsonify({"error": "Detalle no encontrado"}), 404
 
-        detalle = dict(fila)
-        detalle["precio_unitario"] = float(detalle.get("precio_unitario", 0) or 0)
-        detalle["subtotal"] = float(detalle.get("subtotal", 0) or 0)
+            detalle["precio_unitario"] = float(detalle.get("precio_unitario", 0) or 0)
+            detalle["subtotal"] = float(detalle.get("subtotal", 0) or 0)
 
-        return jsonify(detalle)
+            return jsonify(detalle)
     except Exception as e:
         logger.error(f"Error en get_detalle: {str(e)}")
         return jsonify({"error": str(e)}), 500
-    finally:
-        cursor.close()
 
 
 # ========================================
@@ -99,9 +96,10 @@ def get_detalles_por_pedido(pedido_id):
     Incluye info del producto para mostrar en el frontend.
     """
     tenant_id = current_user.tenant_id
-    cursor = mysql.connection.cursor()
+    conn = get_db()
     try:
-        cursor.execute("""
+        with conn.cursor(cursor_factory=DictCursor) as cursor:
+            cursor.execute("""
             SELECT 
                 dp.id_detalle AS id,
                 dp.pedido_id,
@@ -115,22 +113,19 @@ def get_detalles_por_pedido(pedido_id):
             LEFT JOIN productos p ON dp.producto_id = p.id_producto AND p.tenant_id = %s
             WHERE dp.pedido_id = %s AND dp.tenant_id = %s
             ORDER BY dp.id_detalle ASC
-        """, (tenant_id, pedido_id, tenant_id))
-        filas = cursor.fetchall()
-        detalles = [dict(fila) for fila in filas] if filas else []
+            """, (tenant_id, pedido_id, tenant_id))
+            detalles = cursor.fetchall()
 
-        # Asegurar tipos numéricos
-        for d in detalles:
-            d["cantidad"] = int(d.get("cantidad", 0) or 0)
-            d["precio_unitario"] = float(d.get("precio_unitario", 0) or 0)
-            d["subtotal"] = float(d.get("subtotal", 0) or 0)
+            # Asegurar tipos numéricos
+            for d in detalles:
+                d["cantidad"] = int(d.get("cantidad", 0) or 0)
+                d["precio_unitario"] = float(d.get("precio_unitario", 0) or 0)
+                d["subtotal"] = float(d.get("subtotal", 0) or 0)
 
-        return jsonify(detalles)
+            return jsonify(detalles)
     except Exception as e:
         logger.error(f"Error en get_detalles_por_pedido: {str(e)}")
         return jsonify({"error": str(e)}), 500
-    finally:
-        cursor.close()
 
 
 # ========================================
@@ -141,6 +136,7 @@ def get_detalles_por_pedido(pedido_id):
 @cross_origin()
 def create_detalle():
     tenant_id = current_user.tenant_id
+    conn = get_db()
     try:
         data = request.get_json()
 
@@ -154,22 +150,21 @@ def create_detalle():
         if not all([pedido_id, producto_id, cantidad, precio_unitario, subtotal]):
             return jsonify({"error": "Todos los campos son requeridos"}), 400
 
-        cursor = mysql.connection.cursor()
-        cursor.execute("""
-            INSERT INTO detalle_pedidos (pedido_id, producto_id, cantidad, precio_unitario, subtotal, tenant_id)
-            VALUES (%s, %s, %s, %s, %s, %s)
-        """, (pedido_id, producto_id, cantidad, precio_unitario, subtotal, tenant_id))
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                INSERT INTO detalle_pedidos (pedido_id, producto_id, cantidad, precio_unitario, subtotal, tenant_id)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                RETURNING id_detalle
+            """, (pedido_id, producto_id, cantidad, precio_unitario, subtotal, tenant_id))
+            detalle_id = cursor.fetchone()[0]
+            conn.commit()
 
-        detalle_id = cursor.lastrowid
-        mysql.connection.commit()
-        cursor.close()
-
-        return jsonify({
-            "mensaje": "Detalle de pedido creado correctamente",
-            "id_detalle": detalle_id
-        }), 201
-
+            return jsonify({
+                "mensaje": "Detalle de pedido creado correctamente",
+                "id_detalle": detalle_id
+            }), 201
     except Exception as e:
+        conn.rollback()
         logger.error(f"Error en create_detalle: {str(e)}")
         return jsonify({"error": f"Error del servidor: {str(e)}"}), 500
 
@@ -187,21 +182,19 @@ def update_detalle(id):
     precio_unitario = data.get("precio_unitario")
     subtotal = data.get("subtotal")
 
-    cursor = mysql.connection.cursor()
+    conn = get_db()
     try:
-        cursor.execute("""
-            UPDATE detalle_pedidos 
-            SET cantidad=%s, precio_unitario=%s, subtotal=%s 
-            WHERE id_detalle=%s AND tenant_id = %s
-        """, (cantidad, precio_unitario, subtotal, id, tenant_id))
-        mysql.connection.commit()
-        return jsonify({"mensaje": "Detalle actualizado correctamente"})
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                UPDATE detalle_pedidos 
+                SET cantidad=%s, precio_unitario=%s, subtotal=%s 
+                WHERE id_detalle=%s AND tenant_id = %s
+            """, (cantidad, precio_unitario, subtotal, id, tenant_id))
+            conn.commit()
+            return jsonify({"mensaje": "Detalle actualizado correctamente"})
     except Exception as e:
-        logger.error(f"Error en update_detalle: {str(e)}")
-        mysql.connection.rollback()
+        conn.rollback()
         return jsonify({"error": str(e)}), 500
-    finally:
-        cursor.close()
 
 
 # ========================================
@@ -212,14 +205,3 @@ def update_detalle(id):
 @cross_origin()
 def delete_detalle(id):
     tenant_id = current_user.tenant_id
-    cursor = mysql.connection.cursor()
-    try:
-        cursor.execute("DELETE FROM detalle_pedidos WHERE id_detalle = %s AND tenant_id = %s", (id, tenant_id))
-        mysql.connection.commit()
-        return jsonify({"mensaje": "Detalle eliminado correctamente"})
-    except Exception as e:
-        logger.error(f"Error en delete_detalle: {str(e)}")
-        mysql.connection.rollback()
-        return jsonify({"error": str(e)}), 500
-    finally:
-        cursor.close()

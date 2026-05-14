@@ -1,6 +1,6 @@
 // CONFIGURACIÓN GLOBAL
-// 💡 URL del backend. Debería coincidir con la que usa el panel de administración.
-const API_BASE_URL = "https://sweetland-by-anny-production.up.railway.app";
+// 🚀 URL del backend en producción (Render)
+const API_BASE_URL = "https://precivox-backend.onrender.com";
 
 // --- 1. LÓGICA DEL MENÚ (Scroll) ---
 let prevScrollpos = window.pageYOffset;

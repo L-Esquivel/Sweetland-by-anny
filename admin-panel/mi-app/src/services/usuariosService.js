@@ -1,4 +1,5 @@
-const API_URL = (import.meta.env.VITE_API_URL || 'https://sweetland-by-anny-production.up.railway.app') + '/usuarios/';
+// 🚀 URL del backend en producción (Render)
+const API_URL = (import.meta.env.VITE_API_URL || 'https://precivox-backend.onrender.com') + '/usuarios/';
 
 export const usuariosService = {
   // Obtener todos los usuarios
@@ -19,29 +20,22 @@ export const usuariosService = {
 
   // Crear usuario
   createUsuario: async (usuarioData) => {
-  console.log('Enviando al backend:', usuarioData); // ← AGREGAR
-  const response = await fetch(API_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    credentials: 'include',
-    body: JSON.stringify(usuarioData)
-  });
-  
-  console.log('Respuesta del servidor - Status:', response.status); // ← AGREGAR
-  console.log('Respuesta del servidor - OK:', response.ok); // ← AGREGAR
-  
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error('Error del servidor:', errorText); // ← AGREGAR
-    throw new Error(`Error ${response.status}: ${errorText}`);
-  }
-  
-  const result = await response.json();
-  console.log('Respuesta exitosa:', result); // ← AGREGAR
-  return result;
-},
+    const response = await fetch(API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify(usuarioData)
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || `Error ${response.status}`);
+    }
+    
+    return await response.json();
+  },
 
   // Actualizar usuario
   updateUsuario: async (id, usuarioData) => {

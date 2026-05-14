@@ -1,7 +1,8 @@
 from flask import Blueprint, jsonify, request
 from flask_login import login_required, current_user
 from utils import admin_required, registrar_log # 🛡️ Importamos registrar_log
-from extensions import mysql
+from backend.db import get_db # 🟢 Importamos el nuevo gestor de DB
+from psycopg2.extras import DictCursor # 🟢 Para obtener resultados como diccionarios
 import logging
 
 logging.basicConfig(level=logging.DEBUG)
@@ -13,17 +14,16 @@ ingredientes_bp = Blueprint("ingredientes", __name__, url_prefix="/ingredientes"
 @login_required
 def get_ingredientes():
     tenant_id = current_user.tenant_id
+    conn = get_db()
     try:
-        cursor = mysql.connection.cursor()
-        # 💡 SAAS-IFICATION: Filtramos por tenant_id.
-        cursor.execute("SELECT * FROM ingredientes WHERE tenant_id = %s ORDER BY nombre", (tenant_id,))
-        filas = cursor.fetchall()
-        return jsonify(list(filas))
+        with conn.cursor(cursor_factory=DictCursor) as cursor:
+            # 💡 SAAS-IFICATION: Filtramos por tenant_id.
+            cursor.execute("SELECT * FROM ingredientes WHERE tenant_id = %s ORDER BY nombre", (tenant_id,))
+            ingredientes = cursor.fetchall()
+            return jsonify(ingredientes)
     except Exception as e:
         logger.error(f"Error en get_ingredientes: {str(e)}")
-        return jsonify({"error": str(e)}), 500
-    finally:
-        if 'cursor' in locals() and cursor: cursor.close()
+        return jsonify({"error": "Error al obtener ingredientes"}), 500
 
 @ingredientes_bp.route("/", methods=["POST"])
 @login_required
@@ -36,23 +36,22 @@ def create_ingrediente():
         if not nombre or not data.get("unidad"):
             return jsonify({"error": "Nombre y Unidad son obligatorios"}), 400
 
-        # 💡 SAAS-IFICATION: Insertamos el tenant_id.
-        cursor = mysql.connection.cursor()
-        cursor.execute("""
-            INSERT INTO ingredientes (nombre, unidad, cantidad, costo_unitario, tenant_id)
-            VALUES (%s, %s, %s, %s, %s)
-        """, (nombre, data.get("unidad"), float(data.get("cantidad") or 0), float(data.get("costo_unitario") or 0), tenant_id))
-        mysql.connection.commit()
+        conn = get_db()
+        with conn.cursor() as cursor:
+            # 💡 SAAS-IFICATION: Insertamos el tenant_id.
+            cursor.execute("""
+                INSERT INTO ingredientes (nombre, unidad, cantidad, costo_unitario, tenant_id)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (nombre, data.get("unidad"), float(data.get("cantidad") or 0), float(data.get("costo_unitario") or 0), tenant_id))
+            conn.commit()
 
-        # 🛡️ AUDITORÍA: Registro de creación
+        # �️ AUDITORÍA: Registro de creación
         registrar_log(f"Creó nuevo ingrediente: {nombre}")
         
         return jsonify({"mensaje": "Ingrediente creado correctamente"}), 201
     except Exception as e:
-        mysql.connection.rollback()
+        get_db().rollback()
         return jsonify({"error": "Error interno al guardar"}), 500
-    finally:
-        if 'cursor' in locals() and cursor: cursor.close()
 
 @ingredientes_bp.route("/<int:id>", methods=["PUT"])
 @login_required
@@ -62,25 +61,24 @@ def update_ingrediente(id):
     try:
         data = request.get_json() or {}
         nombre = data.get("nombre")
-        # 💡 SAAS-IFICATION: Aseguramos que solo se pueda actualizar un ingrediente del tenant correcto.
-        cursor = mysql.connection.cursor()
-        cursor.execute("""
-            UPDATE ingredientes
-            SET nombre=%s, unidad=%s, cantidad=%s, costo_unitario=%s
-            WHERE id_ingrediente=%s AND tenant_id = %s
-        """, (nombre, data.get("unidad"), float(data.get("cantidad") or 0),
-              float(data.get("costo_unitario") or 0), id, tenant_id))
-        mysql.connection.commit()
+        conn = get_db()
+        with conn.cursor() as cursor:
+            # 💡 SAAS-IFICATION: Aseguramos que solo se pueda actualizar un ingrediente del tenant correcto.
+            cursor.execute("""
+                UPDATE ingredientes
+                SET nombre=%s, unidad=%s, cantidad=%s, costo_unitario=%s
+                WHERE id_ingrediente=%s AND tenant_id = %s
+            """, (nombre, data.get("unidad"), float(data.get("cantidad") or 0),
+                  float(data.get("costo_unitario") or 0), id, tenant_id))
+            conn.commit()
 
-        # 🛡️ AUDITORÍA: Registro de actualización
+        # �️ AUDITORÍA: Registro de actualización
         registrar_log(f"Actualizó el ingrediente ID {id}: {nombre}")
 
         return jsonify({"mensaje": "Ingrediente actualizado"})
     except Exception as e:
-        mysql.connection.rollback()
+        get_db().rollback()
         return jsonify({"error": str(e)}), 500
-    finally:
-        if 'cursor' in locals() and cursor: cursor.close()
 
 @ingredientes_bp.route("/<int:id>", methods=["DELETE"])
 @login_required
@@ -88,27 +86,25 @@ def update_ingrediente(id):
 def delete_ingrediente(id):
     tenant_id = current_user.tenant_id
     try:
-        cursor = mysql.connection.cursor()
-        
-        # VERIFICACIÓN: ¿Está este ingrediente en uso por alguna receta?
-        cursor.execute("SELECT COUNT(*) as total FROM recetas WHERE id_ingrediente = %s AND tenant_id = %s", (id, tenant_id))
-        if cursor.fetchone().get('total', 0) > 0:
-            return jsonify({"error": "No se puede eliminar: el ingrediente está en uso en una o más recetas."}), 400
+        conn = get_db()
+        with conn.cursor(cursor_factory=DictCursor) as cursor:
+            # VERIFICACIÓN: ¿Está este ingrediente en uso por alguna receta?
+            cursor.execute("SELECT COUNT(*) as total FROM recetas_ingredientes WHERE id_ingrediente = %s AND tenant_id = %s", (id, tenant_id))
+            if cursor.fetchone()['total'] > 0:
+                return jsonify({"error": "No se puede eliminar: el ingrediente está en uso en una o más recetas."}), 400
 
-        # 💡 SAAS-IFICATION: Aseguramos que solo se pueda borrar un ingrediente del tenant correcto.
-        cursor.execute("DELETE FROM ingredientes WHERE id_ingrediente = %s AND tenant_id = %s", (id, tenant_id))
-        
-        if cursor.rowcount == 0:
-            return jsonify({"error": "Ingrediente no encontrado o no pertenece a tu organización"}), 404
+            # 💡 SAAS-IFICATION: Aseguramos que solo se pueda borrar un ingrediente del tenant correcto.
+            cursor.execute("DELETE FROM ingredientes WHERE id_ingrediente = %s AND tenant_id = %s", (id, tenant_id))
+            
+            if cursor.rowcount == 0:
+                return jsonify({"error": "Ingrediente no encontrado o no pertenece a tu organización"}), 404
 
-        mysql.connection.commit()
+            conn.commit()
 
         # 🛡️ AUDITORÍA: Registro de eliminación
         registrar_log(f"Eliminó el ingrediente ID {id}")
 
         return jsonify({"mensaje": "Eliminado correctamente"})
     except Exception as e:
-        mysql.connection.rollback()
+        get_db().rollback()
         return jsonify({"error": str(e)}), 500
-    finally:
-        if 'cursor' in locals() and cursor: cursor.close()

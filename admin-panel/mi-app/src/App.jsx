@@ -11,7 +11,8 @@ import Dashboard from './components/Dashboard';
 import GastosList from './components/gastos/GastosList';
 import MermaList from './components/merma/MermaList';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'https://sweetland-by-anny-production.up.railway.app';
+// 🚀 URL del backend en producción (Render)
+const API_BASE = import.meta.env.VITE_API_URL || 'https://precivox-backend.onrender.com';
 
 function App() {
   const [activeSection, setActiveSection] = useState('inicio');
