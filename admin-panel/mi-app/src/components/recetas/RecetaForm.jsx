@@ -90,7 +90,8 @@ const RecetaForm = ({ receta, producto, ingredientes = [], empaques = [], onSubm
                       {ingredientes && ingredientes.length > 0 ? (
                         ingredientes.map(i => (
                           <option key={i.id_ingrediente} value={i.id_ingrediente}>
-                            {i.nombre} ({i.unidad})
+                            {/* FIX: El backend envía 'unidad_medida', no 'unidad'. */}
+                            {i.nombre} ({i.unidad_medida})
                           </option>
                         ))
                       ) : (

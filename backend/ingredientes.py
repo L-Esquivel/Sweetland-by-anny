@@ -33,8 +33,10 @@ def create_ingrediente():
     try:
         data = request.get_json() or {}
         nombre = data.get("nombre")
-        # 💡 STANDARDIZATION: Using consistent column names from schema.sql
-        unidad_medida = data.get("unidad_medida")
+        # 💡 FIX: Se aceptan 'unidad_medida' o 'unidad' desde el frontend.
+        # Esto soluciona un error 400 cuando el frontend envía 'unidad' en lugar
+        # del nombre de la columna de la base de datos ('unidad_medida').
+        unidad_medida = data.get("unidad_medida") or data.get("unidad")
         stock = data.get("stock", 0)
         costo_por_unidad = data.get("costo_por_unidad", 0)
 
@@ -67,8 +69,8 @@ def update_ingrediente(id):
     try:
         data = request.get_json() or {}
         nombre = data.get("nombre")
-        # 💡 STANDARDIZATION: Using consistent column names from schema.sql
-        unidad_medida = data.get("unidad_medida")
+        # 💡 FIX: Se aceptan 'unidad_medida' o 'unidad' para consistencia.
+        unidad_medida = data.get("unidad_medida") or data.get("unidad")
         stock = data.get("stock")
         costo_por_unidad = data.get("costo_por_unidad")
 
