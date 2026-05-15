@@ -23,7 +23,7 @@ def get_payments_for_tenant(tenant_id):
             return jsonify(payments)
     except Exception as e:
         current_app.logger.error(f"Error getting payments for tenant {tenant_id}: {e}")
-        return jsonify({"error": "Error al obtener los pagos"}), 500
+        return jsonify({"error": "Error fetching payments"}), 500
 
 @payments_bp.route("/", methods=["POST"])
 @superadmin_required
@@ -35,7 +35,7 @@ def add_payment():
     notes = data.get('notes', '')
 
     if not all([tenant_id, amount, payment_date]):
-        return jsonify({"error": "Faltan campos obligatorios"}), 400
+        return jsonify({"error": "Required fields are missing"}), 400
 
     conn = get_db()
     try:
@@ -45,11 +45,11 @@ def add_payment():
                 (tenant_id, amount, payment_date, notes)
             )
             conn.commit()
-            return jsonify({"mensaje": "Pago registrado con éxito"}), 201
+            return jsonify({"message": "Payment registered successfully"}), 201
     except Exception as e:
         conn.rollback()
         current_app.logger.error(f"Error adding payment: {e}")
-        return jsonify({"error": "Error al registrar el pago"}), 500
+        return jsonify({"error": "Error registering payment"}), 500
 
 @payments_bp.route("/<int:payment_id>", methods=["DELETE"])
 @superadmin_required
@@ -60,9 +60,9 @@ def delete_payment(payment_id):
             cursor.execute("DELETE FROM tenant_payments WHERE id_payment = %s", (payment_id,))
             conn.commit()
             if cursor.rowcount == 0:
-                return jsonify({"error": "Pago no encontrado"}), 404
-            return jsonify({"mensaje": "Pago eliminado con éxito"})
+                return jsonify({"error": "Payment not found"}), 404
+            return jsonify({"message": "Payment deleted successfully"})
     except Exception as e:
         conn.rollback()
         current_app.logger.error(f"Error deleting payment: {e}")
-        return jsonify({"error": "Error al eliminar el pago"}), 500
+        return jsonify({"error": "Error deleting payment"}), 500
