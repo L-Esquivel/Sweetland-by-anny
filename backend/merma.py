@@ -62,6 +62,7 @@ def add_merma_registro():
                 cursor.execute("SELECT nombre, costo_produccion FROM productos WHERE id_producto = %s AND tenant_id = %s", (id_producto, tenant_id))
                 item = cursor.fetchone()
                 if not item: return jsonify({"error": "Producto no encontrado"}), 404
+                logger.debug(f"Merma (Producto): ID {id_producto}, Nombre '{item.get('nombre')}', Costo Producción: {item.get('costo_produccion', 0)}")
                 costo_unitario = item.get('costo_produccion', 0)
                 descripcion = f"Producto: {item.get('nombre')}"
             elif id_ingrediente:
@@ -74,6 +75,7 @@ def add_merma_registro():
                 descripcion = f"Ingrediente: {item.get('nombre')}"
 
             costo_perdida = float(costo_unitario or 0) * float(cantidad)
+            logger.debug(f"Merma: Cantidad {cantidad}, Costo Unitario {costo_unitario}, Costo Pérdida Calculado: {costo_perdida}")
 
             cursor.execute("""
                 INSERT INTO merma (id_producto, id_ingrediente, descripcion, cantidad, costo_perdida, fecha, motivo, tenant_id)

@@ -93,8 +93,8 @@ def add_producto():
         with conn.cursor() as cursor:
             # 💡 SAAS-IFICATION: Insertamos el tenant_id al crear un nuevo producto.
             cursor.execute("""
-                INSERT INTO productos (nombre, categoria, descripcion, precio, imagen, stock, controla_stock, tenant_id)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                INSERT INTO productos (nombre, categoria, descripcion, precio, imagen, stock, controla_stock, costo_produccion, tenant_id)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, 0, %s) -- Initialize costo_produccion to 0
             """, (nombre, data.get("categoria"), data.get("descripcion"), 
                   data.get("precio"), data.get("imagen"), data.get("stock", 0), data.get("controla_stock", False), tenant_id))
             
