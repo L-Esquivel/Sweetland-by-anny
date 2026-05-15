@@ -3,6 +3,7 @@ from flask_cors import CORS
 from flask_login import LoginManager
 from dotenv import load_dotenv
 import os
+import re
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 # 1. 🟢 Importamos el nuevo gestor de DB y las otras extensiones
@@ -18,7 +19,20 @@ app = Flask(__name__)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 
 # ==========================================
-# 🛡️ CONFIGURACIÓN DE SEGURIDAD Y SESIONES
+# 🛠️ WORKAROUNDS DE ENRUTAMIENTO
+# ==========================================
+@app.before_request
+def fix_path():
+    """
+    Soluciona URLs malformadas enviadas por el cliente.
+    1. Reemplaza múltiples barras (//) por una sola (/).
+    """
+    if '//' in request.path:
+        new_path = re.sub('/+', '/', request.path)
+        request.environ['PATH_INFO'] = new_path
+
+# ==========================================
+# �️ CONFIGURACIÓN DE SEGURIDAD Y SESIONES
 # ==========================================
 app.secret_key = os.getenv('SECRET_KEY', 'super_clave_secreta_sweetland_2026')
 
@@ -40,6 +54,10 @@ app.config.update(
 # 🚀 INICIALIZACIÓN DE EXTENSIONES
 # ==========================================
 db.init_app(app) # 2. 🟢 Inicializamos el nuevo gestor de base de datos PostgreSQL
+# 2. Desactivamos la regla estricta de barras al final de la URL (ej: /gastos y /gastos/ son iguales)
+# Esto hace la API más tolerante a errores del frontend.
+app.url_map.strict_slashes = False
+
 limiter.init_app(app)
 # Inicializamos OAuth para Google Login
 init_oauth(app)
