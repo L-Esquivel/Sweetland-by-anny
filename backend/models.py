@@ -2,8 +2,8 @@ from flask_login import UserMixin
 from werkzeug.security import check_password_hash, generate_password_hash
 from flask import current_app
 
-from db import get_db # 🟢 Importamos el nuevo gestor de DB
-from psycopg2.extras import DictCursor # 🟢 Para obtener resultados como diccionarios
+from db import get_db # 🟢 Import the new DB manager
+from psycopg2.extras import DictCursor # 🟢 To get results as dictionaries
 
 class User(UserMixin):
     def __init__(self, id, nombre, email, password, telefono=None, direccion=None, rol='cliente', tenant_id=None, module_settings=None):
@@ -25,7 +25,7 @@ class User(UserMixin):
                 cursor.execute("SELECT * FROM usuarios WHERE email = %s", (email,))
                 row = cursor.fetchone()
                 if row:
-                    # 💡 MEJORA: Obtenemos la configuración personalizada de módulos para el tenant del usuario.
+                    # 💡 IMPROVEMENT: Fetch custom module settings for the user's tenant.
                     cursor.execute("""
                         SELECT
                             m.module_key,
@@ -35,8 +35,8 @@ class User(UserMixin):
                         LEFT JOIN
                             tenant_module_settings tms ON m.module_key = tms.module_key AND tms.tenant_id = %s ORDER BY m.order_index ASC
                     """, (row['tenant_id'],))
-                    # FIX: Convertimos explícitamente los resultados a una lista de diccionarios
-                    # para asegurar una serialización a JSON consistente, igual que en tenants.py.
+                    # FIX: Explicitly convert results to a list of dictionaries
+                    # to ensure consistent JSON serialization, similar to tenants.py.
                     module_settings_raw = cursor.fetchall()
                     module_settings = [dict(setting) for setting in module_settings_raw]
 
@@ -52,8 +52,8 @@ class User(UserMixin):
                     )
                 return None
         except Exception as e:
-            # En caso de error de DB, es mejor que la app falle a que se comporte de forma inesperada
-            current_app.logger.error(f"Error en User.get_by_email: {e}")
+            # In case of a DB error, it's better for the app to fail than to behave unexpectedly.
+            current_app.logger.error(f"Error in User.get_by_email: {e}")
             return None
 
     @staticmethod
@@ -64,7 +64,7 @@ class User(UserMixin):
                 cursor.execute("SELECT * FROM usuarios WHERE id_usuario = %s", (user_id,))
                 row = cursor.fetchone()
                 if row:
-                    # 💡 MEJORA: Obtenemos la configuración personalizada de módulos para el tenant del usuario.
+                    # 💡 IMPROVEMENT: Fetch custom module settings for the user's tenant.
                     cursor.execute("""
                         SELECT
                             m.module_key,
@@ -74,7 +74,7 @@ class User(UserMixin):
                         LEFT JOIN
                             tenant_module_settings tms ON m.module_key = tms.module_key AND tms.tenant_id = %s ORDER BY m.order_index ASC
                     """, (row['tenant_id'],))
-                    # FIX: Convertimos explícitamente los resultados a una lista de diccionarios.
+                    # FIX: Explicitly convert results to a list of dictionaries.
                     module_settings_raw = cursor.fetchall()
                     module_settings = [dict(setting) for setting in module_settings_raw]
 
@@ -90,7 +90,7 @@ class User(UserMixin):
                     )
                 return None
         except Exception as e:
-            current_app.logger.error(f"Error en User.get_by_id: {e}")
+            current_app.logger.error(f"Error in User.get_by_id: {e}")
             return None
 
     def check_password(self, password):
