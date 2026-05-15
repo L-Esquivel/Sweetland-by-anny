@@ -19,7 +19,10 @@ def get_all_tenants():
     try:
         with conn.cursor(cursor_factory=DictCursor) as cursor:
             cursor.execute("SELECT id_tenant, nombre, fecha_creacion FROM tenants ORDER BY fecha_creacion DESC")
-            tenants = cursor.fetchall()
+            tenants_raw = cursor.fetchall()
+            # Convertimos explícitamente los resultados a una lista de diccionarios
+            # para asegurar una serialización a JSON consistente y predecible.
+            tenants = [dict(row) for row in tenants_raw]
             return jsonify(tenants)
     except Exception as e:
         current_app.logger.error(f"Error en get_all_tenants: {e}")
@@ -64,8 +67,10 @@ def create_tenant_with_admin():
             settings_to_insert = []
             for module in all_modules:
                 module_key = module['module_key']
-                # Usar la etiqueta personalizada si se proveyó, si no, usar la de por defecto
-                final_label = custom_labels.get(module_key, module['label'])
+                # FIX: Si la etiqueta personalizada viene vacía, usamos la etiqueta por defecto.
+                # Esto evita que se guarden etiquetas en blanco si el usuario no personaliza un módulo.
+                custom_value = custom_labels.get(module_key)
+                final_label = custom_value if custom_value else module['label']
                 settings_to_insert.append((tenant_id, module_key, final_label))
 
             # 5. Insertar todas las configuraciones de módulos para el nuevo tenant
