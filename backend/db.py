@@ -1,73 +1,73 @@
 import os
 import psycopg2
 from psycopg2 import pool
-from psycopg2.extras import DictCursor # ¡Importante! Para acceder a las columnas por su nombre.
-from flask import g, current_app
+from psycopg2.extras import DictCursor # Important! To access columns by name.
+from flask import g, current_app # g is the request-bound global context
 
 class Database:
     """
-    Clase para gestionar el pool de conexiones a PostgreSQL.
-    Un "pool" es un conjunto de conexiones pre-abiertas que la aplicación puede
-    usar y devolver, lo cual es mucho más eficiente que abrir y cerrar una
-    conexión para cada consulta.
+    Manages the PostgreSQL connection pool.
+    A "pool" is a set of pre-opened connections that the application can
+    use and return, which is much more efficient than opening and closing
+    a connection for each query.
     """
     _pool = None
 
     @classmethod
     def initialize_pool(cls):
         """
-        Inicializa el pool de conexiones usando la URL de la base de datos
-        definida en las variables de entorno.
+        Initializes the connection pool using the database URL
+        defined in the environment variables.
         """
         if cls._pool is None:
             try:
                 database_url = os.getenv('DATABASE_URL')
                 if not database_url:
-                    raise ValueError("La variable de entorno DATABASE_URL no está configurada.")
+                    raise ValueError("The DATABASE_URL environment variable is not set.")
                 
-                # Creamos el pool de conexiones.
+                # Create the connection pool.
                 cls._pool = psycopg2.pool.SimpleConnectionPool(
-                    minconn=1,      # Mínimo de conexiones que se mantienen abiertas.
-                    maxconn=10,     # Máximo de conexiones que se pueden abrir simultáneamente.
-                    dsn=database_url # La URL de conexión a PostgreSQL.
+                    minconn=1,      # Minimum number of connections to keep open.
+                    maxconn=10,     # Maximum number of simultaneous connections.
+                    dsn=database_url # The PostgreSQL connection DSN.
                 )
-                current_app.logger.info("✅ Pool de conexiones a PostgreSQL inicializado.")
+                current_app.logger.info("✅ PostgreSQL connection pool initialized.")
             except psycopg2.OperationalError as e:
-                current_app.logger.error(f"❌ No se pudo conectar a PostgreSQL: {e}")
-                raise # Relanzamos la excepción para detener la app si no puede conectar.
+                current_app.logger.error(f"❌ Could not connect to PostgreSQL: {e}")
+                raise # Re-raise the exception to stop the app if it cannot connect.
             except ValueError as e:
-                current_app.logger.error(f"❌ Error de configuración: {e}")
+                current_app.logger.error(f"❌ Configuration error: {e}")
                 raise
 
     @classmethod
     def get_connection(cls):
-        """Obtiene una conexión del pool."""
+        """Gets a connection from the pool."""
         if cls._pool is None:
             cls.initialize_pool()
-        # getconn() tomará una conexión libre del pool o esperará si todas están ocupadas.
+        # getconn() will take a free connection from the pool or wait if all are busy.
         return cls._pool.getconn()
 
     @classmethod
     def release_connection(cls, conn):
-        """Devuelve una conexión al pool para que otros la puedan usar."""
+        """Returns a connection to the pool so others can use it."""
         if cls._pool:
             cls._pool.putconn(conn)
 
     @classmethod
     def close_all_connections(cls):
-        """Cierra todas las conexiones del pool (útil al apagar la app)."""
+        """Closes all connections in the pool (useful when shutting down the app)."""
         if cls._pool:
             cls._pool.closeall()
             cls._pool = None
-            current_app.logger.info("Pool de conexiones a PostgreSQL cerrado.")
+            current_app.logger.info("PostgreSQL connection pool closed.")
 
-# --- Funciones de ayuda para usar en las rutas de Flask ---
+# --- Helper functions for use in Flask routes ---
 
 def get_db():
     """
-    Obtiene una conexión para la petición actual de Flask.
-    Usa el objeto `g` (global de la petición) para almacenar la conexión y reutilizarla
-    en lugar de pedir una nueva en la misma petición.
+    Gets a connection for the current Flask request.
+    It uses the `g` object (request global) to store the connection and reuse it
+    instead of requesting a new one within the same request.
     """
     if 'db_conn' not in g:
         g.db_conn = Database.get_connection()
@@ -75,15 +75,15 @@ def get_db():
 
 def close_db(e=None):
     """
-    Cierra (devuelve al pool) la conexión al final de la petición.
-    Flask llama a esta función automáticamente gracias a `app.teardown_appcontext`.
+    Closes (returns to the pool) the connection at the end of the request.
+    Flask calls this function automatically thanks to `app.teardown_appcontext`.
     """
     conn = g.pop('db_conn', None)
     if conn is not None:
         Database.release_connection(conn)
 
 def init_app(app):
-    """Función de fábrica para registrar el gestor de DB con la app Flask."""
+    """Factory function to register the DB manager with the Flask app."""
     app.teardown_appcontext(close_db)
     with app.app_context():
         Database.initialize_pool()
