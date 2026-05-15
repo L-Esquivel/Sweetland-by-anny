@@ -70,7 +70,7 @@ const PaymentManagerModal = ({ tenant, onClose }) => {
 
   return (
     <div className="modal fade show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-      <div className="modal-dialog modal-lg">
+      <div className="modal-dialog modal-xl">
         <div className="modal-content">
           <div className="modal-header">
             <h5 className="modal-title">Gestión de Pagos - {tenant.nombre}</h5>
