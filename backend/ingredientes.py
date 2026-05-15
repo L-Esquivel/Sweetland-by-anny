@@ -18,7 +18,15 @@ def get_ingredientes():
     try:
         with conn.cursor(cursor_factory=DictCursor) as cursor:
             # 💡 SAAS-IFICATION: Filtramos por tenant_id.
-            cursor.execute("SELECT * FROM ingredientes WHERE tenant_id = %s ORDER BY nombre", (tenant_id,))
+            # FIX: Se usan COALESCE para evitar valores nulos en el frontend (que causan precios en $0 o datos faltantes)
+            # y se seleccionan columnas explícitamente para mayor claridad.
+            cursor.execute("""
+                SELECT 
+                    id_ingrediente, nombre, unidad_medida, 
+                    COALESCE(stock, 0) as stock, 
+                    COALESCE(costo_por_unidad, 0) as costo_por_unidad 
+                FROM ingredientes WHERE tenant_id = %s ORDER BY nombre
+            """, (tenant_id,))
             ingredientes_raw = cursor.fetchall()
             # FIX: Convertir a una lista de diccionarios para una serialización JSON correcta.
             ingredientes = [dict(row) for row in ingredientes_raw]

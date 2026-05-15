@@ -7,8 +7,12 @@ from db import get_db # 🟢 Importamos el nuevo gestor de DB
 def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
+        # FIX: Para una petición de sondeo (preflight) OPTIONS, debemos devolver una
+        # respuesta OK inmediatamente sin ejecutar el cuerpo de la función. Flask-CORS
+        # se encargará de añadir las cabeceras necesarias. Ejecutar el cuerpo
+        # causaría errores, ya que las peticiones OPTIONS no tienen payload JSON.
         if request.method == 'OPTIONS':
-            return f(*args, **kwargs)
+            return jsonify(success=True), 200
         if not current_user.is_authenticated:
             return jsonify({"error": "No autenticado"}), 401
         user_role = str(current_user.rol).lower().strip() if current_user.rol else ""
@@ -21,8 +25,9 @@ def admin_required(f):
 def superadmin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
+        # FIX: Misma corrección que en admin_required para las peticiones de sondeo CORS.
         if request.method == 'OPTIONS':
-            return f(*args, **kwargs)
+            return jsonify(success=True), 200
         if not current_user.is_authenticated:
             return jsonify({"error": "No autenticado"}), 401
         user_role = str(current_user.rol).lower().strip() if current_user.rol else ""
