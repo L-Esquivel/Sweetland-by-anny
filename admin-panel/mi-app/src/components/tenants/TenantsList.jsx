@@ -140,20 +140,20 @@ function TenantsList() {
               <div className="row">
                 {availableModules.map(module => (
                   <div key={module.module_key} className="col-md-6 mb-3">
-                    {/* 💡 FIX 1: Guía visual clara. Muestra el nombre original del módulo. */}
-                    <label htmlFor={`label-for-${module.module_key}`} className="form-label">
-                      {module.icon} Personalizar "<strong>{module.label}</strong>"
+                    {/* 💡 FIX 1: Etiqueta de referencia más visible y robusta. */}
+                    <label htmlFor={`label-for-${module.module_key}`} className="form-label fw-bold">
+                      {module.icon} {module.label || module.module_key}
                     </label>
                     <div className="input-group">
                       <input
                         type="text"
                         className="form-control"
-                        name={module.module_key} // Esto es lo que identifica el campo
+                        name={module.module_key}
                         id={`label-for-${module.module_key}`}
-                        // 💡 FIX 2: Simplificamos el valor para asegurar que sea un string controlado.
-                        value={customLabels[module.module_key] || ''} 
-                        onChange={handleLabelChange} // Esto actualiza el estado
-                        placeholder={module.label} // El placeholder muestra el nombre original
+                        // 💡 FIX 2: Aseguramos que el valor siempre sea un string para evitar el bug.
+                        value={String(customLabels[module.module_key] || '')}
+                        onChange={handleLabelChange}
+                        placeholder={`Personalizar "${module.label || 'Módulo'}"...`}
                       />
                     </div>
                   </div>
