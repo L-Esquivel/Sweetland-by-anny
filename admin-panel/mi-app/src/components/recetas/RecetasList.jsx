@@ -274,12 +274,14 @@ const RecetasList = () => {
                         <table className="table table-sm mb-0">
                             <thead><tr><th>Item</th><th>Cant.</th><th>Subtotal</th><th></th></tr></thead>
                             <tbody>
-                                {recetasProducto.map((r, i) => (
-                                    <tr key={i}>
+                                {recetasProducto.map((r) => (
+                                    // FIX: Usar el ID único del registro como key y para la función de borrado.
+                                    // El backend envía 'id', no 'id_receta'.
+                                    <tr key={r.id}>
                                         <td>{r.ingrediente}</td>
                                         <td>{r.cantidad_necesaria} {r.unidad}</td>
                                         <td className="fw-bold">{formatearMoneda(r.costo_ingrediente)}</td>
-                                        <td><button className="btn btn-link btn-sm text-danger" onClick={() => handleEliminarReceta(r.id_receta)}>🗑️</button></td>
+                                        <td><button className="btn btn-link btn-sm text-danger" onClick={() => handleEliminarReceta(r.id)}>🗑️</button></td>
                                     </tr>
                                 ))}
                             </tbody>
