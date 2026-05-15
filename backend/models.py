@@ -29,7 +29,6 @@ class User(UserMixin):
                     cursor.execute("""
                         SELECT
                             m.module_key,
-                            m.icon,
                             COALESCE(tms.custom_label, m.label) AS label
                         FROM
                             modules m
@@ -69,7 +68,6 @@ class User(UserMixin):
                     cursor.execute("""
                         SELECT
                             m.module_key,
-                            m.icon,
                             COALESCE(tms.custom_label, m.label) AS label
                         FROM
                             modules m
