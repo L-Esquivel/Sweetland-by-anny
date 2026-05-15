@@ -77,11 +77,11 @@ def google_callback():
                     registrar_log(f"Nuevo registro vía Google: {email}")
 
             # 💡 MEJORA: Usar una variable de entorno para la URL del frontend.
-            frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:3000')
+            frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:5173')
             return redirect(f"{frontend_url}/mi-cuenta.html")
     except Exception as e:
         current_app.logger.error(f"Error en Google Auth: {e}", exc_info=True)
-        frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:3000')
+        frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:5173')
         return redirect(f"{frontend_url}/mi-cuenta.html?error=auth_failed")
 
 # =========================
@@ -132,7 +132,7 @@ def forgot_password():
             s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
             token = s.dumps(email, salt='password-reset-salt')
             # 💡 MEJORA: Usar una variable de entorno para la URL del frontend.
-            frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:3000')
+            frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:5173')
             reset_url = f"{frontend_url}/reset-password.html?token={token}"
 
             # 🚀 SOLUCIÓN TÉCNICA: Usar un servicio de email transaccional (SendGrid) en un hilo separado.

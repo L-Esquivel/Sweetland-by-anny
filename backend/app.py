@@ -47,11 +47,12 @@ init_oauth(app)
 # --- CORS DINÁMICO ---
 allowed_origins = os.getenv('ALLOWED_ORIGINS', '').split(',')
 if not allowed_origins or allowed_origins == ['']:
-    # 💡 FIX: Añadimos el nuevo dominio del frontend de Vercel a la lista de fallback.
+    # 💡 MEJORA: Lista de fallback robusta para producción y desarrollo local.
     allowed_origins = [
-        "https://sweetland-by-anny.vercel.app", 
-        "https://sweetlandbyanny.vercel.app",
-        "https://precivox.vercel.app" # Nuevo dominio del panel de admin
+        "https://precivox.vercel.app",          # Dominio principal del panel de admin
+        "https://sweetlandbyanny.vercel.app", # Dominio de la landing page
+        "http://localhost:5173",                # Para desarrollo local del panel de admin
+        "http://127.0.0.1:5173"                 # Alternativa para desarrollo local
     ]
 
 CORS(app, origins=allowed_origins, supports_credentials=True)
