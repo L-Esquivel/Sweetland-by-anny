@@ -133,6 +133,7 @@ from merma import merma_bp
 from tenants import tenants_bp
 from platform_api import platform_bp # Corrected import
 from modules import modules_bp      # Added missing import
+from payments import payments_bp
 
 app.register_blueprint(auth_bp)
 app.register_blueprint(usuarios_bp)
@@ -147,6 +148,7 @@ app.register_blueprint(merma_bp)
 app.register_blueprint(tenants_bp)
 app.register_blueprint(platform_bp)
 app.register_blueprint(modules_bp)
+app.register_blueprint(payments_bp)
 
 # ==========================================
 # 🌍 RUTAS DE ARCHIVOS Y ESTADO

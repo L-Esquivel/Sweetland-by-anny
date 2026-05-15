@@ -90,8 +90,9 @@ def get_platform_stats():
             cursor.execute("SELECT COUNT(*) as total FROM usuarios")
             total_users = cursor.fetchone()['total']
 
-            # Ingresos totales de todos los tenants
-            cursor.execute("SELECT SUM(total) as total_revenue FROM pedidos WHERE estado = 'completado'")
+            # FIX: Los ingresos de la plataforma ahora se calculan desde los pagos de los tenants,
+            # no de la suma de sus ventas.
+            cursor.execute("SELECT SUM(amount) as total_revenue FROM tenant_payments")
             total_revenue_raw = cursor.fetchone()
             total_revenue = float(total_revenue_raw['total_revenue'] or 0)
 

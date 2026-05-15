@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { tenantsService } from '../../services/tenantsService';
 import { modulesService } from '../../services/modulesService';
+import PaymentManagerModal from './PaymentManagerModal';
 import './TenantsList.css';
 
 function TenantsList() {
@@ -17,6 +18,8 @@ function TenantsList() {
     admin_password: ''
   });
   const [customLabels, setCustomLabels] = useState({});
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [selectedTenant, setSelectedTenant] = useState(null);
 
   const fetchTenants = async () => {
     try {
@@ -77,6 +80,11 @@ function TenantsList() {
   const handleLabelChange = (e) => {
     const { name, value } = e.target;
     setCustomLabels(prev => ({ ...prev, [name]: value }));
+  };
+
+  const openPaymentModal = (tenant) => {
+    setSelectedTenant(tenant);
+    setShowPaymentModal(true);
   };
 
   const handleSubmit = async (e) => {
@@ -198,7 +206,14 @@ function TenantsList() {
                 <td>{tenant.id_tenant}</td>
                 <td>{tenant.nombre}</td>
                 <td>{new Date(tenant.fecha_creacion).toLocaleDateString()}</td>
-                <td>
+                <td className="d-flex gap-2">
+                  <button 
+                    className="btn btn-info btn-sm"
+                    onClick={() => openPaymentModal(tenant)}
+                    title="Gestionar Pagos"
+                  >
+                    💰 Pagos
+                  </button>
                   <button 
                     className="btn btn-danger btn-sm"
                     onClick={() => handleDelete(tenant.id_tenant, tenant.nombre)}
@@ -212,6 +227,13 @@ function TenantsList() {
           </tbody>
         </table>
       </div>
+
+      {showPaymentModal && selectedTenant && (
+        <PaymentManagerModal 
+          tenant={selectedTenant}
+          onClose={() => setShowPaymentModal(false)}
+        />
+      )}
     </div>
   );
 }
