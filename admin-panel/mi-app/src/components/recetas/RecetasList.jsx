@@ -134,7 +134,16 @@ const RecetasList = () => {
           <select 
             className="form-select form-select-lg"
             value={productoSeleccionado?.id_producto || ''}
-            onChange={(e) => cargarRecetasProducto(parseInt(e.target.value))}
+            onChange={(e) => {
+              const selectedId = e.target.value;
+              if (selectedId) {
+                cargarRecetasProducto(parseInt(selectedId));
+              } else {
+                // Si el usuario deselecciona, limpiamos el estado
+                setProductoSeleccionado(null);
+                setCostos(null);
+              }
+            }}
           >
             <option value="">-- Seleccione un producto del catálogo --</option>
             {productos.map(p => (
