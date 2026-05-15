@@ -97,7 +97,8 @@ from empaques import empaques_bp
 from gastos import gastos_bp
 from merma import merma_bp
 from tenants import tenants_bp
-from platform_api import platform_bp
+from platform_api import platform_bp # Corrected import
+from modules import modules_bp      # Added missing import
 
 app.register_blueprint(auth_bp)
 app.register_blueprint(usuarios_bp)
