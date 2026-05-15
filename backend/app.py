@@ -121,7 +121,7 @@ def unauthorized():
 # ==========================================
 # 📦 BLUEPRINT REGISTRATION
 # ==========================================
-from usuarios import usuarios_bp
+from usuarios import users_bp
 from productos import productos_bp
 from pedidos import pedidos_bp
 from detalle_pedidos import detalle_pedidos_bp
@@ -136,7 +136,7 @@ from modules import modules_bp      # Added missing import
 from payments import payments_bp
 
 app.register_blueprint(auth_bp)
-app.register_blueprint(usuarios_bp)
+app.register_blueprint(users_bp)
 app.register_blueprint(productos_bp)
 app.register_blueprint(pedidos_bp)
 app.register_blueprint(detalle_pedidos_bp)
