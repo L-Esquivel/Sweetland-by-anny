@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'https://sweetland-by-anny-production.up.railway.app';
+const API_BASE = import.meta.env.VITE_API_URL || 'https://precivox-backend.onrender.com';
 
 const Register = ({ onShowLogin }) => {
   const [formData, setFormData] = useState({
@@ -26,7 +26,7 @@ const Register = ({ onShowLogin }) => {
     setError('');
 
     try {
-      const response = await fetch(`${API_BASE}/auth/registrarse`, {
+      const response = await fetch(`${API_BASE}/auth/public/registro`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

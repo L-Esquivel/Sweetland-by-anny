@@ -61,7 +61,7 @@ def google_callback():
                 registrar_log(f"Inició sesión vía Google: {email}")
             else:
                 # 💡 SAAS-IFICATION: Los nuevos registros de Google se asocian al tenant público (1).
-                tenant_id_publico = 1
+                tenant_id_publico = os.getenv('PUBLIC_TENANT_ID', 1)
                 cursor.execute("""
                     INSERT INTO usuarios (nombre, email, rol, google_id, tenant_id)
                     VALUES (%s, %s, 'cliente', %s, %s)
@@ -101,7 +101,12 @@ def login():
         registrar_log(f"Inició sesión: {email}")
         return jsonify({
             "mensaje": "Login exitoso",
-            "usuario": {"id": user.id, "nombre": user.nombre, "email": user.email, "rol": user.rol}
+            "usuario": {
+                "id": user.id, "nombre": user.nombre, 
+                "email": user.email, "rol": user.rol,
+                # 💡 FIX: Devolver los módulos para que el menú dinámico se actualice al instante.
+                "enabled_modules": user.enabled_modules 
+            }
         })
     
     registrar_log(f"Intento de login fallido: {email}")
@@ -239,7 +244,7 @@ def registro_cliente():
                 return jsonify({"error": "Email ya registrado"}), 400
             
             # 💡 SAAS-IFICATION: Los nuevos registros de clientes se asocian al tenant público (1).
-            tenant_id_publico = 1
+            tenant_id_publico = os.getenv('PUBLIC_TENANT_ID', 1)
             hashed = generate_password_hash(password)
             cursor.execute("""
                 INSERT INTO usuarios (nombre, email, password, telefono, direccion, rol, tenant_id)
@@ -271,6 +276,7 @@ def get_current_user():
             "id": current_user.id, "nombre": current_user.nombre, 
             "email": current_user.email, "rol": current_user.rol,
             "telefono": current_user.telefono,
-            "direccion": current_user.direccion
+            "direccion": current_user.direccion,
+            "enabled_modules": current_user.enabled_modules
         }
     })

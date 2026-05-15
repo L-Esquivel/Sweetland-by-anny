@@ -6,7 +6,7 @@ from db import get_db # 🟢 Importamos el nuevo gestor de DB
 from psycopg2.extras import DictCursor # 🟢 Para obtener resultados como diccionarios
 
 class User(UserMixin):
-    def __init__(self, id, nombre, email, password, telefono=None, direccion=None, rol='cliente', tenant_id=None):
+    def __init__(self, id, nombre, email, password, telefono=None, direccion=None, rol='cliente', tenant_id=None, enabled_modules=None):
         self.id = id
         self.nombre = nombre
         self.email = email
@@ -15,6 +15,7 @@ class User(UserMixin):
         self.direccion = direccion
         self.rol = rol
         self.tenant_id = tenant_id
+        self.enabled_modules = enabled_modules or []
 
     @staticmethod
     def get_by_email(email):
@@ -24,6 +25,11 @@ class User(UserMixin):
                 cursor.execute("SELECT * FROM usuarios WHERE email = %s", (email,))
                 row = cursor.fetchone()
                 if row:
+                    # 💡 FIX: Obtenemos los módulos activos para el tenant de este usuario.
+                    cursor.execute("SELECT module_key FROM tenant_modules WHERE tenant_id = %s", (row['tenant_id'],))
+                    module_rows = cursor.fetchall()
+                    enabled_modules = [m_row[0] for m_row in module_rows]
+
                     return User(
                         id=row["id_usuario"],
                         nombre=row["nombre"],
@@ -32,7 +38,8 @@ class User(UserMixin):
                         telefono=row.get("telefono"),
                         direccion=row.get("direccion"),
                         rol=row.get("rol", "cliente"),
-                        tenant_id=row.get("tenant_id")
+                        tenant_id=row.get("tenant_id"),
+                        enabled_modules=enabled_modules
                     )
                 return None
         except Exception as e:
@@ -48,6 +55,11 @@ class User(UserMixin):
                 cursor.execute("SELECT * FROM usuarios WHERE id_usuario = %s", (user_id,))
                 row = cursor.fetchone()
                 if row:
+                    # 💡 FIX: Obtenemos los módulos activos para el tenant de este usuario.
+                    cursor.execute("SELECT module_key FROM tenant_modules WHERE tenant_id = %s", (row['tenant_id'],))
+                    module_rows = cursor.fetchall()
+                    enabled_modules = [m_row[0] for m_row in module_rows]
+
                     return User(
                         id=row["id_usuario"],
                         nombre=row["nombre"],
@@ -56,7 +68,8 @@ class User(UserMixin):
                         telefono=row.get("telefono"),
                         direccion=row.get("direccion"),
                         rol=row.get("rol", "cliente"),
-                        tenant_id=row.get("tenant_id")
+                        tenant_id=row.get("tenant_id"),
+                        enabled_modules=enabled_modules
                     )
                 return None
         except Exception as e:

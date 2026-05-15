@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import './App.css';
 import UsuariosList from './components/usuarios/UsuariosList';
 import Login from './components/Login';
-import Register from './components/Register';
 import ProductosList from './components/productos/ProductosList';
 import PedidosList from './components/pedidos/PedidosList';
 import InsumosPage from "./components/Insumos/InsumosPage";
@@ -24,10 +23,7 @@ function App() {
     const savedUser = localStorage.getItem('sweetland_admin_user');
     return savedUser ? JSON.parse(savedUser) : null;
   });
-
-  const [currentView, setCurrentView] = useState(() => {
-    return localStorage.getItem('sweetland_admin_user') ? 'app' : 'login';
-  });
+  const [isLoggedIn, setIsLoggedIn] = useState(!!user);
 
   const [loading, setLoading] = useState(true);
   const [showSupportModal, setShowSupportModal] = useState(false);
@@ -50,7 +46,7 @@ function App() {
         
         // 2. Sincronizamos el estado de React con la respuesta real del servidor
         setUser(usuario);
-        setCurrentView('app');
+        setIsLoggedIn(true);
         localStorage.setItem('sweetland_admin_user', JSON.stringify(usuario));
       } else {
         // Si el servidor dice que no estamos autorizados, limpiamos todo
@@ -66,7 +62,7 @@ function App() {
 
   const limpiarSesionLocal = () => {
     setUser(null);
-    setCurrentView('login');
+    setIsLoggedIn(false);
     localStorage.removeItem('sweetland_admin_user');
   };
 
@@ -91,7 +87,7 @@ function App() {
         // Guardamos en local para persistencia al recargar
         localStorage.setItem('sweetland_admin_user', JSON.stringify(usuario));
         setUser(usuario);
-        setCurrentView('app');
+        setIsLoggedIn(true);
         return { success: true, user: usuario };
       } else {
         const errorData = await response.json();
@@ -132,23 +128,17 @@ function App() {
 
   if (loading && !user) return <div className="loading">Verificando sesión...</div>;
 
-  if (currentView === 'login' || currentView === 'register') {
-    return (
-      currentView === 'login' ? (
-        <Login onLogin={handleLogin} onShowRegister={() => setCurrentView('register')} />
-      ) : (
-        <Register onShowLogin={() => setCurrentView('login')} />
-      )
-    );
+  if (!isLoggedIn) {
+    return <Login onLogin={handleLogin} />;
   }
 
   return (
     <div className="app">
-      {/* Header con el nuevo color Azul Navy y estilos en línea */}
-      <header className="app-header navbar navbar-expand-lg navbar-dark" style={{ backgroundColor: '#0A192F', padding: '0.5rem 2rem' }}>
+      {/* Header ahora usa clases de App.css */}
+      <header className="app-header navbar navbar-expand-lg navbar-dark">
         <div className="container-fluid">
           <a className="navbar-brand d-flex align-items-center" href="#" onClick={() => setActiveSection('inicio')}>
-            <img src="/logo-precivox.png" alt="Precivox Logo" style={{ height: '70px' }} />
+            <img src="/logo-precivox.png" alt="Precivox Logo" className="header-logo" />
           </a>
           <div className="navbar-nav ms-auto">
             {user && (
@@ -163,10 +153,9 @@ function App() {
         </div>
       </header>
 
-      {/* Sidebar con el nuevo color Azul Navy y estilos en línea */}
+      {/* Sidebar ahora usa clases de App.css */}
       <div className="app-body">
-        {/* Se elimina bg-light para que el estilo en línea tome precedencia */}
-        <nav className="sidebar" style={{ backgroundColor: '#0A192F', color: '#ccd6f6' }}>
+        <nav className="sidebar">
           <ul className="nav nav-pills flex-column p-3">
             <li className="nav-item">
               <button className={`nav-link w-100 text-start ${activeSection === 'inicio' ? 'active' : ''}`} onClick={() => setActiveSection('inicio')}>📊 Inicio / Dashboard</button>

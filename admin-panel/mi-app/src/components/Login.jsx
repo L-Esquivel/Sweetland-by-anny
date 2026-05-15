@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-const Login = ({ onLogin, onShowRegister }) => {
+const Login = ({ onLogin }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -12,31 +12,12 @@ const Login = ({ onLogin, onShowRegister }) => {
     setError('');
 
     try {
-      console.log('🔍 Intentando login con:', email);
       const result = await onLogin(email, password);
-      console.log('🔍 Resultado del login:', result);
-      
       if (!result.success) {
         setError(result.error);
-      } else {
-        // ✅ VERIFICAR SI ES ADMIN DESPUÉS DEL LOGIN EXITOSO
-        if (result.user.rol !== 'admin') {
-          console.log('❌ Cliente detectado, bloqueando acceso al panel');
-          
-          // Cerrar sesión inmediatamente
-          await fetch('/auth/logout', {
-            method: 'POST',
-            credentials: 'include'
-          });
-          
-          setError('❌ Acceso denegado. Solo personal autorizado puede acceder al panel administrativo.');
-          return;
-        }
-        
-        console.log('✅ Admin autenticado, acceso permitido al panel');
       }
+      // La lógica de redirección y verificación de rol ahora vive en App.jsx
     } catch (err) {
-      console.error('🔍 Error en login:', err);
       setError('Error de conexión con el servidor');
     } finally {
       setLoading(false);
@@ -169,30 +150,6 @@ const Login = ({ onLogin, onShowRegister }) => {
             </div>
           )}
 
-          {/* ⚠️ ELIMINADA LA SECCIÓN DE REGISTRO */}
-          {/* <div style={{
-            textAlign: 'center',
-            marginTop: '20px',
-            paddingTop: '20px',
-            borderTop: '1px solid #eee'
-          }}>
-            <small style={{ color: '#666' }}>
-              ¿No tienes cuenta?{' '}
-              <button 
-                onClick={onShowRegister}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: '#0d6efd',
-                  textDecoration: 'underline',
-                  cursor: 'pointer'
-                }}
-                disabled={loading}
-              >
-                Registrarse
-              </button>
-            </small>
-          </div> */}
         </div>
       </div>
     </div>

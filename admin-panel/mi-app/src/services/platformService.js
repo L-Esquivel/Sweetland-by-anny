@@ -19,4 +19,17 @@ export const platformService = {
       throw error;
     }
   },
+
+  async getPlatformStats() {
+    try {
+      const response = await fetch(`${API_URL}/dashboard-stats`, { credentials: 'include' });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Error al obtener estadísticas');
+      }
+      return await response.json();
+    } catch (error) {
+      throw error;
+    }
+  },
 };

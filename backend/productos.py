@@ -166,7 +166,7 @@ def get_productos_public():
     # SOLUCIÓN TEMPORAL: Asumimos que la landing pública siempre corresponde al tenant con id=1 (Sweetland).
     # La solución definitiva implicaría usar subdominios (sweetland.precivox.com) o
     # un identificador en la URL para determinar el tenant dinámicamente.
-    tenant_id_publico = 1
+    tenant_id_publico = os.getenv('PUBLIC_TENANT_ID', 1)
     conn = get_db()
     try:
         with conn.cursor(cursor_factory=DictCursor) as cursor:

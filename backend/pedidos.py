@@ -225,8 +225,8 @@ def get_detalles_admin(id):
 @pedidos_bp.route("/public", methods=["POST"])
 def create_pedido_public():
     data = request.get_json()
-    # 💡 SAAS-IFICATION: Los pedidos públicos se asocian al tenant 1 (Sweetland).
-    tenant_id_publico = 1
+    # 💡 SAAS-IFICATION: Los pedidos públicos se asocian al tenant público.
+    tenant_id_publico = os.getenv('PUBLIC_TENANT_ID', 1)
     conn = get_db()
     cursor = conn.cursor()
     try:

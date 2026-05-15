@@ -67,3 +67,40 @@ def contact_support():
     thread.start()
 
     return jsonify({"mensaje": "Tu solicitud de soporte ha sido enviada. Nos pondremos en contacto contigo pronto."}), 200
+
+@platform_bp.route("/dashboard-stats", methods=["GET"])
+@login_required
+@superadmin_required
+def get_platform_stats():
+    """
+    Devuelve estadísticas globales de la plataforma para el dashboard del Super Admin.
+    """
+    conn = get_db()
+    try:
+        with conn.cursor(cursor_factory=DictCursor) as cursor:
+            # Total de Tenants
+            cursor.execute("SELECT COUNT(*) as total FROM tenants")
+            total_tenants = cursor.fetchone()['total']
+
+            # Nuevos Tenants en los últimos 30 días
+            cursor.execute("SELECT COUNT(*) as total FROM tenants WHERE fecha_creacion >= NOW() - INTERVAL '30 days'")
+            new_tenants_30_days = cursor.fetchone()['total']
+
+            # Total de Usuarios en la plataforma
+            cursor.execute("SELECT COUNT(*) as total FROM usuarios")
+            total_users = cursor.fetchone()['total']
+
+            # Ingresos totales de todos los tenants
+            cursor.execute("SELECT SUM(total) as total_revenue FROM pedidos WHERE estado = 'completado'")
+            total_revenue_raw = cursor.fetchone()
+            total_revenue = float(total_revenue_raw['total_revenue'] or 0)
+
+            return jsonify({
+                "total_tenants": total_tenants,
+                "new_tenants_30_days": new_tenants_30_days,
+                "total_users": total_users,
+                "total_revenue": total_revenue,
+            })
+    except Exception as e:
+        current_app.logger.error(f"Error en get_platform_stats: {e}")
+        return jsonify({"error": "Error al obtener estadísticas de la plataforma"}), 500
