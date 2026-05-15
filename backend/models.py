@@ -36,15 +36,17 @@ class User(UserMixin):
                         LEFT JOIN
                             tenant_module_settings tms ON m.module_key = tms.module_key AND tms.tenant_id = %s ORDER BY m.order_index ASC
                     """, (row['tenant_id'],))
-                    module_settings = cursor.fetchall()
+                    # FIX: Convertimos explícitamente los resultados a una lista de diccionarios
+                    # para asegurar una serialización a JSON consistente, igual que en tenants.py.
+                    module_settings_raw = cursor.fetchall()
+                    module_settings = [dict(setting) for setting in module_settings_raw]
 
                     return User(
                         id=row["id_usuario"],
                         nombre=row["nombre"],
                         email=row["email"],
                         password=row["password"],
-                        telefono=row.get("telefono"),
-                        direccion=row.get("direccion"),
+                        telefono=row.get("telefono"),                        direccion=row.get("direccion"),
                         rol=row.get("rol", "cliente"),
                         tenant_id=row.get("tenant_id"),
                         module_settings=module_settings
@@ -74,15 +76,16 @@ class User(UserMixin):
                         LEFT JOIN
                             tenant_module_settings tms ON m.module_key = tms.module_key AND tms.tenant_id = %s ORDER BY m.order_index ASC
                     """, (row['tenant_id'],))
-                    module_settings = cursor.fetchall()
+                    # FIX: Convertimos explícitamente los resultados a una lista de diccionarios.
+                    module_settings_raw = cursor.fetchall()
+                    module_settings = [dict(setting) for setting in module_settings_raw]
 
                     return User(
                         id=row["id_usuario"],
                         nombre=row["nombre"],
                         email=row["email"],
                         password=row["password"],
-                        telefono=row.get("telefono"),
-                        direccion=row.get("direccion"),
+                        telefono=row.get("telefono"),                        direccion=row.get("direccion"),
                         rol=row.get("rol", "cliente"),
                         tenant_id=row.get("tenant_id"),
                         module_settings=module_settings
