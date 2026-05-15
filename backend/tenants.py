@@ -37,6 +37,7 @@ def create_tenant_with_admin():
     admin_name = data.get('admin_name')
     admin_email = data.get('admin_email')
     admin_password = data.get('admin_password')
+    enabled_modules = data.get('enabled_modules', [])
 
     if not all([tenant_name, admin_name, admin_email, admin_password]):
         return jsonify({"error": "Todos los campos son obligatorios"}), 400
@@ -54,6 +55,12 @@ def create_tenant_with_admin():
                 "INSERT INTO usuarios (nombre, email, password, rol, tenant_id) VALUES (%s, %s, %s, 'admin', %s)",
                 (admin_name, admin_email, hashed_password, tenant_id)
             )
+
+            # 3. Asociar los módulos habilitados con el nuevo tenant
+            if enabled_modules:
+                args_str = ','.join(cursor.mogrify("(%s,%s)", (tenant_id, module_key)).decode('utf-8') for module_key in enabled_modules)
+                cursor.execute("INSERT INTO tenant_modules (tenant_id, module_key) VALUES " + args_str)
+
             conn.commit()
             return jsonify({"mensaje": f"Tenant '{tenant_name}' y su admin '{admin_email}' creados con éxito."}), 201
     except Exception as e:

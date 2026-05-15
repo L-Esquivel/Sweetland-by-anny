@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 // FIX: Ruta ajustada a la ubicación actual del archivo.
 import { tenantsService } from '../../services/tenantsService';
+import { modulesService } from '../../services/modulesService';
 import './TenantsList.css';
 
 function TenantsList() {
@@ -8,12 +9,14 @@ function TenantsList() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [notification, setNotification] = useState({ message: '', type: '' });
+  const [availableModules, setAvailableModules] = useState([]);
   const [form, setForm] = useState({
     tenant_name: '',
     admin_name: '',
     admin_email: '',
     admin_password: ''
   });
+  const [selectedModules, setSelectedModules] = useState(new Set());
 
   const fetchTenants = async () => {
     try {
@@ -29,7 +32,22 @@ function TenantsList() {
   };
 
   useEffect(() => {
-    fetchTenants();
+    const loadInitialData = async () => {
+      setLoading(true);
+      try {
+        const [tenantsData, modulesData] = await Promise.all([
+          tenantsService.getAllTenants(),
+          modulesService.getAllModules()
+        ]);
+        setTenants(tenantsData);
+        setAvailableModules(modulesData);
+      } catch (err) {
+        setError(err.message || 'Error al cargar datos iniciales.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadInitialData();
   }, []);
 
   const handleInputChange = (e) => {
@@ -37,14 +55,28 @@ function TenantsList() {
     setForm(prev => ({ ...prev, [name]: value }));
   };
 
+  const handleModuleChange = (moduleKey) => {
+    setSelectedModules(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(moduleKey)) {
+        newSet.delete(moduleKey);
+      } else {
+        newSet.add(moduleKey);
+      }
+      return newSet;
+    });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setNotification({ message: '', type: '' }); // Limpiar notificaciones previas
     setLoading(true);
     try {
-      await tenantsService.createTenant(form);
+      const payload = { ...form, enabled_modules: Array.from(selectedModules) };
+      await tenantsService.createTenant(payload);
       setNotification({ message: 'Tenant creado con éxito', type: 'success' });
       setForm({ tenant_name: '', admin_name: '', admin_email: '', admin_password: '' });
+      setSelectedModules(new Set());
       fetchTenants(); // Recargar la lista
     } catch (err) {
       setNotification({ message: err.message, type: 'error' });
@@ -99,6 +131,23 @@ function TenantsList() {
             </div>
             <div className="col-md-6">
               <input type="password" name="admin_password" value={form.admin_password} onChange={handleInputChange} className="form-control" placeholder="Contraseña del Admin" required />
+            </div>
+            <div className="col-12 mt-3">
+              <h6>Módulos a Habilitar:</h6>
+              <div className="modules-checkbox-container">
+                {availableModules.map(module => (
+                  <div key={module.module_key} className="form-check form-check-inline">
+                    <input 
+                      className="form-check-input" 
+                      type="checkbox" 
+                      id={`module-${module.module_key}`}
+                      checked={selectedModules.has(module.module_key)}
+                      onChange={() => handleModuleChange(module.module_key)}
+                    />
+                    <label className="form-check-label" htmlFor={`module-${module.module_key}`}>{module.icon} {module.label}</label>
+                  </div>
+                ))}
+              </div>
             </div>
             <div className="col-12">
               <button type="submit" className="btn btn-primary" disabled={loading}>{loading ? 'Creando...' : 'Crear Tenant'}</button>
