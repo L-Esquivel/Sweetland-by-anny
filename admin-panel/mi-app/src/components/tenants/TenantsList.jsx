@@ -140,9 +140,9 @@ function TenantsList() {
               <div className="row">
                 {availableModules.map(module => (
                   <div key={module.module_key} className="col-md-6 mb-3">
-                    {/* 💡 FIX 1: Etiqueta de referencia más visible */}
-                    <label htmlFor={`label-${module.module_key}`} className="form-label">
-                      {module.icon} <strong>{module.label}</strong>
+                    {/* 💡 FIX 1: Etiqueta de referencia más visible y robusta. */}
+                    <label htmlFor={`label-${module.module_key}`} className="form-label fw-bold">
+                      {module.icon} {module.label || module.module_key}
                     </label>
                     <div className="input-group">
                       <input
@@ -150,9 +150,10 @@ function TenantsList() {
                         className="form-control"
                         name={module.module_key}
                         id={`label-${module.module_key}`}
-                        value={customLabels[module.module_key] || ''}
+                        // 💡 FIX 2: Aseguramos que el valor siempre sea un string para evitar el bug.
+                        value={String(customLabels[module.module_key] || '')}
                         onChange={handleLabelChange}
-                        placeholder={`Ej: ${module.label}`}
+                        placeholder={`Personalizar "${module.label || 'Módulo'}"...`}
                       />
                     </div>
                   </div>
