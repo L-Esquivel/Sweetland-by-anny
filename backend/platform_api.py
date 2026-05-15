@@ -4,7 +4,7 @@ from flask import Blueprint, jsonify, current_app, request
 from flask_login import login_required, current_user
 from db import get_db
 from psycopg2.extras import DictCursor
-from utils import admin_required
+from utils import admin_required, superadmin_required
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail as SendGridMail
 
