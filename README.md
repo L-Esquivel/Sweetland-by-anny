@@ -1,12 +1,12 @@
 # Precivox - SaaS Costing & Business Intelligence
 
-**PRECIVOX (formerly Sweetland ERP)** is a high-precision financial intelligence engine and SaaS platform designed to automate cost analysis and optimize profitability.
+**Precivox** is a high-precision financial intelligence engine and multi-tenant SaaS platform designed to automate cost analysis and optimize profitability for small to medium-sized businesses.
 
 **Key Achievement:** Reduced operational calculation time by 95% through a custom-built dynamic pricing engine.
 
 ## 🚀 Live Demo
 
-*   **Admin Panel:** [https://sweetland-admin.vercel.app/](https://sweetland-admin.vercel.app/)
+*   **Admin Panel:** [https://precivox.vercel.app/](https://precivox.vercel.app/)
 *   **Public Landing Page:** [https://sweetlandbyanny.vercel.app/](https://sweetlandbyanny.vercel.app/)
 
 > **Note:** The landing page is a functional demo for a specific client use case ("Sweetland by Anny"), while the admin panel represents the core Precivox SaaS product.
@@ -14,6 +14,8 @@
 ## ✨ Key Features
 
 *   **Product & Inventory Management:** Catalog products, ingredients, and packaging.
+*   **Multi-Tenant Architecture:** Full data isolation between different organizations (tenants), managed by a Super Admin.
+*   **Modular System:** Ability to enable or disable specific features (e.g., 'Pedidos', 'Recetas') for each tenant.
 *   **Advanced Costing Engine:** Automatically calculate production costs, suggested sale prices based on desired profit margins, and operational overheads.
 *   **Order Management:** Track customer orders from creation to completion.
 *   **Business Intelligence Dashboard:** An interactive dashboard with date-range filtering to visualize key metrics like Sales, Expenses, Waste, and **Real Net Profit**.
@@ -25,16 +27,16 @@
 ## 🛠️ Tech Stack
 
 *   **Backend:**
-    *   **Framework:** Flask (Python)
-    *   **Database:** MySQL (via PyMySQL)
+    *   **Framework:** Flask (Python) with Gunicorn
+    *   **Database:** PostgreSQL
     *   **Authentication:** Flask-Login
     *   **Security:** Flask-Limiter (Rate Limiting), Flask-CORS
 *   **Frontend (Admin Panel):**
-    *   **Framework:** React
+    *   **Framework:** React (Vite)
     *   **Styling:** Bootstrap
     *   **Charting:** Recharts
 *   **Deployment:**
-    *   **Backend:** Railway
+    *   **Backend & Database:** Render
     *   **Frontend (Admin):** Vercel
     *   **Frontend (Landing):** Vercel
     *   **Image Storage:** Cloudinary
@@ -45,7 +47,7 @@
 
 *   Python 3.10+
 *   Node.js & npm
-*   A local MySQL database instance.
+*   A local PostgreSQL database instance.
 
 ### Backend Setup
 
@@ -63,17 +65,13 @@
     pip install -r requirements.txt
     ```
 4.  Create a `.env` file in the `backend` directory and add the following environment variables:
-    ```env
+    ```dotenv
     # Flask
     SECRET_KEY=your_super_secret_key
     FLASK_ENV=development
 
     # Database
-    MYSQL_HOST=localhost
-    MYSQL_USER=your_db_user
-    MYSQL_PASSWORD=your_db_password
-    MYSQL_DB=your_db_name
-    MYSQL_PORT=3306
+    DATABASE_URL=postgresql://user:password@host:port/dbname
 
     # Google OAuth
     GOOGLE_CLIENT_ID=your_google_client_id
@@ -84,13 +82,19 @@
     CLOUDINARY_API_KEY=your_cloudinary_api_key
     CLOUDINARY_API_SECRET=your_cloudinary_api_secret
 
-    # Email (for password recovery)
-    MAIL_USERNAME=your_gmail_address@gmail.com
-    MAIL_PASSWORD=your_gmail_app_password
+    # Email (SendGrid for password recovery & support)
+    SENDGRID_API_KEY=your_sendgrid_api_key
+    SENDER_EMAIL=verified_sender@example.com
+    SUPPORT_EMAIL_ADDRESS=your_support_email@example.com
+
+    # SaaS Configuration
+    FRONTEND_URL=http://localhost:5173
+    PUBLIC_TENANT_ID=1
     ```
-5.  Run the backend server:
+5.  Initialize the database by running the `schema.sql` script on your PostgreSQL instance.
+6.  Run the backend server:
     ```bash
-    flask run
+    python app.py
     ```
 
 ### Frontend (Admin Panel) Setup
@@ -104,7 +108,7 @@
     npm install
     ```
 3.  Create a `.env.local` file in the `admin-panel/mi-app` directory and add the backend URL:
-    ```env
+    ```dotenv
     VITE_API_URL=http://127.0.0.1:5000
     ```
 4.  Run the frontend development server:
@@ -117,14 +121,15 @@
 The project is currently evolving from an MVP to a full-fledged multi-tenant SaaS application. Key development phases include:
 
 1.  **✅ Identity & Access:** Finalizing secure user authentication and recovery flows.
-    *   *Status: Completed. Password recovery migrated to a robust API-based service (SendGrid).*
+    *   *Status: Completed. OAuth 2.0 (Google) and secure password recovery via SendGrid are implemented.*
 
 2.  **✅ SaaS-ification:** Implementing a multi-tenant architecture for data isolation.
-    *   *Status: Completed. The database schema and backend logic now support full data isolation between tenants.*
+    *   *Status: Completed. The database schema and backend logic support full data isolation, a Super Admin role, and modular features per tenant.*
 
-3.  **Security Hardening:** Advanced audit logs, security headers (CSP), and input sanitization.
-    *   *Status: Next up. Focus on enhancing security layers.*
+3.  **✅ Deployment & CI/CD:** Migrated to a professional-grade stack (PostgreSQL on Render, Vercel).
+    *   *Status: Completed.*
 
-4.  **Business Intelligence:** Expanding the BI module with features like report exporting (PDF/Excel).
+4.  **Security Hardening:** Advanced audit logs, security headers (CSP), and input sanitization.
+    *   *Status: In Progress.*
 
-5.  **DevOps & Quality:** API documentation (Swagger), containerization (Docker), and unit testing.
+5.  **DevOps & Quality:** API documentation (e.g., Swagger), containerization (Docker), and unit testing.
