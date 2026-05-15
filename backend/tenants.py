@@ -37,14 +37,14 @@ def create_tenant_with_admin():
     admin_name = data.get('admin_name')
     admin_email = data.get('admin_email')
     admin_password = data.get('admin_password')
-    enabled_modules = data.get('enabled_modules', [])
+    custom_labels = data.get('custom_labels', {})
 
     if not all([tenant_name, admin_name, admin_email, admin_password]):
         return jsonify({"error": "Todos los campos son obligatorios"}), 400
 
     conn = get_db()
     try:
-        with conn.cursor() as cursor:
+        with conn.cursor(cursor_factory=DictCursor) as cursor:
             # 1. Crear el Tenant
             cursor.execute("INSERT INTO tenants (nombre) VALUES (%s) RETURNING id_tenant", (tenant_name,))
             tenant_id = cursor.fetchone()[0]
@@ -56,10 +56,22 @@ def create_tenant_with_admin():
                 (admin_name, admin_email, hashed_password, tenant_id)
             )
 
-            # 3. Asociar los módulos habilitados con el nuevo tenant
-            if enabled_modules:
-                args_str = ','.join(cursor.mogrify("(%s,%s)", (tenant_id, module_key)).decode('utf-8') for module_key in enabled_modules)
-                cursor.execute("INSERT INTO tenant_modules (tenant_id, module_key) VALUES " + args_str)
+            # 3. Obtener todos los módulos disponibles y sus etiquetas por defecto
+            cursor.execute("SELECT module_key, label FROM modules")
+            all_modules = cursor.fetchall()
+
+            # 4. Preparar las configuraciones de etiquetas para la inserción
+            settings_to_insert = []
+            for module in all_modules:
+                module_key = module['module_key']
+                # Usar la etiqueta personalizada si se proveyó, si no, usar la de por defecto
+                final_label = custom_labels.get(module_key, module['label'])
+                settings_to_insert.append((tenant_id, module_key, final_label))
+
+            # 5. Insertar todas las configuraciones de módulos para el nuevo tenant
+            if settings_to_insert:
+                args_str = ','.join(cursor.mogrify("(%s,%s,%s)", s).decode('utf-8') for s in settings_to_insert)
+                cursor.execute("INSERT INTO tenant_module_settings (tenant_id, module_key, custom_label) VALUES " + args_str)
 
             conn.commit()
             return jsonify({"mensaje": f"Tenant '{tenant_name}' y su admin '{admin_email}' creados con éxito."}), 201

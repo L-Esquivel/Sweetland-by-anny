@@ -47,7 +47,7 @@ def create_admin_user():
         conn = psycopg2.connect(DATABASE_URL)
         print("✅ Connection successful.")
 
-        with conn.cursor() as cursor:
+        with conn.cursor(cursor_factory=DictCursor) as cursor:
             # 1. Create a new Tenant first
             # 💡 MEJORA: Lógica diferenciada para superadmin y admin normal.
             if admin_role == 'superadmin':
@@ -80,6 +80,15 @@ def create_admin_user():
                 """,
                 (admin_name, admin_email, hashed_password, admin_role, tenant_id)
             )
+
+            # 3. Populate default module settings for the new tenant
+            cursor.execute("SELECT module_key, label FROM modules")
+            all_modules = cursor.fetchall()
+            if all_modules:
+                settings_to_insert = [(tenant_id, m['module_key'], m['label']) for m in all_modules]
+                args_str = ','.join(cursor.mogrify("(%s,%s,%s)", s).decode('utf-8') for s in settings_to_insert)
+                cursor.execute("INSERT INTO tenant_module_settings (tenant_id, module_key, custom_label) VALUES " + args_str)
+                print(f"✅ Default module settings created for tenant ID: {tenant_id}")
 
             conn.commit()
             print("\n🎉 Success! User and tenant have been created in the database.")

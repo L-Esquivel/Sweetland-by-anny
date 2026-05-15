@@ -16,7 +16,7 @@ function TenantsList() {
     admin_email: '',
     admin_password: ''
   });
-  const [selectedModules, setSelectedModules] = useState(new Set());
+  const [customLabels, setCustomLabels] = useState({});
 
   const fetchTenants = async () => {
     try {
@@ -41,6 +41,12 @@ function TenantsList() {
         ]);
         setTenants(tenantsData);
         setAvailableModules(modulesData);
+        // Pre-llenar las etiquetas personalizadas con los valores por defecto
+        const initialLabels = {};
+        modulesData.forEach(m => {
+            initialLabels[m.module_key] = m.label;
+        });
+        setCustomLabels(initialLabels);
       } catch (err) {
         setError(err.message || 'Error al cargar datos iniciales.');
       } finally {
@@ -55,16 +61,8 @@ function TenantsList() {
     setForm(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleModuleChange = (moduleKey) => {
-    setSelectedModules(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(moduleKey)) {
-        newSet.delete(moduleKey);
-      } else {
-        newSet.add(moduleKey);
-      }
-      return newSet;
-    });
+  const handleLabelChange = (moduleKey, newLabel) => {
+    setCustomLabels(prev => ({ ...prev, [moduleKey]: newLabel }));
   };
 
   const handleSubmit = async (e) => {
@@ -72,11 +70,14 @@ function TenantsList() {
     setNotification({ message: '', type: '' }); // Limpiar notificaciones previas
     setLoading(true);
     try {
-      const payload = { ...form, enabled_modules: Array.from(selectedModules) };
+      const payload = { ...form, custom_labels: customLabels };
       await tenantsService.createTenant(payload);
       setNotification({ message: 'Tenant creado con éxito', type: 'success' });
       setForm({ tenant_name: '', admin_name: '', admin_email: '', admin_password: '' });
-      setSelectedModules(new Set());
+      // Resetear etiquetas a los valores por defecto
+      const initialLabels = {};
+      availableModules.forEach(m => { initialLabels[m.module_key] = m.label; });
+      setCustomLabels(initialLabels);
       fetchTenants(); // Recargar la lista
     } catch (err) {
       setNotification({ message: err.message, type: 'error' });
@@ -132,19 +133,20 @@ function TenantsList() {
             <div className="col-md-6">
               <input type="password" name="admin_password" value={form.admin_password} onChange={handleInputChange} className="form-control" placeholder="Contraseña del Admin" required />
             </div>
-            <div className="col-12 mt-3">
-              <h6>Módulos a Habilitar:</h6>
-              <div className="modules-checkbox-container">
+            <div className="col-12 mt-4">
+              <h6>Personalizar Etiquetas de Módulos:</h6>
+              <div className="row">
                 {availableModules.map(module => (
-                  <div key={module.module_key} className="form-check form-check-inline">
-                    <input 
-                      className="form-check-input" 
-                      type="checkbox" 
-                      id={`module-${module.module_key}`}
-                      checked={selectedModules.has(module.module_key)}
-                      onChange={() => handleModuleChange(module.module_key)}
-                    />
-                    <label className="form-check-label" htmlFor={`module-${module.module_key}`}>{module.icon} {module.label}</label>
+                  <div key={module.module_key} className="col-md-6 mb-2">
+                    <div className="input-group">
+                      <span className="input-group-text" title={module.label}>{module.icon}</span>
+                      <input
+                        type="text"
+                        className="form-control"
+                        value={customLabels[module.module_key] || ''}
+                        onChange={(e) => handleLabelChange(module.module_key, e.target.value)}
+                      />
+                    </div>
                   </div>
                 ))}
               </div>

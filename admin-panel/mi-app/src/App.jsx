@@ -171,27 +171,17 @@ function App() {
             {/* 4. Botones visibles solo para Admin de Tenant */}
             {user?.rol === 'admin' && (
               <>
-                <li className="nav-item">
-                  <button className={`nav-link w-100 text-start ${activeSection === 'usuarios' ? 'active' : ''}`} onClick={() => setActiveSection('usuarios')}>👥 Usuarios</button>
-                </li>
-                <li className="nav-item">
-                  <button className={`nav-link w-100 text-start ${activeSection === 'productos' ? 'active' : ''}`} onClick={() => setActiveSection('productos')}>🎂 Productos</button>
-                </li>
-                <li className="nav-item">
-                  <button className={`nav-link w-100 text-start ${activeSection === 'pedidos' ? 'active' : ''}`} onClick={() => setActiveSection('pedidos')}>📦 Pedidos</button>
-                </li>
-                <li className="nav-item">
-                  <button className={`nav-link w-100 text-start ${activeSection === 'insumos' ? 'active' : ''}`} onClick={() => setActiveSection('insumos')}>📦 Insumos</button>
-                </li>
-                <li className="nav-item">
-                  <button className={`nav-link w-100 text-start ${activeSection === 'recetas' ? 'active' : ''}`} onClick={() => setActiveSection('recetas')}>📋 Recetas y Costos</button>
-                </li>
-                <li className="nav-item">
-                  <button className={`nav-link w-100 text-start ${activeSection === 'gastos' ? 'active' : ''}`} onClick={() => setActiveSection('gastos')}>💸 Gastos</button>
-                </li>
-                <li className="nav-item">
-                  <button className={`nav-link w-100 text-start ${activeSection === 'merma' ? 'active' : ''}`} onClick={() => setActiveSection('merma')}>📉 Merma</button>
-                </li>
+                {/* Renderizado dinámico del menú basado en la configuración de módulos del tenant */}
+                {user.module_settings && user.module_settings.map(module => (
+                  <li className="nav-item" key={module.module_key}>
+                    <button 
+                      className={`nav-link w-100 text-start ${activeSection === module.module_key ? 'active' : ''}`} 
+                      onClick={() => setActiveSection(module.module_key)}
+                    >
+                      {module.icon} {module.label}
+                    </button>
+                  </li>
+                ))}
                 <hr className="text-white-50" />
                 <li className="nav-item">
                   <button className="nav-link w-100 text-start" onClick={() => setShowSupportModal(true)}>❓ Soporte</button>

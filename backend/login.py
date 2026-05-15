@@ -104,8 +104,8 @@ def login():
             "usuario": {
                 "id": user.id, "nombre": user.nombre, 
                 "email": user.email, "rol": user.rol,
-                # 💡 FIX: Devolver los módulos para que el menú dinámico se actualice al instante.
-                "enabled_modules": user.enabled_modules 
+                # 💡 MEJORA: Devolver la configuración completa de módulos.
+                "module_settings": user.module_settings 
             }
         })
     
@@ -277,6 +277,6 @@ def get_current_user():
             "email": current_user.email, "rol": current_user.rol,
             "telefono": current_user.telefono,
             "direccion": current_user.direccion,
-            "enabled_modules": current_user.enabled_modules
+            "module_settings": current_user.module_settings
         }
     })
