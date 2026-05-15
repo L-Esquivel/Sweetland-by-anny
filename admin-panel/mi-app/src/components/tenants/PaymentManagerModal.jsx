@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { paymentsService } from '../../services/paymentsService';
 
 const PaymentManagerModal = ({ tenant, onClose }) => {
@@ -68,7 +69,7 @@ const PaymentManagerModal = ({ tenant, onClose }) => {
     return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(valor || 0);
   };
 
-  return (
+  return createPortal(
     <div className="modal fade show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
       <div className="modal-dialog modal-xl">
         <div className="modal-content">
@@ -103,7 +104,8 @@ const PaymentManagerModal = ({ tenant, onClose }) => {
           <div className="modal-footer"><button type="button" className="btn btn-secondary" onClick={onClose}>Cerrar</button></div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 
