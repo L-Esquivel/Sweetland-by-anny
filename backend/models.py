@@ -34,7 +34,7 @@ class User(UserMixin):
                         FROM
                             modules m
                         LEFT JOIN
-                            tenant_module_settings tms ON m.module_key = tms.module_key AND tms.tenant_id = %s
+                            tenant_module_settings tms ON m.module_key = tms.module_key AND tms.tenant_id = %s ORDER BY m.order_index ASC
                     """, (row['tenant_id'],))
                     module_settings = cursor.fetchall()
 
@@ -72,7 +72,7 @@ class User(UserMixin):
                         FROM
                             modules m
                         LEFT JOIN
-                            tenant_module_settings tms ON m.module_key = tms.module_key AND tms.tenant_id = %s
+                            tenant_module_settings tms ON m.module_key = tms.module_key AND tms.tenant_id = %s ORDER BY m.order_index ASC
                     """, (row['tenant_id'],))
                     module_settings = cursor.fetchall()
 

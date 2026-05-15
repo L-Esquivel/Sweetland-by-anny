@@ -16,7 +16,7 @@ def get_all_modules():
     conn = get_db()
     try:
         with conn.cursor(cursor_factory=DictCursor) as cursor:
-            cursor.execute("SELECT module_key, label, icon, description FROM modules ORDER BY label")
+            cursor.execute("SELECT module_key, label, icon, description FROM modules ORDER BY order_index ASC")
             modules = cursor.fetchall()
             return jsonify(modules)
     except Exception as e:
