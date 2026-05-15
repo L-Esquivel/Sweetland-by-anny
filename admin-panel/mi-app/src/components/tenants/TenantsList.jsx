@@ -33,17 +33,25 @@ function TenantsList() {
     const loadInitialData = async () => {
       setLoading(true);
       try {
-        const [tenantsData, modulesData] = await Promise.all([
+        const [tenantsData, modulesRawData] = await Promise.all([
           tenantsService.getAllTenants(),
           modulesService.getAllModules()
         ]);
-        // DIAGNÓSTICO: Ver qué datos de módulos llegan realmente de la API.
-        console.log("MODULOS RECIBIDOS:", modulesData);
+
+        // 💡 FIX: La API devuelve un array de arrays. Lo transformamos a un array de objetos.
+        // El formato esperado es [{ module_key: '...', label: '...' }, ...].
+        // El formato recibido es [['usuarios', 'Usuarios', ...], ...].
+        const modulesData = modulesRawData.map(mod => ({
+          module_key: mod[0],
+          label: mod[1],
+          icon: mod[2],
+          description: mod[3]
+        }));
+
         setTenants(tenantsData);
         setAvailableModules(modulesData);
         
-        // FIX DEFINITIVO: Inicializa el estado de las etiquetas.
-        // Se crea una entrada para cada módulo con un string vacío.
+        // Ahora que modulesData tiene el formato correcto, esto funcionará.
         // Esto asegura que cada input sea un "componente controlado" desde el inicio,
         // solucionando el problema de no poder editar el texto.
         const initialLabels = modulesData.reduce((acc, module) => {
@@ -68,8 +76,6 @@ function TenantsList() {
 
   const handleLabelChange = (e) => {
     const { name, value } = e.target;
-    // DIAGNÓSTICO: Verificar si el evento se dispara y con qué datos.
-    console.log(`ACTUALIZANDO ETIQUETA: name='${name}', value='${value}'`);
     setCustomLabels(prev => ({ ...prev, [name]: value }));
   };
 
@@ -122,8 +128,7 @@ function TenantsList() {
 
   return (
     <div className="tenants-container">
-      {/* DIAGNÓSTICO: Cambio visual para confirmar que el archivo se actualizó. */}
-      <h2>Gestión de Tenants (v2 - Diagnóstico)</h2>
+      <h2>Gestión de Tenants</h2>
       
       <Notification message={notification.message} type={notification.type} />
       {error && <div className="alert alert-danger">{error}</div>}
