@@ -6,10 +6,10 @@ import os
 import re
 from werkzeug.middleware.proxy_fix import ProxyFix
 
-# 1. 🟢 Importamos el nuevo gestor de DB y las otras extensiones
+# 1. 🟢 Import the new DB manager and other extensions
 import db
 from extensions import limiter
-# Importamos el Blueprint de auth y la función de inicialización de OAuth
+# Import auth blueprint and OAuth initialization function
 from login import auth_bp, init_oauth
 
 load_dotenv()
@@ -17,13 +17,13 @@ load_dotenv()
 app = Flask(__name__)
 
 # ==========================================
-# 🛠️ WORKAROUNDS DE ENRUTAMIENTO
+# 🛠️ ROUTING WORKAROUNDS
 # ==========================================
 class FixPathMiddleware:
     """
-    Middleware que intercepta las peticiones a nivel de WSGI para corregir
-    URLs malformadas (ej. con dobles barras) ANTES de que el router de Flask
-    las procese y potencialmente emita una redirección no deseada.
+    Middleware that intercepts requests at the WSGI level to fix
+    malformed URLs (e.g., with double slashes) BEFORE the Flask router
+    processes them and potentially issues an unwanted redirect.
     """
     def __init__(self, app):
         self.app = app
@@ -34,9 +34,9 @@ class FixPathMiddleware:
         return self.app(environ, start_response)
 
 # ==========================================
-# �️ CONFIGURACIÓN DE SEGURIDAD Y SESIONES
+# ️ SECURITY AND SESSION CONFIGURATION
 # ==========================================
-app.secret_key = os.getenv('SECRET_KEY', 'super_clave_secreta_sweetland_2026')
+app.secret_key = os.getenv('SECRET_KEY', 'a-super-secret-key-for-development')
 
 app.config.update(
     SESSION_COOKIE_SAMESITE='None',
@@ -48,57 +48,57 @@ app.config.update(
 )
 
 # ==========================================
-# 🗄️ CONFIGURACIÓN DE BASE DE DATOS
+# 🗄️ DATABASE CONFIGURATION
 # ==========================================
-# 🔴 La configuración de la base de datos ahora se gestiona con la variable DATABASE_URL en el archivo .env
+# 🔴 Database configuration is now managed by the DATABASE_URL variable in the .env file
 
 # ==========================================
-# 🚀 INICIALIZACIÓN DE MIDDLEWARE Y EXTENSIONES
+# 🚀 MIDDLEWARE AND EXTENSIONS INITIALIZATION
 # ==========================================
 
 # ==========================================
-# 🚀 INICIALIZACIÓN DE EXTENSIONES
+# 🚀 EXTENSIONS INITIALIZATION
 # ==========================================
-db.init_app(app) # 2. 🟢 Inicializamos el nuevo gestor de base de datos PostgreSQL
-# 2. Desactivamos la regla estricta de barras al final de la URL (ej: /gastos y /gastos/ son iguales)
-# Esto hace la API más tolerante a errores del frontend.
+db.init_app(app) # 2. 🟢 Initialize the new PostgreSQL database manager
+# Disable strict slashes rule at the end of the URL (e.g., /gastos and /gastos/ are the same).
+# This makes the API more tolerant to frontend errors.
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
-# Aplicamos nuestro middleware para limpiar las URLs
+# Apply our middleware to clean up URLs
 app.wsgi_app = FixPathMiddleware(app.wsgi_app)
 
 app.url_map.strict_slashes = False
 
 limiter.init_app(app)
-# Inicializamos OAuth para Google Login
+# Initialize OAuth for Google Login
 init_oauth(app)
 
-# --- CORS DINÁMICO ---
+# --- DYNAMIC CORS ---
 allowed_origins = os.getenv('ALLOWED_ORIGINS', '').split(',')
 if not allowed_origins or allowed_origins == ['']:
-    # 💡 MEJORA: Lista de fallback robusta para producción y desarrollo local.
+    # 💡 IMPROVEMENT: Robust fallback list for production and local development.
     allowed_origins = [
-        "https://precivox.vercel.app",          # Dominio principal del panel de admin
-        "https://sweetlandbyanny.vercel.app", # Dominio de la landing page
-        "http://localhost:5173",                # Para desarrollo local del panel de admin
-        "http://127.0.0.1:5173"                 # Alternativa para desarrollo local
+        "https://precivox.vercel.app",          # Main domain for the admin panel
+        "https://sweetlandbyanny.vercel.app", # Landing page domain
+        "http://localhost:5173",                # For local development of the admin panel
+        "http://127.0.0.1:5173"                 # Alternative for local development
     ]
 
 CORS(app, origins=allowed_origins, supports_credentials=True)
 
 # ==========================================
-# 🛡️ MANEJADORES DE ERRORES (SANITIZACIÓN)
+# 🛡️ ERROR HANDLERS (SANITIZATION)
 # ==========================================
 @app.errorhandler(429)
 def ratelimit_handler(e):
-    return jsonify({"error": "Demasiados intentos", "mensaje": "Por seguridad, espera un momento antes de reintentar."}), 429
+    return jsonify({"error": "Too many requests", "message": "For security reasons, please wait a moment before trying again."}), 429
 
 @app.errorhandler(500)
 def internal_error(e):
-    app.logger.error(f"Error 500: {str(e)}")
-    return jsonify({"error": "Error interno", "mensaje": "Estamos trabajando para solucionarlo rápidamente."}), 500
+    app.logger.error(f"500 Error: {str(e)}")
+    return jsonify({"error": "Internal Server Error", "message": "We are working to fix it quickly."}), 500
 
 # ==========================================
-# 👤 CONFIGURACIÓN DE FLASK-LOGIN
+# 👤 FLASK-LOGIN CONFIGURATION
 # ==========================================
 login_manager = LoginManager()
 login_manager.init_app(app)
@@ -115,11 +115,11 @@ def unauthorized():
     # This ensures that preflight requests always receive a 200 OK, even if the user is not authenticated.
     # Flask-CORS will then add the necessary headers.
     if request.method == 'OPTIONS':
-        return jsonify(success=True), 200
-    return jsonify({"error": "No autorizado", "mensaje": "Debes iniciar sesión para realizar esta acción."}), 401
+        return jsonify(success=True), 200 # Allow preflight requests
+    return jsonify({"error": "Unauthorized", "message": "You must be logged in to perform this action."}), 401
 
 # ==========================================
-# 📦 REGISTRO DE BLUEPRINTS
+# 📦 BLUEPRINT REGISTRATION
 # ==========================================
 from usuarios import usuarios_bp
 from productos import productos_bp
@@ -151,12 +151,12 @@ app.register_blueprint(modules_bp)
 app.register_blueprint(payments_bp)
 
 # ==========================================
-# 🌍 RUTAS DE ARCHIVOS Y ESTADO
+# 🌍 FILE AND STATUS ROUTES
 # ==========================================
 @app.route("/")
 def index():
     return jsonify({
-        "mensaje": "Precivox Backend funcionando ✅",
+        "message": "Precivox Backend is running ✅",
         "security": "Rate Limiting & OAuth Active",
         "env": os.getenv('FLASK_ENV', 'development')
     })
@@ -168,14 +168,14 @@ def serve_image(filename):
 
 @app.after_request
 def add_header(response):
-    # Desactivar caché para evitar datos desactualizados en el Dashboard y Mi Cuenta
+    # Disable cache to prevent stale data in the Dashboard and My Account
     response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0'
     response.headers['Pragma'] = 'no-cache'
     response.headers['Expires'] = '-1'
     return response
 
 if __name__ == "__main__":
-    # Asegurar que la carpeta de imágenes exista
+    # Ensure the images folder exists
     os.makedirs(os.path.join(app.root_path, 'static', 'images'), exist_ok=True)
     port = int(os.getenv("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=False)
