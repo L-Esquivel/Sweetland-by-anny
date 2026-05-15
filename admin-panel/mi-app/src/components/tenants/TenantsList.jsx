@@ -138,11 +138,14 @@ function TenantsList() {
               <div className="row">
                 {availableModules.map(module => (
                   <div key={module.module_key} className="col-md-6 mb-2">
+                    {/* 💡 MEJORA: Añadimos una etiqueta de referencia para el nombre original del módulo. */}
+                    <label htmlFor={`label-${module.module_key}`} className="form-label small text-muted">{module.label}</label>
                     <div className="input-group">
-                      <span className="input-group-text" title={module.label}>{module.icon}</span>
+                      <span className="input-group-text" id={`icon-${module.module_key}`}>{module.icon}</span>
                       <input
                         type="text"
                         className="form-control"
+                        id={`label-${module.module_key}`}
                         value={customLabels[module.module_key] || ''}
                         onChange={(e) => handleLabelChange(module.module_key, e.target.value)}
                       />
