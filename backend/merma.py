@@ -58,11 +58,13 @@ def add_merma_registro():
             costo_unitario = 0
             descripcion = ""
             if id_producto:
-                cursor.execute("SELECT nombre, costo_produccion FROM productos WHERE id_producto = %s AND tenant_id = %s", (id_producto, tenant_id))
+                # FIX: Se cambia la lógica para usar el precio de venta ('precio') en lugar del costo de producción.
+                # Esto alinea el valor de la merma con el valor real de venta del producto.
+                cursor.execute("SELECT nombre, precio FROM productos WHERE id_producto = %s AND tenant_id = %s", (id_producto, tenant_id))
                 item = cursor.fetchone()
                 if not item: return jsonify({"error": "Producto no encontrado"}), 404
-                current_app.logger.debug(f"Merma (Producto): ID {id_producto}, Nombre '{item.get('nombre')}', Costo Producción: {item.get('costo_produccion', 0)}")
-                costo_unitario = item.get('costo_produccion', 0)
+                current_app.logger.debug(f"Merma (Producto): ID {id_producto}, Nombre '{item.get('nombre')}', Precio Venta: {item.get('precio', 0)}")
+                costo_unitario = item.get('precio', 0)
                 descripcion = f"Producto: {item.get('nombre')}"
             elif id_ingrediente:
                 # FIX: El nombre de la columna es 'costo_por_unidad', no 'costo_unitario'.
