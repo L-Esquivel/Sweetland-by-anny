@@ -24,7 +24,9 @@ def get_usuarios():
                 "SELECT id_usuario, nombre, email, telefono, direccion, rol FROM usuarios WHERE tenant_id = %s", 
                 (current_user.tenant_id,)
             )
-            rows = cursor.fetchall()
+            rows_raw = cursor.fetchall()
+            # FIX: Convertir explícitamente a una lista de diccionarios para asegurar la serialización JSON.
+            rows = [dict(row) for row in rows_raw]
             return jsonify(rows)
     except Exception as e:
         current_app.logger.error(f"Error en get_usuarios: {e}")
@@ -42,16 +44,16 @@ def get_usuario(id):
                 "SELECT id_usuario, nombre, email, telefono, direccion, rol FROM usuarios WHERE id_usuario = %s AND tenant_id = %s", 
                 (id, current_user.tenant_id)
             )
-            row = cursor.fetchone()
-            if row:
-                return jsonify(row)
+            row_raw = cursor.fetchone()
+            if row_raw:
+                # FIX: Convertir a dict para asegurar la serialización.
+                return jsonify(dict(row_raw))
             return jsonify({"error": "Usuario no encontrado"}), 404
     except Exception as e:
         current_app.logger.error(f"Error en get_usuario: {e}")
         return jsonify({"error": "Error al obtener el usuario"}), 500
 
 @usuarios_bp.route("/", methods=["POST"])
-@login_required
 @admin_required
 def add_usuario():
     data = request.json
@@ -81,7 +83,6 @@ def add_usuario():
         return jsonify({"error": "El email ya podría estar registrado"}), 400
 
 @usuarios_bp.route("/<int:id>", methods=["PUT"])
-@login_required
 @admin_required
 def update_usuario(id):
     data      = request.json
@@ -116,7 +117,6 @@ def update_usuario(id):
         return jsonify({"error": "Error al actualizar el usuario"}), 500
 
 @usuarios_bp.route("/<int:id>", methods=["DELETE"])
-@login_required
 @admin_required
 def delete_usuario(id):
     # 🛡️ Protección: Evitar que un admin se borre a sí mismo.

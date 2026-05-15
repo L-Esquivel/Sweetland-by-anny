@@ -178,7 +178,6 @@ def update_estado_pedido(id):
         return jsonify({"error": "Error al actualizar el estado del pedido"}), 500
 
 @pedidos_bp.route("/<int:id>", methods=["DELETE"])
-@login_required
 @admin_required
 def delete_pedido(id):
     tenant_id = current_user.tenant_id

@@ -19,14 +19,15 @@ def get_ingredientes():
         with conn.cursor(cursor_factory=DictCursor) as cursor:
             # 💡 SAAS-IFICATION: Filtramos por tenant_id.
             cursor.execute("SELECT * FROM ingredientes WHERE tenant_id = %s ORDER BY nombre", (tenant_id,))
-            ingredientes = cursor.fetchall()
+            ingredientes_raw = cursor.fetchall()
+            # FIX: Convertir a una lista de diccionarios para una serialización JSON correcta.
+            ingredientes = [dict(row) for row in ingredientes_raw]
             return jsonify(ingredientes)
     except Exception as e:
         logger.error(f"Error en get_ingredientes: {e}", exc_info=True)
         return jsonify({"error": "Error al obtener los insumos"}), 500
 
 @ingredientes_bp.route("/", methods=["POST"])
-@login_required
 @admin_required
 def create_ingrediente():
     tenant_id = current_user.tenant_id
@@ -62,7 +63,6 @@ def create_ingrediente():
         return jsonify({"error": "Error al crear el insumo"}), 500
 
 @ingredientes_bp.route("/<int:id>", methods=["PUT"])
-@login_required
 @admin_required
 def update_ingrediente(id):
     tenant_id = current_user.tenant_id
@@ -94,7 +94,6 @@ def update_ingrediente(id):
         return jsonify({"error": "Error al actualizar el insumo"}), 500
 
 @ingredientes_bp.route("/<int:id>", methods=["DELETE"])
-@login_required
 @admin_required
 def delete_ingrediente(id):
     tenant_id = current_user.tenant_id

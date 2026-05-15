@@ -23,7 +23,6 @@ cloudinary.config(
 # SUBIDA DE IMAGEN A LA NUBE
 # ==========================================
 @productos_bp.route("/upload-image", methods=["POST"])
-@login_required
 @admin_required
 def upload_image():
     if 'imagen' not in request.files:
@@ -69,16 +68,21 @@ def get_productos():
     try:
         # Usamos un 'with' para que el cursor se cierre automáticamente
         with conn.cursor(cursor_factory=DictCursor) as cursor:
-            # La sintaxis de la consulta SQL es la misma
-            cursor.execute("SELECT * FROM productos WHERE tenant_id = %s", (tenant_id,))
-            productos = cursor.fetchall()
-            return jsonify(productos) # DictCursor ya devuelve una lista de diccionarios
+            # FIX: Se convierten los resultados a una lista de diccionarios para asegurar la serialización a JSON.
+            # Esto soluciona el problema de la tabla de productos que aparecía vacía.
+            # También se usa COALESCE para asegurar que el precio nunca sea nulo y evitar errores de 'NaN' en el frontend.
+            cursor.execute("""
+                SELECT id_producto, nombre, categoria, descripcion, COALESCE(precio, 0) as precio, imagen, stock, controla_stock, costo_produccion, pax, utilidad_porcentaje 
+                FROM productos WHERE tenant_id = %s ORDER BY nombre
+            """, (tenant_id,))
+            productos_raw = cursor.fetchall()
+            productos = [dict(row) for row in productos_raw]
+            return jsonify(productos)
     except Exception as e:
         current_app.logger.error(f"Error en get_productos: {e}")
         return jsonify({"error": "Error al obtener productos"}), 500
 
 @productos_bp.route("/", methods=["POST"])
-@login_required
 @admin_required
 def add_producto():
     data = request.json
@@ -106,7 +110,6 @@ def add_producto():
         return jsonify({"error": "Error al crear el producto"}), 500
 
 @productos_bp.route("/<int:id>", methods=["PUT"])
-@login_required
 @admin_required
 def update_producto(id):
     data = request.json
@@ -136,7 +139,6 @@ def update_producto(id):
         return jsonify({"error": "Error al actualizar el producto"}), 500
 
 @productos_bp.route("/<int:id>", methods=["DELETE"])
-@login_required
 @admin_required
 def delete_producto(id):
     tenant_id = current_user.tenant_id

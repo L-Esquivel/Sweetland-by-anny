@@ -22,15 +22,19 @@ def get_empaques():
     try:
         with conn.cursor(cursor_factory=DictCursor) as cursor:
             # 💡 SAAS-IFICATION: Filtramos por tenant_id.
-            cursor.execute("SELECT id_empaque, nombre, descripcion, precio FROM empaques WHERE tenant_id = %s ORDER BY nombre", (tenant_id,))
-            empaques = cursor.fetchall()
+            # FIX: Se usa COALESCE para evitar precios nulos (NaN en frontend) y se convierte a dict.
+            cursor.execute("""
+                SELECT id_empaque, nombre, descripcion, COALESCE(precio, 0) as precio 
+                FROM empaques WHERE tenant_id = %s ORDER BY nombre
+            """, (tenant_id,))
+            empaques_raw = cursor.fetchall()
+            empaques = [dict(row) for row in empaques_raw]
             return jsonify(empaques)
     except Exception as e:
         logger.error(f"Error en get_empaques: {str(e)}")
         return jsonify({"error": "Error al obtener el catálogo de empaques"}), 500
 
 @empaques_bp.route("/", methods=["POST"])
-@login_required
 @admin_required # 💡 FIX: Se añade decorador para que solo admins puedan crear empaques.
 def add_empaque():
     tenant_id = current_user.tenant_id
@@ -60,7 +64,7 @@ def add_empaque():
         return jsonify({"error": "Error interno al crear el empaque"}), 500
 
 @empaques_bp.route("/<int:id>", methods=["PUT"])
-@login_required
+@admin_required # FIX: Solo admins pueden modificar el catálogo.
 def update_empaque(id):
     tenant_id = current_user.tenant_id
     try:
@@ -91,7 +95,7 @@ def update_empaque(id):
         return jsonify({"error": "Error al procesar los datos del empaque"}), 500
 
 @empaques_bp.route("/<int:id>", methods=["DELETE"])
-@login_required
+@admin_required # FIX: Solo admins pueden borrar del catálogo.
 def delete_empaque(id):
     tenant_id = current_user.tenant_id
     try:

@@ -28,7 +28,9 @@ def get_merma_registros():
             query += " ORDER BY fecha DESC"
 
             cursor.execute(query, tuple(params))
-            registros = cursor.fetchall()
+            registros_raw = cursor.fetchall()
+            # FIX: Convertir a dict para asegurar la serialización JSON y que la tabla se muestre.
+            registros = [dict(r) for r in registros_raw]
             for registro in registros:
                 if isinstance(registro.get('fecha'), datetime.date):
                     registro['fecha'] = registro['fecha'].isoformat()
@@ -38,7 +40,6 @@ def get_merma_registros():
         return jsonify({"error": "Error al obtener registros de merma"}), 500
 
 @merma_bp.route("/", methods=["POST"])
-@login_required
 @admin_required
 def add_merma_registro():
     data = request.get_json()
@@ -86,7 +87,6 @@ def add_merma_registro():
         return jsonify({"error": "Error al añadir registro de merma"}), 500
 
 @merma_bp.route("/<int:id>", methods=["DELETE"])
-@login_required
 @admin_required
 def delete_merma_registro(id):
     tenant_id = current_user.tenant_id

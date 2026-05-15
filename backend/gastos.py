@@ -30,7 +30,9 @@ def get_gastos():
             query += " ORDER BY fecha DESC"
             
             cursor.execute(query, tuple(params))
-            gastos = cursor.fetchall()
+            gastos_raw = cursor.fetchall()
+            # FIX: Convertir a dict para asegurar la serialización JSON y que la tabla se muestre.
+            gastos = [dict(g) for g in gastos_raw]
             # Convierte objetos de fecha a string para la serialización JSON
             for gasto in gastos:
                 if isinstance(gasto.get('fecha'), datetime.date):
@@ -41,7 +43,6 @@ def get_gastos():
         return jsonify({"error": "Error al obtener los gastos"}), 500
 
 @gastos_bp.route("/", methods=["POST"])
-@login_required
 @admin_required
 def add_gasto():
     data = request.get_json()
@@ -71,7 +72,6 @@ def add_gasto():
         return jsonify({"error": "Error al registrar el gasto"}), 500
 
 @gastos_bp.route("/<int:id>", methods=["PUT"])
-@login_required
 @admin_required
 def update_gasto(id):
     tenant_id = current_user.tenant_id
@@ -105,7 +105,6 @@ def update_gasto(id):
         return jsonify({"error": "Error al actualizar el gasto"}), 500
 
 @gastos_bp.route("/<int:id>", methods=["DELETE"])
-@login_required
 @admin_required
 def delete_gasto(id):
     tenant_id = current_user.tenant_id

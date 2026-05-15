@@ -163,8 +163,10 @@ def get_recetas():
                 LEFT JOIN ingredientes i ON ri.id_ingrediente = i.id_ingrediente AND i.tenant_id = %s
                 WHERE ri.tenant_id = %s
             """, (tenant_id, tenant_id, tenant_id))
-            filas = cursor.fetchall()
-            return jsonify(filas if filas else [])
+            filas_raw = cursor.fetchall()
+            # FIX: Convertir a dict para asegurar la serialización JSON.
+            filas = [dict(row) for row in filas_raw]
+            return jsonify(filas)
     except Exception as e:
         logger.error(f"Error en get_recetas: {str(e)}")
         return jsonify({"error": "Error al obtener las recetas"}), 500
@@ -188,7 +190,9 @@ def get_recetas_por_producto(producto_id):
                 LEFT JOIN ingredientes i ON ri.id_ingrediente = i.id_ingrediente AND i.tenant_id = %s
                 WHERE ri.id_producto = %s AND ri.tenant_id = %s
             """, (tenant_id, producto_id, tenant_id))
-            recetas = cursor.fetchall()
+            recetas_raw = cursor.fetchall()
+            # FIX: Convertir a dict para asegurar la serialización JSON.
+            recetas = [dict(row) for row in recetas_raw]
 
             # Empaques
             cursor.execute("""
@@ -198,7 +202,9 @@ def get_recetas_por_producto(producto_id):
                 LEFT JOIN empaques e ON re.id_empaque = e.id_empaque AND e.tenant_id = %s
                 WHERE re.id_producto = %s AND re.tenant_id = %s
             """, (tenant_id, producto_id, tenant_id))
-            empaques = cursor.fetchall()
+            empaques_raw = cursor.fetchall()
+            # FIX: Convertir a dict para asegurar la serialización JSON.
+            empaques = [dict(row) for row in empaques_raw]
 
             # Costos
             costos = calcular_costo_completo(producto_id, tenant_id)
