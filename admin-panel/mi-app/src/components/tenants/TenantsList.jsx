@@ -157,7 +157,7 @@ function TenantsList() {
                 {availableModules.map(module => (
                   <div key={module.module_key} className="col-md-6 mb-3">
                     <label htmlFor={`label-for-${module.module_key}`} className="form-label fw-bold">
-                      {module.icon} {module.label || module.module_key}
+                      {module.label || module.module_key}
                     </label>
                     <div className="input-group">
                       <input
