@@ -76,12 +76,22 @@ def get_stats():
         merma_rango_raw = cursor.fetchone()
         resumen['total_merma_rango'] = float(merma_rango_raw.get('total_merma_rango') or 0)
 
-        # 5. Datos para la gráfica para el rango
-        cursor.execute(f"""
-            SELECT DATE(fecha_pedido) as fecha, SUM(total) as venta 
-            FROM pedidos {where_pedidos}
-            GROUP BY DATE(fecha_pedido) ORDER BY fecha ASC
-        """, params_with_tenant)
+        # 5. Datos para la gráfica para el rango (VERSIÓN MEJORADA)
+        # 💡 FIX: Se genera una serie de fechas completa para el rango y se unen las ventas.
+        # Esto asegura que haya un punto de datos (incluso si es 0) para cada día,
+        # lo que hace que la gráfica sea continua y más fácil de renderizar en el frontend.
+        cursor.execute("""
+            WITH date_series AS (
+                SELECT generate_series(%s::date, %s::date, '1 day'::interval)::date as fecha
+            )
+            SELECT 
+                d.fecha,
+                COALESCE(SUM(p.total), 0) as venta
+            FROM date_series d
+            LEFT JOIN pedidos p ON DATE(p.fecha_pedido) = d.fecha AND p.tenant_id = %s AND p.estado != 'cancelado'
+            GROUP BY d.fecha
+            ORDER BY d.fecha ASC
+        """, (fecha_inicio_str, fecha_fin_str, tenant_id))
         grafica_raw = cursor.fetchall()
         grafica = [{"fecha": str(row['fecha']), "venta": float(row['venta'])} for row in grafica_raw]
 
