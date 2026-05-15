@@ -35,7 +35,6 @@ def get_empaques():
         return jsonify({"error": "Error al obtener el catálogo de empaques"}), 500
 
 @empaques_bp.route("/", methods=["POST"])
-@login_required
 @admin_required # 💡 FIX: Se añade decorador para que solo admins puedan crear empaques.
 def add_empaque():
     tenant_id = current_user.tenant_id
@@ -65,7 +64,6 @@ def add_empaque():
         return jsonify({"error": "Error interno al crear el empaque"}), 500
 
 @empaques_bp.route("/<int:id>", methods=["PUT"])
-@login_required
 @admin_required # FIX: Solo admins pueden modificar el catálogo.
 def update_empaque(id):
     tenant_id = current_user.tenant_id
@@ -93,7 +91,6 @@ def update_empaque(id):
         return jsonify({"error": "Error al actualizar el empaque"}), 500
 
 @empaques_bp.route("/<int:id>", methods=["DELETE"])
-@login_required
 @admin_required # FIX: Solo admins pueden borrar del catálogo.
 def delete_empaque(id):
     tenant_id = current_user.tenant_id

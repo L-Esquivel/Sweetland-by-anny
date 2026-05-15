@@ -12,7 +12,6 @@ usuarios_bp = Blueprint("usuarios_bp", __name__, url_prefix="/usuarios")
 # ============================================================
 
 @usuarios_bp.route("/", methods=["GET"])
-@login_required
 @admin_required
 def get_usuarios():
     conn = get_db()
@@ -33,7 +32,6 @@ def get_usuarios():
         return jsonify({"error": "Error al obtener usuarios"}), 500
 
 @usuarios_bp.route("/<int:id>", methods=["GET"])
-@login_required
 @admin_required
 def get_usuario(id):
     conn = get_db()
@@ -54,7 +52,6 @@ def get_usuario(id):
         return jsonify({"error": "Error al obtener el usuario"}), 500
 
 @usuarios_bp.route("/", methods=["POST"])
-@login_required
 @admin_required
 def add_usuario():
     data = request.json
@@ -84,7 +81,6 @@ def add_usuario():
         return jsonify({"error": "El email ya podría estar registrado"}), 400
 
 @usuarios_bp.route("/<int:id>", methods=["PUT"])
-@login_required
 @admin_required
 def update_usuario(id):
     data      = request.json
@@ -119,7 +115,6 @@ def update_usuario(id):
         return jsonify({"error": "Error al actualizar el usuario"}), 500
 
 @usuarios_bp.route("/<int:id>", methods=["DELETE"])
-@login_required
 @admin_required
 def delete_usuario(id):
     # 🛡️ Protección: Evitar que un admin se borre a sí mismo.

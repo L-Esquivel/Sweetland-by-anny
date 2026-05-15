@@ -8,7 +8,6 @@ import datetime
 merma_bp = Blueprint("merma_bp", __name__, url_prefix="/merma")
 
 @merma_bp.route("/", methods=["GET"])
-@login_required
 @admin_required
 def get_merma_registros():
     tenant_id = current_user.tenant_id
@@ -40,7 +39,6 @@ def get_merma_registros():
         return jsonify({"error": "Error al obtener registros de merma"}), 500
 
 @merma_bp.route("/", methods=["POST"])
-@login_required
 @admin_required
 def add_merma_registro():
     data = request.get_json()
@@ -92,7 +90,6 @@ def add_merma_registro():
         return jsonify({"error": "Error al añadir registro de merma"}), 500
 
 @merma_bp.route("/<int:id>", methods=["DELETE"])
-@login_required
 @admin_required
 def delete_merma_registro(id):
     tenant_id = current_user.tenant_id

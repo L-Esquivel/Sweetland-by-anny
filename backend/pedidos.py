@@ -31,7 +31,6 @@ def procesar_descuento_stock(cursor, pedido_id, tenant_id):
 # ==================== STATS (Dashboard) ====================
 
 @pedidos_bp.route("/stats", methods=["GET"])
-@login_required
 @admin_required
 def get_stats():
     tenant_id = current_user.tenant_id
@@ -150,7 +149,6 @@ def get_pedidos():
         return jsonify({"error": "Error al obtener pedidos"}), 500
 
 @pedidos_bp.route("/<int:id>/estado", methods=["PUT"])
-@login_required
 @admin_required # FIX: Se añade decorador de seguridad. Solo admins pueden cambiar el estado.
 def update_estado_pedido(id):
     data = request.get_json()
@@ -179,7 +177,6 @@ def update_estado_pedido(id):
         return jsonify({"error": "Error al actualizar el estado del pedido"}), 500
 
 @pedidos_bp.route("/<int:id>", methods=["DELETE"])
-@login_required
 @admin_required
 def delete_pedido(id):
     tenant_id = current_user.tenant_id
