@@ -41,12 +41,8 @@ function TenantsList() {
         ]);
         setTenants(tenantsData);
         setAvailableModules(modulesData);
-        // Pre-llenar las etiquetas personalizadas con los valores por defecto
-        const initialLabels = {};
-        modulesData.forEach(m => {
-            initialLabels[m.module_key] = m.label;
-        });
-        setCustomLabels(initialLabels);
+        // No pre-llenamos las etiquetas. El estado inicial de customLabels es {},
+        // por lo que los inputs estarán vacíos y mostrarán el placeholder.
       } catch (err) {
         setError(err.message || 'Error al cargar datos iniciales.');
       } finally {
@@ -76,10 +72,8 @@ function TenantsList() {
       await tenantsService.createTenant(payload);
       setNotification({ message: 'Tenant creado con éxito', type: 'success' });
       setForm({ tenant_name: '', admin_name: '', admin_email: '', admin_password: '' });
-      // Resetear etiquetas a los valores por defecto
-      const initialLabels = {};
-      availableModules.forEach(m => { initialLabels[m.module_key] = m.label; });
-      setCustomLabels(initialLabels);
+      // Resetear etiquetas a un objeto vacío para el siguiente formulario.
+      setCustomLabels({});
       fetchTenants(); // Recargar la lista
     } catch (err) {
       setNotification({ message: err.message, type: 'error' });
@@ -154,7 +148,8 @@ function TenantsList() {
                         // y evita el bug de "uncontrolled to controlled" sin bloquear la edición.
                         value={customLabels[module.module_key] || ''}
                         onChange={handleLabelChange}
-                        placeholder={`Personalizar: ${module.label || 'Módulo'}`}
+                        // FIX: Usamos module_key como fallback para el placeholder, igual que en la etiqueta.
+                        placeholder={`Personalizar: ${module.label || module.module_key}`}
                       />
                     </div>
                   </div>
