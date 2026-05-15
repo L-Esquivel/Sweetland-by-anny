@@ -23,6 +23,7 @@ cloudinary.config(
 # SUBIDA DE IMAGEN A LA NUBE
 # ==========================================
 @productos_bp.route("/upload-image", methods=["POST"])
+@login_required
 @admin_required
 def upload_image():
     if 'imagen' not in request.files:
@@ -83,6 +84,7 @@ def get_productos():
         return jsonify({"error": "Error al obtener productos"}), 500
 
 @productos_bp.route("/", methods=["POST"])
+@login_required
 @admin_required
 def add_producto():
     data = request.json
@@ -110,6 +112,7 @@ def add_producto():
         return jsonify({"error": "Error al crear el producto"}), 500
 
 @productos_bp.route("/<int:id>", methods=["PUT"])
+@login_required
 @admin_required
 def update_producto(id):
     data = request.json
@@ -139,6 +142,7 @@ def update_producto(id):
         return jsonify({"error": "Error al actualizar el producto"}), 500
 
 @productos_bp.route("/<int:id>", methods=["DELETE"])
+@login_required
 @admin_required
 def delete_producto(id):
     tenant_id = current_user.tenant_id
