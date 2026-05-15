@@ -1,8 +1,8 @@
 from flask import Blueprint, jsonify, request
 from flask_login import login_required, current_user
-from utils import admin_required, registrar_log # 🛡️ Importamos registrar_log
-from db import get_db # 🟢 Importamos el nuevo gestor de DB
-from psycopg2.extras import DictCursor # 🟢 Para obtener resultados como diccionarios
+from utils import admin_required, registrar_log # 🛡️ Import the log utility
+from db import get_db # 🟢 Import the new DB manager
+from psycopg2.extras import DictCursor # 🟢 To get results as dictionaries
 import logging
 
 logging.basicConfig(level=logging.DEBUG)
@@ -17,9 +17,9 @@ def get_ingredientes():
     conn = get_db()
     try:
         with conn.cursor(cursor_factory=DictCursor) as cursor:
-            # 💡 SAAS-IFICATION: Filtramos por tenant_id.
-            # FIX: Se usan COALESCE para evitar valores nulos en el frontend (que causan precios en $0 o datos faltantes)
-            # y se seleccionan columnas explícitamente para mayor claridad.
+            # 💡 SAAS-IFICATION: Filter by tenant_id.
+            # FIX: Use COALESCE to avoid null values on the frontend (which cause $0 prices or missing data)
+            # and select columns explicitly for clarity.
             cursor.execute("""
                 SELECT 
                     id_ingrediente, nombre, unidad_medida, 
@@ -28,12 +28,12 @@ def get_ingredientes():
                 FROM ingredientes WHERE tenant_id = %s ORDER BY nombre
             """, (tenant_id,))
             ingredientes_raw = cursor.fetchall()
-            # FIX: Convertir a una lista de diccionarios para una serialización JSON correcta.
+            # FIX: Convert to a list of dictionaries for correct JSON serialization.
             ingredientes = [dict(row) for row in ingredientes_raw]
             return jsonify(ingredientes)
     except Exception as e:
         logger.error(f"Error en get_ingredientes: {e}", exc_info=True)
-        return jsonify({"error": "Error al obtener los insumos"}), 500
+        return jsonify({"error": "Error fetching supplies"}), 500
 
 @ingredientes_bp.route("/", methods=["POST"])
 @admin_required
@@ -43,32 +43,32 @@ def create_ingrediente():
     try:
         data = request.get_json() or {}
         nombre = data.get("nombre")
-        # 💡 FIX: Se aceptan 'unidad_medida' o 'unidad' desde el frontend.
-        # Esto soluciona un error 400 cuando el frontend envía 'unidad' en lugar
-        # del nombre de la columna de la base de datos ('unidad_medida').
+        # 💡 FIX: Accept 'unidad_medida' or 'unidad' from the frontend.
+        # This fixes a 400 error when the frontend sends 'unidad' instead of
+        # the database column name ('unidad_medida').
         unidad_medida = data.get("unidad_medida") or data.get("unidad")
         stock = data.get("stock", 0)
         costo_por_unidad = data.get("costo_por_unidad", 0)
 
         if not nombre or not unidad_medida:
-            return jsonify({"error": "Nombre y Unidad de Medida son obligatorios"}), 400
+            return jsonify({"error": "Name and Unit of Measurement are required"}), 400
 
         with conn.cursor() as cursor:
-            # 💡 SAAS-IFICATION: Insertamos el tenant_id.
+            # 💡 SAAS-IFICATION: Insert the tenant_id.
             cursor.execute("""
                 INSERT INTO ingredientes (nombre, unidad_medida, stock, costo_por_unidad, tenant_id)
                 VALUES (%s, %s, %s, %s, %s)
             """, (nombre, unidad_medida, float(stock), float(costo_por_unidad), tenant_id))
             conn.commit()
 
-        # �️ AUDITORÍA: Registro de creación
-        registrar_log(f"Creó nuevo ingrediente: {nombre}")
+        # 🛡️ AUDIT: Creation log
+        registrar_log(f"Created new ingredient: {nombre}")
         
-        return jsonify({"mensaje": "Ingrediente creado correctamente"}), 201
+        return jsonify({"message": "Ingredient created successfully"}), 201
     except Exception as e:
         conn.rollback()
         logger.error(f"Error en create_ingrediente: {e}", exc_info=True)
-        return jsonify({"error": "Error al crear el insumo"}), 500
+        return jsonify({"error": "Error creating supply"}), 500
 
 @ingredientes_bp.route("/<int:id>", methods=["PUT"])
 @admin_required
@@ -78,13 +78,13 @@ def update_ingrediente(id):
     try:
         data = request.get_json() or {}
         nombre = data.get("nombre")
-        # 💡 FIX: Se aceptan 'unidad_medida' o 'unidad' para consistencia.
+        # 💡 FIX: Accept 'unidad_medida' or 'unidad' for consistency.
         unidad_medida = data.get("unidad_medida") or data.get("unidad")
         stock = data.get("stock")
         costo_por_unidad = data.get("costo_por_unidad")
 
         with conn.cursor() as cursor:
-            # 💡 SAAS-IFICATION: Aseguramos que solo se pueda actualizar un ingrediente del tenant correcto.
+            # 💡 SAAS-IFICATION: Ensure only an ingredient from the correct tenant can be updated.
             cursor.execute("""
                 UPDATE ingredientes
                 SET nombre=%s, unidad_medida=%s, stock=%s, costo_por_unidad=%s
@@ -92,14 +92,14 @@ def update_ingrediente(id):
             """, (nombre, unidad_medida, float(stock or 0), float(costo_por_unidad or 0), id, tenant_id))
             conn.commit()
 
-        # �️ AUDITORÍA: Registro de actualización
-        registrar_log(f"Actualizó el ingrediente ID {id}: {nombre}")
+        # 🛡️ AUDIT: Update log
+        registrar_log(f"Updated ingredient ID {id}: {nombre}")
 
-        return jsonify({"mensaje": "Ingrediente actualizado"})
+        return jsonify({"message": "Ingredient updated successfully"})
     except Exception as e:
         conn.rollback()
         logger.error(f"Error en update_ingrediente: {e}", exc_info=True)
-        return jsonify({"error": "Error al actualizar el insumo"}), 500
+        return jsonify({"error": "Error updating supply"}), 500
 
 @ingredientes_bp.route("/<int:id>", methods=["DELETE"])
 @admin_required
@@ -108,24 +108,24 @@ def delete_ingrediente(id):
     conn = get_db()
     try:
         with conn.cursor(cursor_factory=DictCursor) as cursor:
-            # VERIFICACIÓN: ¿Está este ingrediente en uso por alguna receta?
+            # VERIFICATION: Is this ingredient in use by any recipe?
             cursor.execute("SELECT COUNT(*) as total FROM recetas_ingredientes WHERE id_ingrediente = %s AND tenant_id = %s", (id, tenant_id))
             if cursor.fetchone()['total'] > 0:
-                return jsonify({"error": "No se puede eliminar: el ingrediente está en uso en una o más recetas."}), 400
+                return jsonify({"error": "Cannot delete: the ingredient is in use in one or more recipes."}), 400
 
-            # 💡 SAAS-IFICATION: Aseguramos que solo se pueda borrar un ingrediente del tenant correcto.
+            # 💡 SAAS-IFICATION: Ensure only an ingredient from the correct tenant can be deleted.
             cursor.execute("DELETE FROM ingredientes WHERE id_ingrediente = %s AND tenant_id = %s", (id, tenant_id))
             
             if cursor.rowcount == 0:
-                return jsonify({"error": "Ingrediente no encontrado o no pertenece a tu organización"}), 404
+                return jsonify({"error": "Ingredient not found or does not belong to your organization"}), 404
 
             conn.commit()
 
-        # 🛡️ AUDITORÍA: Registro de eliminación
-        registrar_log(f"Eliminó el ingrediente ID {id}")
+        # 🛡️ AUDIT: Deletion log
+        registrar_log(f"Deleted ingredient ID {id}")
 
-        return jsonify({"mensaje": "Eliminado correctamente"})
+        return jsonify({"message": "Deleted successfully"})
     except Exception as e:
         conn.rollback()
         logger.error(f"Error en delete_ingrediente: {e}", exc_info=True)
-        return jsonify({"error": "Error al eliminar el insumo"}), 500
+        return jsonify({"error": "Error deleting supply"}), 500
