@@ -41,8 +41,15 @@ function TenantsList() {
         ]);
         setTenants(tenantsData);
         setAvailableModules(modulesData);
-        // No pre-llenamos las etiquetas. El estado inicial de customLabels es {},
-        // por lo que los inputs estarán vacíos y mostrarán el placeholder.
+        // 💡 FIX: Se inicializa el estado de las etiquetas personalizadas.
+        // Creamos una entrada para cada módulo con un string vacío.
+        // Esto asegura que cada input sea un "componente controlado" desde el inicio
+        // y soluciona el problema de no poder editar el texto.
+        const initialLabels = modulesData.reduce((acc, module) => {
+          acc[module.module_key] = '';
+          return acc;
+        }, {});
+        setCustomLabels(initialLabels);
       } catch (err) {
         setError(err.message || 'Error al cargar datos iniciales.');
       } finally {
@@ -72,8 +79,12 @@ function TenantsList() {
       await tenantsService.createTenant(payload);
       setNotification({ message: 'Tenant creado con éxito', type: 'success' });
       setForm({ tenant_name: '', admin_name: '', admin_email: '', admin_password: '' });
-      // Resetear etiquetas a un objeto vacío para el siguiente formulario.
-      setCustomLabels({});
+      // Reseteamos las etiquetas a su estado inicial (vacío) para el siguiente formulario.
+      const initialLabels = availableModules.reduce((acc, module) => {
+        acc[module.module_key] = '';
+        return acc;
+      }, {});
+      setCustomLabels(initialLabels);
       fetchTenants(); // Recargar la lista
     } catch (err) {
       setNotification({ message: err.message, type: 'error' });
@@ -148,7 +159,9 @@ function TenantsList() {
                         // y evita el bug de "uncontrolled to controlled" sin bloquear la edición.
                         value={customLabels[module.module_key] || ''}
                         onChange={handleLabelChange}
-                        // FIX: Usamos module_key como fallback para el placeholder, igual que en la etiqueta.
+                        // 💡 FIX: El placeholder ahora usa la etiqueta (label) del módulo o su clave (module_key)
+                        // como fallback. Esto garantiza que cada campo muestre a qué módulo corresponde,
+                        // por ejemplo: "Personalizar: productos".
                         placeholder={`Personalizar: ${module.label || module.module_key}`}
                       />
                     </div>
