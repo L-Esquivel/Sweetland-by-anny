@@ -5,7 +5,7 @@ from models import User
 from extensions import limiter
 from db import get_db # 🟢 Import the new DB manager
 from psycopg2.extras import DictCursor # 🟢 To get results as dictionaries
-from utils import registrar_log
+from utils import register_log
 from authlib.integrations.flask_client import OAuth
 from itsdangerous import URLSafeTimedSerializer
 import os
@@ -58,7 +58,7 @@ def google_callback():
                 # If the user already exists, load them with all their data
                 usuario = User.get_by_id(user_row["id_usuario"])
                 login_user(usuario)
-                registrar_log(f"Logged in via Google: {email}")
+                register_log(f"Logged in via Google: {email}")
             else:
                 # 💡 SAAS-IFICATION: New Google sign-ups are associated with the public tenant (1).
                 tenant_id_publico = os.getenv('PUBLIC_TENANT_ID', 1)
@@ -74,7 +74,7 @@ def google_callback():
                 usuario = User.get_by_id(new_id)
                 if usuario:
                     login_user(usuario)
-                    registrar_log(f"New user registered via Google: {email}")
+                    register_log(f"New user registered via Google: {email}")
 
             # 💡 IMPROVEMENT: Use an environment variable for the frontend URL.
             frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:5173')
@@ -98,7 +98,7 @@ def login():
     user = User.get_by_email(email)
     if user and user.check_password(password):
         login_user(user)
-        registrar_log(f"Logged in: {email}")
+        register_log(f"Logged in: {email}")
         return jsonify({
             "message": "Login successful",
             "usuario": {
@@ -109,7 +109,7 @@ def login():
             }
         })
     
-    registrar_log(f"Failed login attempt for: {email}")
+    register_log(f"Failed login attempt for: {email}")
     return jsonify({"error": "Invalid credentials"}), 401
 
 # =========================
@@ -172,7 +172,7 @@ def forgot_password():
             thread = threading.Thread(target=send_async_email_sendgrid, args=(current_app._get_current_object(), email, user.nombre, reset_url))
             thread.start()
             
-            registrar_log(f"Password recovery requested (process initiated) for: {email}")
+            register_log(f"Password recovery requested (process initiated) for: {email}")
 
         # English comment: Always return a generic success message.
         # This prevents user enumeration attacks, as the response is the same whether the user
@@ -201,7 +201,7 @@ def reset_password_confirm():
         with conn.cursor() as cursor:
             cursor.execute("UPDATE usuarios SET password = %s WHERE email = %s", (hashed_pw, email))
             conn.commit()
-            registrar_log(f"Successfully reset password for: {email}")
+            register_log(f"Successfully reset password for: {email}")
             return jsonify({"message": "Password updated successfully"})
     except Exception as e:
         conn.rollback()
@@ -219,10 +219,10 @@ def login_cliente():
     # English comment: Verify user exists, password is correct, and role is 'cliente'.
     if user and user.check_password(data.get("password")) and user.rol == 'cliente':
         login_user(user)
-        registrar_log(f"Customer logged in: {user.email}")
+        register_log(f"Customer logged in: {user.email}")
         return jsonify({"usuario": {"id": user.id, "nombre": user.nombre, "email": user.email, "telefono": user.telefono, "direccion": user.direccion}})
     
-    registrar_log(f"Failed customer login attempt for: {data.get('email')}")
+    register_log(f"Failed customer login attempt for: {data.get('email')}")
     return jsonify({"error": "Invalid credentials"}), 401
 
 @auth_bp.route("/public/registro", methods=["POST"])
@@ -250,7 +250,7 @@ def registro_cliente():
                 VALUES (%s, %s, %s, %s, %s, 'cliente', %s)
             """, (nombre, email, hashed, data.get("telefono"), data.get("direccion"), tenant_id_publico))
             conn.commit()
-            registrar_log(f"New customer registered: {email}")
+            register_log(f"New customer registered: {email}")
             return jsonify({"message": "Registration successful"}), 201
     except Exception as e:
         conn.rollback()
@@ -263,7 +263,7 @@ def registro_cliente():
 @auth_bp.route("/logout", methods=["POST"])
 @login_required
 def logout():
-    registrar_log(f"Logged out")
+    register_log(f"Logged out")
     logout_user()
     return jsonify({"message": "Session closed"})
 

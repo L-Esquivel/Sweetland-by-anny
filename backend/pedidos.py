@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request, current_app
 from flask_login import login_required, current_user
-from utils import admin_required, registrar_log # 🛡️ Import the audit log utility
+from utils import admin_required, register_log # 🛡️ Import the audit log utility
 from db import get_db # 🟢 Import the new DB manager
 from psycopg2.extras import DictCursor # 🟢 To get results as dictionaries
 import logging, datetime
@@ -224,7 +224,7 @@ def create_order_admin():
                                (pedido_id, prod['producto_id'], prod['cantidad'], prod['precio_unitario'], prod['subtotal'], tenant_id))
             
             conn.commit()
-            registrar_log(f"Admin created new order ID {pedido_id}")
+            register_log(f"Admin created new order ID {pedido_id}")
             return jsonify({"message": "Order created successfully", "id_pedido": pedido_id}), 201
 
     except ValueError as e:
@@ -255,7 +255,7 @@ def update_order_status(id):
         conn.commit()
 
         # 🛡️ LOG: Order status tracking
-        registrar_log(f"Updated order #{id} status from '{current_status_row.get('estado')}' to '{new_status}'")
+        register_log(f"Updated order #{id} status from '{current_status_row.get('estado')}' to '{new_status}'")
 
         return jsonify({"message": "Updated", "status": new_status})
     except Exception as e:
@@ -275,7 +275,7 @@ def delete_order(id):
         conn.commit()
 
         # 🛡️ LOG: Order deletion
-        registrar_log(f"Permanently deleted order ID {id}")
+        register_log(f"Permanently deleted order ID {id}")
 
         return jsonify({"message": "Order deleted successfully"})
     except Exception as e:
@@ -330,7 +330,7 @@ def create_public_order():
         conn.commit()
 
         # 🛡️ LOG: New incoming order
-        registrar_log(f"Received new web order: ID #{pedido_id}")
+        register_log(f"Received new web order: ID #{pedido_id}")
 
         return jsonify({"message": "Order received", "id_pedido": pedido_id}), 201
     except Exception as e:

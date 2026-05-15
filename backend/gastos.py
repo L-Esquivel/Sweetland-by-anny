@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request, current_app
 from flask_login import login_required, current_user
-from utils import admin_required, registrar_log # 🛡️ Import the log utility
+from utils import admin_required, register_log # 🛡️ Import the log utility
 from db import get_db # 🟢 Importamos el nuevo gestor de DB
 from psycopg2.extras import DictCursor # 🟢 Para obtener resultados como diccionarios
 import datetime
@@ -63,7 +63,7 @@ def add_expense():
                 VALUES (%s, %s, %s, %s, %s)
             """, (description, amount, category, date, tenant_id))
             conn.commit()
-            registrar_log(f"Registered new expense: {description} for ${amount}")
+            register_log(f"Registered new expense: {description} for ${amount}")
             return jsonify({"message": "Expense registered successfully"}), 201
     except Exception as e:
         conn.rollback()
@@ -96,7 +96,7 @@ def update_expense(id):
                 return jsonify({"error": "Expense not found or does not belong to your organization"}), 404
 
             conn.commit()
-            registrar_log(f"Updated expense ID {id}: {description}")
+            register_log(f"Updated expense ID {id}: {description}")
             return jsonify({"message": "Expense updated successfully"})
     except Exception as e:
         conn.rollback()
@@ -117,7 +117,7 @@ def delete_expense(id):
                 return jsonify({"error": "Expense not found or does not belong to your organization"}), 404
 
             conn.commit()
-            registrar_log(f"Deleted expense ID {id}")
+            register_log(f"Deleted expense ID {id}")
             return jsonify({"message": "Expense deleted successfully"})
     except Exception as e:
         conn.rollback()

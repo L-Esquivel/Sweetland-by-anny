@@ -6,8 +6,8 @@ from flask_login import login_required, current_user # 🟢 Import current_user
 from psycopg2.extras import DictCursor # 🟢 To get results as dictionaries
 
 from db import get_db # 🟢 Import the new DB manager
-from utils import admin_required, registrar_log # 🛡️ Import the log utility
-from recetas import calcular_costo_completo # Ensure this file is also migrated
+from utils import admin_required, register_log # 🛡️ Import the log utility
+from recetas import calculate_full_cost # Ensure this file is also migrated
 
 productos_bp = Blueprint("productos_bp", __name__, url_prefix="/productos")
 
@@ -44,7 +44,7 @@ def upload_image():
         secure_url = upload_result.get("secure_url")
         
         # 🛡️ AUDIT: File upload log
-        registrar_log(f"Uploaded new image to the cloud: {file.filename}")
+        register_log(f"Uploaded new image to the cloud: {file.filename}")
         
         return jsonify({
             "message": "Image successfully uploaded to the cloud ✅",
@@ -101,7 +101,7 @@ def add_product():
             conn.commit() # 🔵 Commit on the connection
             
             # 🛡️ AUDIT: Creation log
-            registrar_log(f"Created product: {nombre}")
+            register_log(f"Created product: {nombre}")
             
             return jsonify({"message": "Product created"}), 201
     except Exception as e:
@@ -131,7 +131,7 @@ def update_product(id):
             conn.commit()
             # calcular_costo_completo(id, tenant_id) # This function must also be migrated
             
-            registrar_log(f"Updated product ID {id}: {nombre}")
+            register_log(f"Updated product ID {id}: {nombre}")
             return jsonify({"message": "Product updated"})
     except Exception as e:
         conn.rollback()
@@ -150,7 +150,7 @@ def delete_product(id):
             conn.commit()
             
             # 🛡️ AUDIT: Deletion log
-            registrar_log(f"Deleted product ID {id}")
+            register_log(f"Deleted product ID {id}")
             
             return jsonify({"message": "Deleted"})
     except Exception as e:

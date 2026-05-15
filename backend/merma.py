@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request, current_app
 from flask_login import login_required, current_user
-from utils import admin_required, registrar_log
+from utils import admin_required, register_log
 from db import get_db # 🟢 Importamos el nuevo gestor de DB
 from psycopg2.extras import DictCursor # 🟢 Para obtener resultados como diccionarios
 import datetime
@@ -84,7 +84,7 @@ def add_waste_record():
             """, (id_producto, id_ingrediente, description, cantidad, loss_cost, fecha, motivo, tenant_id))
             conn.commit()
             
-            registrar_log(f"Registered waste for '{description}' with a cost of ${loss_cost}")
+            register_log(f"Registered waste for '{description}' with a cost of ${loss_cost}")
             return jsonify({"message": "Waste record added successfully"}), 201
     except Exception as e:
         conn.rollback()
@@ -102,7 +102,7 @@ def delete_waste_record(id):
             conn.commit()
             if cursor.rowcount == 0:
                 return jsonify({"error": "Waste record not found"}), 404
-            registrar_log(f"Deleted waste record ID {id}")
+            register_log(f"Deleted waste record ID {id}")
             return jsonify({"message": "Waste record deleted successfully"})
     except Exception as e:
         conn.rollback()

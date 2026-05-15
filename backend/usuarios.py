@@ -3,7 +3,7 @@ from flask_login import login_required, current_user
 from werkzeug.security import generate_password_hash
 from db import get_db # 🟢 Importamos el nuevo gestor de DB
 from psycopg2.extras import DictCursor # 🟢 Para obtener resultados como diccionarios
-from utils import admin_required, registrar_log
+from utils import admin_required, register_log
 import secrets
 import string
 
@@ -96,7 +96,7 @@ def add_user():
             if temporary_password:
                 response_data["temporary_password"] = temporary_password
             
-            registrar_log(f"Admin created new user: {email}")
+            register_log(f"Admin created new user: {email}")
             return jsonify(response_data), 201
     except Exception as e:
         conn.rollback()

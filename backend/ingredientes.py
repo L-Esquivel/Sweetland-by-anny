@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
 from flask_login import login_required, current_user
-from utils import admin_required, registrar_log # 🛡️ Import the log utility
+from utils import admin_required, register_log # 🛡️ Import the log utility
 from db import get_db # 🟢 Import the new DB manager
 from psycopg2.extras import DictCursor # 🟢 To get results as dictionaries
 import logging
@@ -62,7 +62,7 @@ def create_ingrediente():
             conn.commit()
 
         # 🛡️ AUDIT: Creation log
-        registrar_log(f"Created new ingredient: {nombre}")
+        register_log(f"Created new ingredient: {nombre}")
         
         return jsonify({"message": "Ingredient created successfully"}), 201
     except Exception as e:
@@ -93,7 +93,7 @@ def update_ingrediente(id):
             conn.commit()
 
         # 🛡️ AUDIT: Update log
-        registrar_log(f"Updated ingredient ID {id}: {nombre}")
+        register_log(f"Updated ingredient ID {id}: {nombre}")
 
         return jsonify({"message": "Ingredient updated successfully"})
     except Exception as e:
@@ -122,7 +122,7 @@ def delete_ingrediente(id):
             conn.commit()
 
         # 🛡️ AUDIT: Deletion log
-        registrar_log(f"Deleted ingredient ID {id}")
+        register_log(f"Deleted ingredient ID {id}")
 
         return jsonify({"message": "Deleted successfully"})
     except Exception as e:
