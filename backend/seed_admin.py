@@ -3,6 +3,7 @@ import psycopg2
 from werkzeug.security import generate_password_hash
 from dotenv import load_dotenv
 import getpass # To hide password input
+from psycopg2.extras import DictCursor # To access columns by name
 
 # --- Configuration ---
 # Load environment variables from .env file in the current directory
@@ -49,26 +50,26 @@ def create_admin_user():
 
         with conn.cursor(cursor_factory=DictCursor) as cursor:
             # 1. Create a new Tenant first
-            # 💡 MEJORA: Lógica diferenciada para superadmin y admin normal.
+            # 💡 IMPROVEMENT: Differentiated logic for superadmin and regular admin.
             if admin_role == 'superadmin':
-                tenant_name = "Precivox Platform" # Nombre fijo para el tenant de la plataforma.
+                tenant_name = "Precivox Platform" # Fixed name for the platform's tenant.
             else: # Es un 'admin'
                 tenant_name = input("Enter the organization's name (e.g., Sweetland): ")
                 if not tenant_name:
                     print("\n❌ Error: Organization name cannot be empty for an 'admin' role.")
                     return
             
-            # Buscamos si el tenant ya existe para reutilizarlo, si no, lo creamos.
+            # Check if the tenant already exists to reuse it; otherwise, create it.
             cursor.execute("SELECT id_tenant FROM tenants WHERE nombre = %s", (tenant_name,))
             tenant_row = cursor.fetchone()
 
             if tenant_row:
-                tenant_id = tenant_row[0]
+                tenant_id = tenant_row['id_tenant']
                 print(f"✅ Using existing tenant '{tenant_name}' with ID: {tenant_id}")
             else:
                 print(f"Creating new tenant: '{tenant_name}'...")
                 cursor.execute("INSERT INTO tenants (nombre) VALUES (%s) RETURNING id_tenant", (tenant_name,))
-                tenant_id = cursor.fetchone()[0]
+                tenant_id = cursor.fetchone()['id_tenant']
                 print(f"✅ Tenant created with ID: {tenant_id}")
 
             # 2. Create the Admin User associated with the new tenant
