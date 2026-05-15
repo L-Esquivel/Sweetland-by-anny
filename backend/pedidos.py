@@ -192,14 +192,14 @@ def create_pedido_admin():
             if not productos_a_insertar:
                 return jsonify({"error": "No se proporcionaron productos válidos en el pedido"}), 400
 
-            # 2. Insertar el pedido principal. Asume que la tabla 'pedidos' tiene una columna 'cliente_nombre'.
+            # 2. Insertar el pedido principal.
+            # FIX: Se elimina 'cliente_nombre' del INSERT. El nombre del cliente se obtiene a través del JOIN con la tabla 'usuarios' usando 'usuario_id'.
             cursor.execute("""
-                INSERT INTO pedidos (usuario_id, cliente_nombre, telefono, direccion, total, estado, tenant_id)
-                VALUES (%s, %s, %s, %s, %s, 'pendiente', %s)
+                INSERT INTO pedidos (usuario_id, telefono, direccion, total, estado, tenant_id)
+                VALUES (%s, %s, %s, %s, 'pendiente', %s)
                 RETURNING id_pedido
             """, (
                 data.get("usuario_id"), 
-                data.get("cliente_nombre"), 
                 data.get("telefono"), 
                 data.get("direccion"), 
                 total_pedido, 
