@@ -12,17 +12,21 @@ const TenantDashboard = ({ user }) => {
   const today = new Date();
   const thirtyDaysAgo = new Date(new Date().setDate(today.getDate() - 30));
   
+  // Estado para los inputs de fecha (controlado)
   const [dateRange, setDateRange] = useState({
     startDate: thirtyDaysAgo.toISOString().split('T')[0],
     endDate: today.toISOString().split('T')[0],
   });
+
+  // Estado para los filtros aplicados que disparan el fetch
+  const [appliedFilters, setAppliedFilters] = useState(dateRange);
 
   useEffect(() => {
     const fetchStats = async () => {
       setLoading(true);
       setError('');
       try {
-        const data = await pedidosService.getStats(dateRange.startDate, dateRange.endDate);
+        const data = await pedidosService.getStats(appliedFilters.startDate, appliedFilters.endDate);
         setStats(data);
       } catch (err) {
         setError('No se pudieron cargar las estadísticas. Intenta de nuevo.');
@@ -33,10 +37,20 @@ const TenantDashboard = ({ user }) => {
     };
 
     fetchStats();
-  }, [dateRange]);
+  }, [appliedFilters]); // Se ejecuta solo cuando se aplican los filtros
 
   const handleDateChange = (e) => {
     setDateRange(prev => ({ ...prev, [e.target.name]: e.target.value }));
+  };
+
+  const handleApplyFilters = () => {
+    // Validación simple para evitar rangos inválidos
+    if (new Date(dateRange.startDate) > new Date(dateRange.endDate)) {
+      setError('La fecha de inicio no puede ser posterior a la fecha de fin.');
+      return;
+    }
+    setError('');
+    setAppliedFilters(dateRange);
   };
 
   const formatearMoneda = (valor) => {
@@ -65,6 +79,9 @@ const TenantDashboard = ({ user }) => {
           <div>
             <label htmlFor="endDate" className="form-label">Hasta</label>
             <input type="date" id="endDate" name="endDate" className="form-control" value={dateRange.endDate} onChange={handleDateChange} />
+          </div>
+          <div className="align-self-end">
+            <button className="btn btn-primary" onClick={handleApplyFilters}>Aplicar</button>
           </div>
         </div>
       </div>
