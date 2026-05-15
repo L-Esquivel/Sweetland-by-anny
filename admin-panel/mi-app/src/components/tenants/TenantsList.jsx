@@ -150,10 +150,11 @@ function TenantsList() {
                         className="form-control"
                         name={module.module_key}
                         id={`label-for-${module.module_key}`}
-                        // 💡 FIX 2: Aseguramos que el valor siempre sea un string para evitar el bug.
-                        value={String(customLabels[module.module_key] || '')}
+                        // 💡 FIX: El valor se toma del estado 'customLabels'. El '|| ""' asegura que siempre sea un string
+                        // y evita el bug de "uncontrolled to controlled" sin bloquear la edición.
+                        value={customLabels[module.module_key] || ''}
                         onChange={handleLabelChange}
-                        placeholder={`Personalizar "${module.label || 'Módulo'}"...`}
+                        placeholder={`Personalizar: ${module.label || 'Módulo'}`}
                       />
                     </div>
                   </div>
