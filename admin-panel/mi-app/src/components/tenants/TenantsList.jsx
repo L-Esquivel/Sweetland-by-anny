@@ -135,8 +135,9 @@ function TenantsList() {
   };
 
   return (
-    <div className="tenants-container">
-      <h2>Gestión de Tenants</h2>
+    <>
+      <div className="tenants-container">
+        <h2>Gestión de Tenants</h2>
       
       <Notification message={notification.message} type={notification.type} />
       {error && <div className="alert alert-danger">{error}</div>}
@@ -227,14 +228,14 @@ function TenantsList() {
           </tbody>
         </table>
       </div>
-
+      </div>
       {showPaymentModal && selectedTenant && (
-        <PaymentManagerModal 
+        <PaymentManagerModal
           tenant={selectedTenant}
           onClose={() => setShowPaymentModal(false)}
         />
       )}
-    </div>
+    </>
   );
 }
 
