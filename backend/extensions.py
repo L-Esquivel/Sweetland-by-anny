@@ -1,12 +1,12 @@
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
-# La clase MySQL ha sido reemplazada por el módulo db.py,
-# que gestiona un pool de conexiones a PostgreSQL de forma más eficiente.
-# El objeto `mysql` ya no es necesario.
+# The MySQL class has been replaced by the db.py module,
+# which manages a PostgreSQL connection pool more efficiently.
+# The `mysql` object is no longer needed.
 
-# --- INSTANCIAS GLOBALES ---
-# El objeto `mysql` se elimina. Las rutas ahora usarán `get_db()` del módulo `db`.
+# --- GLOBAL INSTANCES ---
+# The `mysql` object is removed. Routes will now use `get_db()` from the `db` module.
 
 limiter = Limiter(
     key_func=get_remote_address,
