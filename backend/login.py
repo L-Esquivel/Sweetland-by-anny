@@ -1,10 +1,10 @@
 from flask import Blueprint, request, jsonify, current_app, url_for, redirect
 from flask_login import login_user, logout_user, login_required, current_user
-from werkzeug.security import check_password_hash, generate_password_hash
+from werkzeug.security import check_password_hash
 from models import User
 from extensions import limiter
-from db import get_db # 🟢 Importamos el nuevo gestor de DB
-from psycopg2.extras import DictCursor # 🟢 Para obtener resultados como diccionarios
+from db import get_db # 🟢 Import the new DB manager
+from psycopg2.extras import DictCursor # 🟢 To get results as dictionaries
 from utils import registrar_log
 from authlib.integrations.flask_client import OAuth
 from itsdangerous import URLSafeTimedSerializer
@@ -15,7 +15,7 @@ from sendgrid.helpers.mail import Mail as SendGridMail
 
 auth_bp = Blueprint("auth_bp", __name__, url_prefix="/auth")
 
-# --- CONFIGURACIÓN DE OAUTH ---
+# --- OAUTH CONFIGURATION ---
 oauth = OAuth()
 google = oauth.register(
     name='google',
@@ -29,7 +29,7 @@ def init_oauth(app):
     oauth.init_app(app)
 
 # =========================
-# LOGIN CON GOOGLE 🌍
+# GOOGLE LOGIN 🌍
 # =========================
 
 @auth_bp.route("/login/google")
@@ -43,7 +43,7 @@ def google_callback():
         token = google.authorize_access_token()
         user_info = token.get('userinfo')
         if not user_info:
-            return jsonify({"error": "No se pudo obtener información de Google"}), 400
+            return jsonify({"error": "Could not retrieve user information from Google"}), 400
 
         email = user_info['email']
         nombre = user_info['name']
@@ -55,12 +55,12 @@ def google_callback():
             user_row = cursor.fetchone()
 
             if user_row:
-                # Si el usuario ya existe, lo cargamos con todos sus datos
+                # If the user already exists, load them with all their data
                 usuario = User.get_by_id(user_row["id_usuario"])
                 login_user(usuario)
-                registrar_log(f"Inició sesión vía Google: {email}")
+                registrar_log(f"Logged in via Google: {email}")
             else:
-                # 💡 SAAS-IFICATION: Los nuevos registros de Google se asocian al tenant público (1).
+                # 💡 SAAS-IFICATION: New Google sign-ups are associated with the public tenant (1).
                 tenant_id_publico = os.getenv('PUBLIC_TENANT_ID', 1)
                 cursor.execute("""
                     INSERT INTO usuarios (nombre, email, rol, google_id, tenant_id)
@@ -70,22 +70,22 @@ def google_callback():
                 new_id = cursor.fetchone()[0]
                 conn.commit()
                 
-                # Cargamos el nuevo usuario desde la DB para asegurar consistencia
+                # Load the new user from the DB to ensure consistency
                 usuario = User.get_by_id(new_id)
                 if usuario:
                     login_user(usuario)
-                    registrar_log(f"Nuevo registro vía Google: {email}")
+                    registrar_log(f"New user registered via Google: {email}")
 
-            # 💡 MEJORA: Usar una variable de entorno para la URL del frontend.
+            # 💡 IMPROVEMENT: Use an environment variable for the frontend URL.
             frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:5173')
             return redirect(f"{frontend_url}/mi-cuenta.html")
     except Exception as e:
         current_app.logger.error(f"Error en Google Auth: {e}", exc_info=True)
         frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:5173')
-        return redirect(f"{frontend_url}/mi-cuenta.html?error=auth_failed")
+        return redirect(f"{frontend_url}/mi-cuenta.html?error=auth_failed") # Redirect with an error query param
 
 # =========================
-# LOGIN TRADICIONAL 🔑
+# TRADITIONAL LOGIN 🔑
 # =========================
 
 @auth_bp.route("/login", methods=["POST"])
@@ -98,22 +98,22 @@ def login():
     user = User.get_by_email(email)
     if user and user.check_password(password):
         login_user(user)
-        registrar_log(f"Inició sesión: {email}")
+        registrar_log(f"Logged in: {email}")
         return jsonify({
-            "mensaje": "Login exitoso",
+            "message": "Login successful",
             "usuario": {
                 "id": user.id, "nombre": user.nombre, 
                 "email": user.email, "rol": user.rol,
-                # 💡 MEJORA: Devolver la configuración completa de módulos.
+                # 💡 IMPROVEMENT: Return the complete module configuration.
                 "module_settings": user.module_settings 
             }
         })
     
-    registrar_log(f"Intento de login fallido: {email}")
-    return jsonify({"error": "Credenciales inválidas"}), 401
+    registrar_log(f"Failed login attempt for: {email}")
+    return jsonify({"error": "Invalid credentials"}), 401
 
 # =========================
-# RECUPERACIÓN DE CLAVE 📧
+# PASSWORD RECOVERY 📧
 # =========================
 
 @auth_bp.route("/forgot-password", methods=["POST"])
@@ -131,58 +131,57 @@ def forgot_password():
         if user and user.rol == 'cliente':
             s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
             token = s.dumps(email, salt='password-reset-salt')
-            # 💡 MEJORA: Usar una variable de entorno para la URL del frontend.
+            # 💡 IMPROVEMENT: Use an environment variable for the frontend URL.
             frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:5173')
             reset_url = f"{frontend_url}/reset-password.html?token={token}"
 
-            # 🚀 SOLUCIÓN TÉCNICA: Usar un servicio de email transaccional (SendGrid) en un hilo separado.
-            # Esto evita bloqueos de red en plataformas como Railway y es la práctica recomendada.
+            # 🚀 TECHNICAL SOLUTION: Use a transactional email service (SendGrid) in a separate thread.
+            # This avoids network blocking on platforms like Railway and is the recommended practice.
             def send_async_email_sendgrid(app, recipient, user_nombre, url_reseteo):
                 with app.app_context():
-                    # Aquí podrías usar una plantilla HTML para un correo más profesional
-                    body = f"Hola {user_nombre},\n\nPara restablecer tu clave haz clic aquí:\n{url_reseteo}\n\nEl enlace expira en 1 hora."
-                    # 💡 MEJORA: Usar una plantilla HTML para un correo más profesional y con mejor entregabilidad.
+                    body = f"Hi {user_nombre},\n\nTo reset your password, click here:\n{url_reseteo}\n\nThe link will expire in 1 hour."
+                    # 💡 IMPROVEMENT: Use an HTML template for a more professional and deliverable email.
                     html_content = f"""
                     <div style="font-family: sans-serif; padding: 20px; background-color: #f4f4f4;">
                         <div style="max-width: 600px; margin: auto; background-color: white; padding: 30px; border-radius: 10px;">
-                            <h2 style="color: #333;">Recuperación de Contraseña</h2>
-                            <p>Hola {user_nombre},</p>
-                            <p>Hemos recibido una solicitud para restablecer la contraseña de tu cuenta. Haz clic en el siguiente botón para continuar:</p>
+                            <h2 style="color: #333;">Password Recovery</h2>
+                            <p>Hi {user_nombre},</p>
+                            <p>We received a request to reset your account password. Click the button below to continue:</p>
                             <a href="{url_reseteo}" style="display: inline-block; padding: 12px 25px; margin: 20px 0; background-color: #aa1d80; color: white; text-decoration: none; border-radius: 5px;">
-                                Restablecer Contraseña
+                                Reset Password
                             </a>
-                            <p>Si no solicitaste esto, puedes ignorar este correo de forma segura.</p>
+                            <p>If you did not request this, you can safely ignore this email.</p>
                             <hr style="border: none; border-top: 1px solid #eee; margin-top: 20px;">
-                            <p style="font-size: 0.8em; color: #999;">El enlace expirará en 1 hora.</p>
+                            <p style="font-size: 0.8em; color: #999;">The link will expire in 1 hour.</p>
                         </div>
                     </div>
                     """
                     message = SendGridMail(
                         from_email=os.getenv('SENDER_EMAIL'),
                         to_emails=recipient,
-                        subject="Recuperación de Contraseña - Precivox",
+                        subject="Password Recovery - Precivox",
                         plain_text_content=body,
                         html_content=html_content)
                     try:
                         sendgrid_client = SendGridAPIClient(os.getenv('SENDGRID_API_KEY'))
                         response = sendgrid_client.send(message)
-                        app.logger.info(f"✅ HILO: Correo de recuperación enviado a {recipient} vía SendGrid. Status: {response.status_code}")
+                        app.logger.info(f"✅ THREAD: Recovery email sent to {recipient} via SendGrid. Status: {response.status_code}")
                     except Exception as e:
-                        app.logger.error(f"❌ HILO: Error enviando correo vía SendGrid a {recipient}: {e}", exc_info=True)
+                        app.logger.error(f"❌ THREAD: Error sending email via SendGrid to {recipient}: {e}", exc_info=True)
 
             thread = threading.Thread(target=send_async_email_sendgrid, args=(current_app._get_current_object(), email, user.nombre, reset_url))
             thread.start()
             
-            registrar_log(f"Solicitó recuperación de contraseña (proceso iniciado): {email}")
+            registrar_log(f"Password recovery requested (process initiated) for: {email}")
 
         # English comment: Always return a generic success message.
         # This prevents user enumeration attacks, as the response is the same whether the user
         # exists, is an admin, or doesn't exist at all.
-        return jsonify({"mensaje": "Si el correo está registrado, recibirás un enlace pronto."}), 200
+        return jsonify({"message": "If the email is registered, you will receive a link shortly."}), 200
 
     except Exception as e:
-        current_app.logger.error(f"❌ ERROR GENERAL en forgot-password: {e}", exc_info=True)
-        return jsonify({"error": "Error interno del servidor"}), 500
+        current_app.logger.error(f"❌ GENERAL ERROR in forgot-password: {e}", exc_info=True)
+        return jsonify({"error": "Internal server error"}), 500
 
 @auth_bp.route("/reset-password-confirm", methods=["POST"])
 def reset_password_confirm():
@@ -194,7 +193,7 @@ def reset_password_confirm():
         s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
         email = s.loads(token, salt='password-reset-salt', max_age=3600)
     except:
-        return jsonify({"error": "El enlace ha expirado o es inválido"}), 400
+        return jsonify({"error": "The link has expired or is invalid"}), 400
 
     hashed_pw = generate_password_hash(password)
     conn = get_db()
@@ -202,14 +201,14 @@ def reset_password_confirm():
         with conn.cursor() as cursor:
             cursor.execute("UPDATE usuarios SET password = %s WHERE email = %s", (hashed_pw, email))
             conn.commit()
-            registrar_log(f"Restableció su contraseña con éxito: {email}")
-            return jsonify({"mensaje": "Contraseña actualizada"})
+            registrar_log(f"Successfully reset password for: {email}")
+            return jsonify({"message": "Password updated successfully"})
     except Exception as e:
         conn.rollback()
-        return jsonify({"error": "Error al actualizar la contraseña"}), 500
+        return jsonify({"error": "Error updating password"}), 500
 
 # =========================
-# LOGIN/REGISTRO PÚBLICO (CLIENTES) 🙋‍♀️
+# PUBLIC LOGIN/REGISTRATION (CUSTOMERS) 🙋‍♀️
 # =========================
 
 @auth_bp.route("/public/login", methods=["POST"])
@@ -220,11 +219,11 @@ def login_cliente():
     # English comment: Verify user exists, password is correct, and role is 'cliente'.
     if user and user.check_password(data.get("password")) and user.rol == 'cliente':
         login_user(user)
-        registrar_log(f"Cliente inició sesión: {user.email}")
+        registrar_log(f"Customer logged in: {user.email}")
         return jsonify({"usuario": {"id": user.id, "nombre": user.nombre, "email": user.email, "telefono": user.telefono, "direccion": user.direccion}})
     
-    registrar_log(f"Intento de login de cliente fallido: {data.get('email')}")
-    return jsonify({"error": "Credenciales inválidas"}), 401
+    registrar_log(f"Failed customer login attempt for: {data.get('email')}")
+    return jsonify({"error": "Invalid credentials"}), 401
 
 @auth_bp.route("/public/registro", methods=["POST"])
 def registro_cliente():
@@ -234,16 +233,16 @@ def registro_cliente():
     password = data.get("password")
 
     if not nombre or not email or not password:
-        return jsonify({"error": "Nombre, email y contraseña son obligatorios"}), 400
+        return jsonify({"error": "Name, email, and password are required"}), 400
 
     conn = get_db()
     try:
         with conn.cursor() as cursor:
             cursor.execute("SELECT id_usuario FROM usuarios WHERE email = %s", (email,))
             if cursor.fetchone():
-                return jsonify({"error": "Email ya registrado"}), 400
+                return jsonify({"error": "Email already registered"}), 400
             
-            # 💡 SAAS-IFICATION: Los nuevos registros de clientes se asocian al tenant público (1).
+            # 💡 SAAS-IFICATION: New customer sign-ups are associated with the public tenant (1).
             tenant_id_publico = os.getenv('PUBLIC_TENANT_ID', 1)
             hashed = generate_password_hash(password)
             cursor.execute("""
@@ -251,11 +250,11 @@ def registro_cliente():
                 VALUES (%s, %s, %s, %s, %s, 'cliente', %s)
             """, (nombre, email, hashed, data.get("telefono"), data.get("direccion"), tenant_id_publico))
             conn.commit()
-            registrar_log(f"Nuevo cliente registrado: {email}")
-            return jsonify({"mensaje": "Registro exitoso"}), 201
+            registrar_log(f"New customer registered: {email}")
+            return jsonify({"message": "Registration successful"}), 201
     except Exception as e:
         conn.rollback()
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "An error occurred. The email might already be in use."}), 500
 
 # =========================
 # SESIÓN Y ESTADO
@@ -264,9 +263,9 @@ def registro_cliente():
 @auth_bp.route("/logout", methods=["POST"])
 @login_required
 def logout():
-    registrar_log(f"Cerró sesión")
+    registrar_log(f"Logged out")
     logout_user()
-    return jsonify({"mensaje": "Sesión cerrada"})
+    return jsonify({"message": "Session closed"})
 
 @auth_bp.route("/me", methods=["GET"])
 @login_required
