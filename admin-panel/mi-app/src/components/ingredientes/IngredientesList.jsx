@@ -10,9 +10,9 @@ const IngredientesList = () => {
   const [ingredienteEditando, setIngredienteEditando] = useState(null);
   const [formData, setFormData] = useState({
     nombre: '',
-    unidad: '',
-    cantidad: '',
-    costo_unitario: ''
+    unidad_medida: '',
+    stock: '',
+    costo_por_unidad: ''
   });
 
   // Unidades disponibles
@@ -40,9 +40,9 @@ const IngredientesList = () => {
     setIngredienteEditando(null);
     setFormData({
       nombre: '',
-      unidad: '',
-      cantidad: '',
-      costo_unitario: ''
+      unidad_medida: '',
+      stock: '',
+      costo_por_unidad: ''
     });
     setMostrarModal(true);
   };
@@ -51,9 +51,9 @@ const IngredientesList = () => {
     setIngredienteEditando(ingrediente);
     setFormData({
       nombre: ingrediente.nombre,
-      unidad: ingrediente.unidad,
-      cantidad: ingrediente.cantidad || '',
-      costo_unitario: ingrediente.costo_unitario || ''
+      unidad_medida: ingrediente.unidad_medida,
+      stock: ingrediente.stock || '',
+      costo_por_unidad: ingrediente.costo_por_unidad || ''
     });
     setMostrarModal(true);
   };
@@ -79,13 +79,13 @@ const IngredientesList = () => {
       // Validamos que los números sean válidos antes de enviar
       const datosEnviar = {
         nombre: formData.nombre.trim(),
-        unidad: formData.unidad,
+        unidad_medida: formData.unidad_medida,
         // Si está vacío, enviamos 0 para evitar errores de DB
-        cantidad: formData.cantidad === '' ? 0 : parseFloat(formData.cantidad),
-        costo_unitario: formData.costo_unitario === '' ? 0 : parseFloat(formData.costo_unitario)
+        stock: formData.stock === '' ? 0 : parseFloat(formData.stock),
+        costo_por_unidad: formData.costo_por_unidad === '' ? 0 : parseFloat(formData.costo_por_unidad)
       };
 
-      if (!datosEnviar.nombre || !datosEnviar.unidad) {
+      if (!datosEnviar.nombre || !datosEnviar.unidad_medida) {
         setError('Nombre y Unidad son obligatorios');
         return;
       }
@@ -190,21 +190,21 @@ const IngredientesList = () => {
                     <tr key={ingrediente.id_ingrediente}>
                       <td className="fw-semibold">{ingrediente.nombre}</td>
                       <td>
-                        <span className={`badge ${getUnidadBadgeClass(ingrediente.unidad)}`}>
-                          {ingrediente.unidad}
+                        <span className={`badge ${getUnidadBadgeClass(ingrediente.unidad_medida)}`}>
+                          {ingrediente.unidad_medida}
                         </span>
                       </td>
                       <td>
-                        {ingrediente.cantidad !== null ? (
+                        {ingrediente.stock !== null ? (
                           <span className="fw-bold">
-                            {ingrediente.cantidad} {ingrediente.unidad}
+                            {ingrediente.stock} {ingrediente.unidad_medida}
                           </span>
                         ) : (
                           <span className="text-muted">N/A</span>
                         )}
                       </td>
                       <td className="fw-bold text-success">
-                        {formatearMoneda(ingrediente.costo_unitario)}
+                        {formatearMoneda(ingrediente.costo_por_unidad)}
                       </td>
                       <td className="text-center">
                         <div className="btn-group" role="group">
@@ -267,9 +267,9 @@ const IngredientesList = () => {
                   <div className="mb-3">
                     <label className="form-label">Unidad de Medida *</label>
                     <select
-                      name="unidad"
+                      name="unidad_medida"
                       className="form-select"
-                      value={formData.unidad}
+                      value={formData.unidad_medida}
                       onChange={handleInputChange}
                       required
                     >
@@ -288,9 +288,9 @@ const IngredientesList = () => {
                         <label className="form-label">Cantidad en Stock</label>
                         <input
                           type="number"
-                          name="cantidad"
+                          name="stock"
                           className="form-control"
-                          value={formData.cantidad}
+                          value={formData.stock}
                           onChange={handleInputChange}
                           step="0.01"
                           min="0"
@@ -304,9 +304,9 @@ const IngredientesList = () => {
                         <label className="form-label">Costo Unitario (COP)</label>
                         <input
                           type="number"
-                          name="costo_unitario"
+                          name="costo_por_unidad"
                           className="form-control"
-                          value={formData.costo_unitario}
+                          value={formData.costo_por_unidad}
                           onChange={handleInputChange}
                           step="0.01"
                           min="0"
