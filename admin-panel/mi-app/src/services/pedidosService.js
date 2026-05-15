@@ -2,7 +2,6 @@
 const BASE = import.meta.env.VITE_API_URL || 'https://precivox-backend.onrender.com';
 // Aseguramos que la URL base no termine en slash para no duplicarlos
 const API_URL = `${BASE.replace(/\/$/, '')}/pedidos`;
-const USUARIOS_URL = `${BASE.replace(/\/$/, '')}/usuarios`;
 
 export const pedidosService = {
 
@@ -116,39 +115,6 @@ export const pedidosService = {
       return await response.json();
     } catch (error) {
       console.error('Error en pedidosService.createDetallePedidoAlternativo:', error);
-      throw error;
-    }
-  },
-
-  // ==================== USUARIOS ====================
-
-  async getUsuarios() {
-    try {
-      const response = await fetch(`${USUARIOS_URL}/`, { credentials: 'include' });
-      if (!response.ok) throw new Error('Error al cargar usuarios');
-      return await response.json();
-    } catch (error) {
-      console.error('Error en pedidosService.getUsuarios:', error);
-      throw error;
-    }
-  },
-
-  async createUsuario(usuarioData) {
-    try {
-      // FIX: Usar la URL correcta de usuarios
-      const response = await fetch(`${USUARIOS_URL}/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(usuarioData)
-      });
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `Error ${response.status}`);
-      }
-      return await response.json();
-    } catch (error) {
-      console.error('Error en pedidosService.createUsuario:', error);
       throw error;
     }
   },

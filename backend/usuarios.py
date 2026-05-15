@@ -3,7 +3,9 @@ from flask_login import login_required, current_user
 from werkzeug.security import generate_password_hash
 from db import get_db # 🟢 Importamos el nuevo gestor de DB
 from psycopg2.extras import DictCursor # 🟢 Para obtener resultados como diccionarios
-from utils import admin_required, superadmin_required
+from utils import admin_required, superadmin_required, registrar_log
+import secrets
+import string
 
 usuarios_bp = Blueprint("usuarios_bp", __name__, url_prefix="/usuarios")
 
@@ -62,22 +64,43 @@ def add_usuario():
     direccion = data.get("direccion")
     rol       = data.get("rol", "cliente")
 
-    if not nombre or not email or not password:
-        return jsonify({"error": "Faltan campos obligatorios"}), 400
+    if not nombre or not email:
+        return jsonify({"error": "Nombre y email son obligatorios"}), 400
+
+    password_temporal = None
+    if not password:
+        # Generar una contraseña temporal si no se proporciona una.
+        alphabet = string.ascii_letters + string.digits
+        password_temporal = ''.join(secrets.choice(alphabet) for i in range(10))
+        password = password_temporal
 
     hashed_pw = generate_password_hash(password)
     conn = get_db()
     try:
-        with conn.cursor() as cursor:
+        with conn.cursor(cursor_factory=DictCursor) as cursor:
             # 💡 SAAS-IFICATION: Un nuevo usuario creado por un admin pertenece al mismo tenant.
             cursor.execute("""
                 INSERT INTO usuarios (nombre, email, password, telefono, direccion, rol, tenant_id)
                 VALUES (%s, %s, %s, %s, %s, %s, %s)
+                RETURNING id_usuario, email, nombre
             """, (nombre, email, hashed_pw, telefono, direccion, rol, current_user.tenant_id))
+            new_user = cursor.fetchone()
             conn.commit()
-            return jsonify({"mensaje": "Usuario agregado con éxito"}), 201
+
+            response_data = {
+                "mensaje": "Usuario agregado con éxito",
+                "id_usuario": new_user['id_usuario'],
+                "email": new_user['email'],
+                "nombre": new_user['nombre']
+            }
+            if password_temporal:
+                response_data["password_temporal"] = password_temporal
+            
+            registrar_log(f"Admin creó nuevo usuario: {email}")
+            return jsonify(response_data), 201
     except Exception as e:
         conn.rollback()
+        current_app.logger.error(f"Error en add_usuario: {e}", exc_info=True)
         return jsonify({"error": "El email ya podría estar registrado"}), 400
 
 @usuarios_bp.route("/<int:id>", methods=["PUT"])

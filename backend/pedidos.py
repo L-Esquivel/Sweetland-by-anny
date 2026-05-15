@@ -148,6 +148,82 @@ def get_pedidos():
         current_app.logger.error(f"Error en get_pedidos: {e}")
         return jsonify({"error": "Error al obtener pedidos"}), 500
 
+@pedidos_bp.route("/", methods=["POST"])
+@admin_required
+def create_pedido_admin():
+    """
+    Permite a un administrador crear un nuevo pedido manualmente.
+    Calcula el total en el backend para seguridad.
+    """
+    data = request.get_json()
+    tenant_id = current_user.tenant_id
+    conn = get_db()
+
+    items = data.get("items", [])
+    if not items:
+        return jsonify({"error": "El pedido debe tener al menos un producto"}), 400
+
+    try:
+        with conn.cursor(cursor_factory=DictCursor) as cursor:
+            # 1. Calcular el total del pedido desde el backend para evitar manipulación de precios.
+            total_pedido = 0
+            productos_a_insertar = []
+            for item in items:
+                producto_id = item.get("producto_id")
+                cantidad = item.get("cantidad")
+                if not producto_id or not cantidad or int(cantidad) <= 0:
+                    continue # Ignorar items inválidos
+
+                cursor.execute("SELECT precio FROM productos WHERE id_producto = %s AND tenant_id = %s", (producto_id, tenant_id))
+                producto_data = cursor.fetchone()
+                if not producto_data:
+                    raise ValueError(f"Uno de los productos seleccionados (ID: {producto_id}) no fue encontrado.")
+                
+                precio_unitario = float(producto_data['precio'] or 0)
+                subtotal = precio_unitario * int(cantidad)
+                total_pedido += subtotal
+                productos_a_insertar.append({
+                    "producto_id": producto_id,
+                    "cantidad": cantidad,
+                    "precio_unitario": precio_unitario,
+                    "subtotal": subtotal
+                })
+            
+            if not productos_a_insertar:
+                return jsonify({"error": "No se proporcionaron productos válidos en el pedido"}), 400
+
+            # 2. Insertar el pedido principal. Asume que la tabla 'pedidos' tiene una columna 'cliente_nombre'.
+            cursor.execute("""
+                INSERT INTO pedidos (usuario_id, cliente_nombre, telefono, direccion, total, estado, tenant_id)
+                VALUES (%s, %s, %s, %s, %s, 'pendiente', %s)
+                RETURNING id_pedido
+            """, (
+                data.get("usuario_id"), 
+                data.get("cliente_nombre"), 
+                data.get("telefono"), 
+                data.get("direccion"), 
+                total_pedido, 
+                tenant_id
+            ))
+            pedido_id = cursor.fetchone()[0]
+
+            # 3. Insertar los detalles del pedido.
+            for prod in productos_a_insertar:
+                cursor.execute("INSERT INTO detalle_pedidos (pedido_id, producto_id, cantidad, precio_unitario, subtotal, tenant_id) VALUES (%s, %s, %s, %s, %s, %s)",
+                               (pedido_id, prod['producto_id'], prod['cantidad'], prod['precio_unitario'], prod['subtotal'], tenant_id))
+            
+            conn.commit()
+            registrar_log(f"Admin creó nuevo pedido ID {pedido_id}")
+            return jsonify({"mensaje": "Pedido creado con éxito", "id_pedido": pedido_id}), 201
+
+    except ValueError as e:
+        conn.rollback()
+        return jsonify({"error": str(e)}), 404
+    except Exception as e:
+        conn.rollback()
+        current_app.logger.error(f"Error en create_pedido_admin: {e}", exc_info=True)
+        return jsonify({"error": "Error interno al crear el pedido"}), 500
+
 @pedidos_bp.route("/<int:id>/estado", methods=["PUT"])
 @admin_required # FIX: Se añade decorador de seguridad. Solo admins pueden cambiar el estado.
 def update_estado_pedido(id):

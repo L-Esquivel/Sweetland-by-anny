@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { pedidosService } from '../../services/pedidosService';
+import { usuariosService } from '../../services/usuariosService';
 
 const PedidoForm = ({ productos, onSubmit, onClose, titulo = "➕ Nuevo Pedido" }) => {
   const [formData, setFormData] = useState({
@@ -26,7 +27,7 @@ const PedidoForm = ({ productos, onSubmit, onClose, titulo = "➕ Nuevo Pedido" 
       try {
         console.log('🔄 Cargando usuarios reales...');
         setCargandoUsuarios(true);
-        const usuariosReales = await pedidosService.getUsuarios();
+        const usuariosReales = await usuariosService.getUsuarios();
         console.log('✅ Usuarios cargados de la BD:', usuariosReales);
         setUsuarios(usuariosReales);
       } catch (error) {
@@ -181,7 +182,7 @@ const PedidoForm = ({ productos, onSubmit, onClose, titulo = "➕ Nuevo Pedido" 
           direccion: formData.direccion
         };
 
-        const nuevoUsuario = await pedidosService.createUsuario(nuevoUsuarioData);
+        const nuevoUsuario = await usuariosService.createUsuario(nuevoUsuarioData);
         usuarioId = nuevoUsuario.id_usuario;
         nuevoUsuarioCreado = true;
         
@@ -192,27 +193,26 @@ const PedidoForm = ({ productos, onSubmit, onClose, titulo = "➕ Nuevo Pedido" 
           nombre: nuevoUsuario.nombre
         });
         
-        const usuariosActualizados = await pedidosService.getUsuarios();
+        const usuariosActualizados = await usuariosService.getUsuarios();
         setUsuarios(usuariosActualizados);
       }
 
+      // Construir el payload para el endpoint de creación de pedidos
+      const items = formData.detalles.map(d => ({
+        producto_id: d.producto_id,
+        cantidad: d.cantidad
+      }));
+
       const pedidoData = {
         usuario_id: usuarioId,
+        cliente_nombre: formData.cliente_nombre,
         telefono: formData.cliente_telefono,
         direccion: formData.direccion,
-        total: calcularTotal()
+        items: items
       };
 
-      const pedidoCreado = await pedidosService.createPedido(pedidoData);
-      const pedidoId = pedidoCreado.id_pedido;
-
-      for (const detalle of formData.detalles) {
-        await pedidosService.createDetallePedidoAlternativo(pedidoId, {
-          producto_id: detalle.producto_id,
-          cantidad: detalle.cantidad,
-          subtotal: detalle.subtotal
-        });
-      }
+      console.log('📦 Enviando datos del pedido al backend:', pedidoData);
+      await pedidosService.createPedido(pedidoData);
 
       console.log('🎉 Pedido completado exitosamente!');
       onClose();
