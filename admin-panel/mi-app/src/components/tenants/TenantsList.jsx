@@ -61,8 +61,10 @@ function TenantsList() {
     setForm(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleLabelChange = (moduleKey, newLabel) => {
-    setCustomLabels(prev => ({ ...prev, [moduleKey]: newLabel }));
+  const handleLabelChange = (e) => {
+    const { name, value } = e.target;
+    // El 'name' del input será la 'module_key', permitiendo actualizar el estado correctamente.
+    setCustomLabels(prev => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e) => {
@@ -138,16 +140,17 @@ function TenantsList() {
               <div className="row">
                 {availableModules.map(module => (
                   <div key={module.module_key} className="col-md-6 mb-2">
-                    {/* 💡 MEJORA: Añadimos una etiqueta de referencia para el nombre original del módulo. */}
-                    <label htmlFor={`label-${module.module_key}`} className="form-label small text-muted">{module.label}</label>
+                    {/* 💡 FIX 1: Etiqueta de referencia más visible para saber qué módulo se está personalizando. */}
+                    <label htmlFor={`label-${module.module_key}`} className="form-label fw-bold">{module.label}</label>
                     <div className="input-group">
                       <span className="input-group-text" id={`icon-${module.module_key}`}>{module.icon}</span>
                       <input
                         type="text"
                         className="form-control"
+                        name={module.module_key} // 💡 FIX 2: Usamos el 'name' para identificar el input.
                         id={`label-${module.module_key}`}
                         value={customLabels[module.module_key] || ''}
-                        onChange={(e) => handleLabelChange(module.module_key, e.target.value)}
+                        onChange={handleLabelChange} // 💡 FIX 2: Pasamos el manejador directamente.
                       />
                     </div>
                   </div>
