@@ -11,7 +11,7 @@ modules_bp = Blueprint("modules_bp", __name__, url_prefix="/modules")
 @superadmin_required
 def get_all_modules():
     """
-    Devuelve una lista de todos los módulos configurables en la plataforma.
+    Returns a list of all configurable modules on the platform.
     """
     conn = get_db()
     try:
@@ -21,4 +21,4 @@ def get_all_modules():
             return jsonify(modules)
     except Exception as e:
         current_app.logger.error(f"Error en get_all_modules: {e}")
-        return jsonify({"error": "Error al obtener la lista de módulos"}), 500
+        return jsonify({"error": "Error fetching module list"}), 500
