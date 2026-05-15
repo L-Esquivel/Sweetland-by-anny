@@ -3,6 +3,7 @@ from flask_login import login_required, current_user
 from db import get_db # 🟢 Importamos el nuevo gestor de DB
 from psycopg2.extras import DictCursor # 🟢 Para obtener resultados como diccionarios
 import logging
+from utils import admin_required # 💡 FIX: Importar el decorador de admin
 from recetas import calcular_costo_completo # Importamos la función de costeo
 
 logging.basicConfig(level=logging.DEBUG)
@@ -30,35 +31,33 @@ def get_empaques():
 
 @empaques_bp.route("/", methods=["POST"])
 @login_required
+@admin_required # 💡 FIX: Se añade decorador para que solo admins puedan crear empaques.
 def add_empaque():
     tenant_id = current_user.tenant_id
+    conn = get_db()
     try:
         data = request.get_json()
+        if not data:
+            return jsonify({"error": "No se recibieron datos JSON"}), 400
+
         nombre = data.get("nombre")
         descripcion = data.get("descripcion", "")
-        # Forzamos conversión a float
         precio = float(data.get("precio") or 0)
 
         if not nombre:
             return jsonify({"error": "El nombre es obligatorio"}), 400
 
-        conn = get_db()
-        try:
-            with conn.cursor() as cursor:
-                # 💡 SAAS-IFICATION: Insertamos el tenant_id.
-                cursor.execute(
-                    "INSERT INTO empaques (nombre, descripcion, precio, tenant_id) VALUES (%s, %s, %s, %s)",
-                    (nombre, descripcion, precio, tenant_id)
-                )
-                conn.commit()
-                return jsonify({"mensaje": "Empaque creado en el catálogo"}), 201
-        except Exception as e:
-            get_db().rollback()
-            logger.error(f"Error en add_empaque: {str(e)}")
-            return jsonify({"error": "Error al crear el empaque"}), 500
+        with conn.cursor() as cursor:
+            cursor.execute(
+                "INSERT INTO empaques (nombre, descripcion, precio, tenant_id) VALUES (%s, %s, %s, %s)",
+                (nombre, descripcion, precio, tenant_id)
+            )
+            conn.commit()
+        return jsonify({"mensaje": "Empaque creado en el catálogo"}), 201
     except Exception as e:
-        logger.error(f"Error en add_empaque: {str(e)}")
-        return jsonify({"error": "Error al procesar los datos del empaque"}), 500
+        conn.rollback() # 💡 FIX: Se usa la conexión correcta para el rollback y se simplifica el manejo de errores.
+        logger.error(f"Error en add_empaque: {e}", exc_info=True)
+        return jsonify({"error": "Error interno al crear el empaque"}), 500
 
 @empaques_bp.route("/<int:id>", methods=["PUT"])
 @login_required
