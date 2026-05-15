@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, request
 from flask_login import login_required, current_user
-from db import get_db # 🟢 Importamos el nuevo gestor de DB
-from psycopg2.extras import DictCursor # 🟢 Para obtener resultados como diccionarios
+from db import get_db # 🟢 Import the new DB manager
+from psycopg2.extras import DictCursor # 🟢 To get results as dictionaries
 import logging
 
 logging.basicConfig(level=logging.DEBUG)
@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 detalle_pedidos_bp = Blueprint("detalle_pedidos", __name__, url_prefix="/detalle_pedidos")
 
 # ========================================
-# Obtener TODOS los detalles (admin)
+# Get ALL order details (admin)
 # ========================================
 @detalle_pedidos_bp.route("/", methods=["GET"])
 @login_required
@@ -34,7 +34,7 @@ def get_detalles():
             """, (tenant_id, tenant_id))
             detalles = cursor.fetchall()
 
-            # Asegurar que precio_unitario y subtotal sean float
+            # Ensure precio_unitario and subtotal are floats
             for d in detalles:
                 d["precio_unitario"] = float(d.get("precio_unitario", 0) or 0)
                 d["subtotal"] = float(d.get("subtotal", 0) or 0)
@@ -42,11 +42,11 @@ def get_detalles():
             return jsonify(detalles)
     except Exception as e:
         logger.error(f"Error en get_detalles: {e}", exc_info=True)
-        return jsonify({"error": "Error al obtener los detalles de pedidos"}), 500
+        return jsonify({"error": "Error fetching order details"}), 500
 
 
 # ========================================
-# Obtener detalle por ID
+# Get detail by ID
 # ========================================
 @detalle_pedidos_bp.route("/<int:id>", methods=["GET"])
 @login_required
@@ -70,7 +70,7 @@ def get_detalle(id):
             detalle = cursor.fetchone()
 
             if not detalle:
-                return jsonify({"error": "Detalle no encontrado"}), 404
+                return jsonify({"error": "Detail not found"}), 404
 
             detalle["precio_unitario"] = float(detalle.get("precio_unitario", 0) or 0)
             detalle["subtotal"] = float(detalle.get("subtotal", 0) or 0)
@@ -78,18 +78,18 @@ def get_detalle(id):
             return jsonify(detalle)
     except Exception as e:
         logger.error(f"Error en get_detalle: {e}", exc_info=True)
-        return jsonify({"error": "Error al obtener el detalle del pedido"}), 500
+        return jsonify({"error": "Error fetching order detail"}), 500
 
 
 # ========================================
-# NUEVO: Obtener detalles por PEDIDO_ID
+# NEW: Get details by ORDER_ID
 # ========================================
 @detalle_pedidos_bp.route("/pedido/<int:pedido_id>", methods=["GET"])
 @login_required
 def get_detalles_por_pedido(pedido_id):
     """
-    Obtiene todos los detalles de un pedido específico.
-    Incluye info del producto para mostrar en el frontend.
+    Gets all details for a specific order.
+    Includes product info for frontend display.
     """
     tenant_id = current_user.tenant_id
     conn = get_db()
@@ -112,7 +112,7 @@ def get_detalles_por_pedido(pedido_id):
             """, (tenant_id, pedido_id, tenant_id))
             detalles = cursor.fetchall()
 
-            # Asegurar tipos numéricos
+            # Ensure numeric types
             for d in detalles:
                 d["cantidad"] = int(d.get("cantidad", 0) or 0)
                 d["precio_unitario"] = float(d.get("precio_unitario", 0) or 0)
@@ -121,11 +121,11 @@ def get_detalles_por_pedido(pedido_id):
             return jsonify(detalles)
     except Exception as e:
         logger.error(f"Error en get_detalles_por_pedido: {e}", exc_info=True)
-        return jsonify({"error": "Error al obtener los detalles del pedido"}), 500
+        return jsonify({"error": "Error fetching order details"}), 500
 
 
 # ========================================
-# Crear nuevo detalle de pedido
+# Create new order detail
 # ========================================
 @detalle_pedidos_bp.route("/", methods=["POST"])
 @login_required
@@ -141,9 +141,9 @@ def create_detalle():
         precio_unitario = data.get("precio_unitario")
         subtotal = data.get("subtotal")
 
-        # Validar campos requeridos
+        # Validate required fields
         if not all([pedido_id, producto_id, cantidad, precio_unitario, subtotal]):
-            return jsonify({"error": "Todos los campos son requeridos"}), 400
+            return jsonify({"error": "All fields are required"}), 400
 
         with conn.cursor() as cursor:
             cursor.execute("""
@@ -155,17 +155,17 @@ def create_detalle():
             conn.commit()
 
             return jsonify({
-                "mensaje": "Detalle de pedido creado correctamente",
+                "message": "Order detail created successfully",
                 "id_detalle": detalle_id
             }), 201
     except Exception as e:
         conn.rollback()
         logger.error(f"Error en create_detalle: {e}", exc_info=True)
-        return jsonify({"error": "Error al crear el detalle del pedido"}), 500
+        return jsonify({"error": "Error creating order detail"}), 500
 
 
 # ========================================
-# Actualizar un detalle
+# Update a detail
 # ========================================
 @detalle_pedidos_bp.route("/<int:id>", methods=["PUT"])
 @login_required
@@ -185,17 +185,29 @@ def update_detalle(id):
                 WHERE id_detalle=%s AND tenant_id = %s
             """, (cantidad, precio_unitario, subtotal, id, tenant_id))
             conn.commit()
-            return jsonify({"mensaje": "Detalle actualizado correctamente"})
+            return jsonify({"message": "Detail updated successfully"})
     except Exception as e:
         conn.rollback()
         logger.error(f"Error en update_detalle: {e}", exc_info=True)
-        return jsonify({"error": "Error al actualizar el detalle"}), 500
+        return jsonify({"error": "Error updating detail"}), 500
 
 
 # ========================================
-# Eliminar detalle de pedido
+# Delete order detail
 # ========================================
 @detalle_pedidos_bp.route("/<int:id>", methods=["DELETE"])
 @login_required
 def delete_detalle(id):
     tenant_id = current_user.tenant_id
+    conn = get_db()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("DELETE FROM detalle_pedidos WHERE id_detalle = %s AND tenant_id = %s", (id, tenant_id))
+            conn.commit()
+            if cursor.rowcount == 0:
+                return jsonify({"error": "Order detail not found or does not belong to your organization"}), 404
+            return jsonify({"message": "Order detail deleted successfully"})
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Error in delete_detalle: {e}", exc_info=True)
+        return jsonify({"error": "Error deleting order detail"}), 500
