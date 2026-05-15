@@ -3,8 +3,8 @@ from flask_login import login_required, current_user
 from db import get_db # 🟢 Import the new DB manager
 from psycopg2.extras import DictCursor # 🟢 To get results as dictionaries
 import logging
-from utils import admin_required # 💡 FIX: Import the admin decorator
-from recetas import calcular_costo_completo # Import the costing function
+from utils import admin_required
+from recetas import calculate_full_cost # Import the costing function
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -190,7 +190,7 @@ def add_empaque_producto(producto_id):
             conn.commit()
 
         # 💡 FIX: Recalculate the product cost to update it in the 'productos' table.
-        calcular_costo_completo(producto_id, tenant_id)
+        calculate_full_cost(producto_id, tenant_id)
 
         return jsonify({"message": "Packaging assigned to product"}), 201
     except Exception as e:
@@ -220,7 +220,7 @@ def delete_empaque_producto(id):
 
         # 💡 FIX: If deleted, recalculate the product cost.
         if id_producto:
-            calcular_costo_completo(id_producto, tenant_id)
+            calculate_full_cost(id_producto, tenant_id)
 
         return jsonify({"message": "Packaging removed from product"})
     except Exception as e:

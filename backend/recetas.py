@@ -1,88 +1,89 @@
 from flask import Blueprint, jsonify, request
 from flask_login import login_required, current_user
-from db import get_db # 🟢 Importamos el nuevo gestor de DB
+from db import get_db # 🟢 Import the new DB manager
 import logging
-from psycopg2.extras import DictCursor # 🟢 Para obtener resultados como diccionarios
+from psycopg2.extras import DictCursor # 🟢 To get results as dictionaries
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-recetas_bp = Blueprint("recetas", __name__, url_prefix="/recetas")
+recetas_bp = Blueprint("recipes", __name__, url_prefix="/recipes")
 
 # ========================================
-# LÓGICA EXACTA DE COSTEO (versión final corregida)
+# EXACT COSTING LOGIC (final corrected version)
 # ========================================
-def calcular_costo_completo(id_producto, tenant_id, pax=None, utilidad_porcentaje=None):
+def calculate_full_cost(product_id, tenant_id, pax=None, profit_percentage=None):
     """
-    Calcula el costeo completo de un producto.
+    Calculates the full cost of a product.
+    This is the core costing engine of the application.
     """
     conn = get_db()
     try:
         with conn.cursor(cursor_factory=DictCursor) as cursor:
-            # 💡 SAAS-IFICATION: Todas las consultas internas ahora usan tenant_id.
-            # 1. TOTAL 1 = Costo de ingredientes (ahora desde recetas_ingredientes)
+            # 💡 SAAS-IFICATION: All internal queries now use tenant_id.
+            # 1. TOTAL 1 = Cost of ingredients (from recetas_ingredientes)
             cursor.execute("""
-                SELECT COALESCE(SUM(costo_ingrediente), 0) as total1
+                SELECT COALESCE(SUM(costo_ingrediente), 0) as base_cost
                 FROM recetas_ingredientes
                 WHERE id_producto = %s AND tenant_id = %s
-            """, (id_producto, tenant_id))
-            resultado = cursor.fetchone()
-            total1 = float(resultado.get('total1', 0) if resultado else 0)
+            """, (product_id, tenant_id))
+            result = cursor.fetchone()
+            base_cost = float(result.get('base_cost', 0) if result else 0)
 
-            # 2. Gastos Operativos = TOTAL 1 × 35%
-            gastos_operativos = total1 * 0.35
+            # 2. Operational Expenses = TOTAL 1 * 35%
+            operational_expenses = base_cost * 0.35
 
-            # 3. Depreciación del Mercado = TOTAL 1 × 10%
-            dep_mercado = total1 * 0.10
+            # 3. Market Depreciation = TOTAL 1 * 10%
+            market_depreciation = base_cost * 0.10
 
-            # 4. TOTAL 2 = TOTAL 1 × 1.45
-            total2 = total1 * 1.45
+            # 4. TOTAL 2 = TOTAL 1 * 1.45
+            total_2 = base_cost * 1.45
 
-            # 5. Depreciación de Equipos = TOTAL 2 × 5%
-            dep_equipos = total2 * 0.05
+            # 5. Equipment Depreciation = TOTAL 2 * 5%
+            equipment_depreciation = total_2 * 0.05
 
-            # 6. Valor total de empaques
+            # 6. Total packaging cost
             cursor.execute("""
-                SELECT COALESCE(SUM(subtotal), 0) as costo_empaques
+                SELECT COALESCE(SUM(subtotal), 0) as packaging_cost
                 FROM recetas_empaques
                 WHERE id_producto = %s AND tenant_id = %s
-            """, (id_producto, tenant_id))
-            resultado_empaques = cursor.fetchone()
-            costo_empaques = float(resultado_empaques.get('costo_empaques', 0) if resultado_empaques else 0)
+            """, (product_id, tenant_id))
+            packaging_result = cursor.fetchone()
+            packaging_cost = float(packaging_result.get('packaging_cost', 0) if packaging_result else 0)
 
-            # 7. TOTAL 3
-            total3 = total2 + dep_equipos + costo_empaques
+            # 7. TOTAL 3 (Production Cost)
+            production_cost = total_2 + equipment_depreciation + packaging_cost
 
-            # 8. Obtener PAX y % de utilidad
-            if pax is None or utilidad_porcentaje is None:
+            # 8. Get PAX and profit percentage from DB if not provided
+            if pax is None or profit_percentage is None:
                 cursor.execute("""
                     SELECT pax, utilidad_porcentaje
                     FROM productos
                     WHERE id_producto = %s AND tenant_id = %s
-                """, (id_producto, tenant_id))
+                """, (product_id, tenant_id))
                 prod = cursor.fetchone()
                 pax_db = int(prod.get('pax', 1)) if prod and prod.get('pax') is not None else 1
-                utilidad_db = float(prod.get('utilidad_porcentaje', 40.0)) if prod and prod.get('utilidad_porcentaje') is not None else 40.0
+                profit_db = float(prod.get('utilidad_porcentaje', 40.0)) if prod and prod.get('utilidad_porcentaje') is not None else 40.0
 
                 pax = pax if pax is not None else pax_db
-                utilidad_porcentaje = utilidad_porcentaje if utilidad_porcentaje is not None else utilidad_db
+                profit_percentage = profit_percentage if profit_percentage is not None else profit_db
 
-            # 9. Utilidad
-            utilidad = total3 * (utilidad_porcentaje / 100)
+            # 9. Profit
+            profit = production_cost * (profit_percentage / 100)
 
             # 10. TOTAL 4
-            total4 = total3 + utilidad
+            total_4 = production_cost + profit
 
-            # 11. I.C. = TOTAL 4 × 8%
-            ic = total4 * 0.08
+            # 11. I.C. (Consumption Tax) = TOTAL 4 * 8%
+            consumption_tax = total_4 * 0.08
 
-            # 12. Valor Final = TOTAL 4 × 1.08
-            valor_final = total4 * 1.08
+            # 12. Final Value = TOTAL 4 * 1.08
+            final_value = total_4 * 1.08
 
-            # 13. Precio Sugerido Final (por unidad)
-            precio_sugerido = valor_final / pax if pax > 0 else 0
+            # 13. Final Suggested Price (per unit)
+            suggested_price = final_value / pax if pax > 0 else 0
 
-            # Actualizar tabla productos con los valores finales
+            # Update the 'productos' table with the final values
             cursor.execute("""
                 UPDATE productos
                 SET costo_produccion = %s,
@@ -90,67 +91,67 @@ def calcular_costo_completo(id_producto, tenant_id, pax=None, utilidad_porcentaj
                     utilidad_porcentaje = %s,
                     precio = %s
                 WHERE id_producto = %s AND tenant_id = %s
-            """, (total3, pax, utilidad_porcentaje, precio_sugerido, id_producto, tenant_id))
+            """, (production_cost, pax, profit_percentage, suggested_price, product_id, tenant_id))
 
         conn.commit()
 
         return {
-            "costo_base": round(total1, 2),
-            "gastos_operativos": round(gastos_operativos, 2),
-            "dep_mercado": round(dep_mercado, 2),
-            "dep_equipos": round(dep_equipos, 2),
-            "costo_empaques": round(costo_empaques, 2),
-            "total3": round(total3, 2),
-            "utilidad": round(utilidad, 2),
-            "total4": round(total4, 2),
-            "ic": round(ic, 2),
-            "valor_final": round(valor_final, 2),
-            "precio_sugerido": round(precio_sugerido, 2),
+            "base_cost": round(base_cost, 2),
+            "operational_expenses": round(operational_expenses, 2),
+            "market_depreciation": round(market_depreciation, 2),
+            "equipment_depreciation": round(equipment_depreciation, 2),
+            "packaging_cost": round(packaging_cost, 2),
+            "production_cost": round(production_cost, 2),
+            "profit": round(profit, 2),
+            "pre_tax_total": round(total_4, 2),
+            "consumption_tax": round(consumption_tax, 2),
+            "final_value": round(final_value, 2),
+            "suggested_price": round(suggested_price, 2),
             "pax": pax,
-            "utilidad_porcentaje": utilidad_porcentaje
+            "profit_percentage": profit_percentage
         }
 
     except Exception as e:
-        logger.error(f"Error en calcular_costo_completo: {str(e)}")
+        logger.error(f"Error in calculate_full_cost: {str(e)}")
         if 'conn' in locals() and conn: conn.rollback()
         raise
 
 # ================================
-# RECALCULAR CON PAX Y UTILIDAD
+# RECALCULATE WITH PAX AND PROFIT
 # ================================
 @recetas_bp.route("/recalcular", methods=["POST"])
 @login_required
-def recalcular_costos():
+def recalculate_costs():
     tenant_id = current_user.tenant_id
     data = request.get_json()
-    id_producto = data.get("id_producto")
+    product_id = data.get("id_producto")
     pax = data.get("pax")
-    utilidad_porcentaje = data.get("utilidad_porcentaje")
+    profit_percentage = data.get("utilidad_porcentaje")
 
-    if not id_producto:
-        return jsonify({"error": "id_producto es requerido"}), 400
+    if not product_id:
+        return jsonify({"error": "product_id is required"}), 400
 
     try:
-        costos = calcular_costo_completo(
-            id_producto,
+        costs = calculate_full_cost(
+            product_id,
             tenant_id,
             pax=int(pax) if pax is not None else None,
-            utilidad_porcentaje=float(utilidad_porcentaje) if utilidad_porcentaje is not None else None
+            profit_percentage=float(profit_percentage) if profit_percentage is not None else None
         )
         return jsonify({
-            "mensaje": "Costos recalculados correctamente",
-            "costos": costos
+            "message": "Costs recalculated successfully",
+            "costs": costs
         })
     except Exception as e:
-        logger.error(f"Error en recalcular_costos: {str(e)}")
-        return jsonify({"error": "Error al recalcular los costos"}), 500
+        logger.error(f"Error in recalculate_costs: {str(e)}")
+        return jsonify({"error": "Error recalculating costs"}), 500
 
 # ================================
 # Obtener todas las recetas
 # ================================
 @recetas_bp.route("/", methods=["GET"])
 @login_required
-def get_recetas():
+def get_recipes():
     tenant_id = current_user.tenant_id
     conn = get_db()
     try:
@@ -163,20 +164,20 @@ def get_recetas():
                 LEFT JOIN ingredientes i ON ri.id_ingrediente = i.id_ingrediente AND i.tenant_id = %s
                 WHERE ri.tenant_id = %s
             """, (tenant_id, tenant_id, tenant_id))
-            filas_raw = cursor.fetchall()
-            # FIX: Convertir a dict para asegurar la serialización JSON.
-            filas = [dict(row) for row in filas_raw]
-            return jsonify(filas)
+            rows_raw = cursor.fetchall()
+            # FIX: Convert to dict to ensure JSON serialization.
+            rows = [dict(row) for row in rows_raw]
+            return jsonify(rows)
     except Exception as e:
-        logger.error(f"Error en get_recetas: {str(e)}")
-        return jsonify({"error": "Error al obtener las recetas"}), 500
+        logger.error(f"Error in get_recipes: {str(e)}")
+        return jsonify({"error": "Error fetching recipes"}), 500
 
 # ================================
 # Obtener recetas + empaques + costos de un producto
 # ================================
-@recetas_bp.route("/producto/<int:producto_id>", methods=["GET"])
+@recetas_bp.route("/producto/<int:product_id>", methods=["GET"])
 @login_required
-def get_recetas_por_producto(producto_id):
+def get_product_recipe_details(product_id):
     tenant_id = current_user.tenant_id
     conn = get_db()
     try:
@@ -189,10 +190,10 @@ def get_recetas_por_producto(producto_id):
                 FROM recetas_ingredientes ri
                 LEFT JOIN ingredientes i ON ri.id_ingrediente = i.id_ingrediente AND i.tenant_id = %s
                 WHERE ri.id_producto = %s AND ri.tenant_id = %s
-            """, (tenant_id, producto_id, tenant_id))
-            recetas_raw = cursor.fetchall()
-            # FIX: Convertir a dict para asegurar la serialización JSON.
-            recetas = [dict(row) for row in recetas_raw]
+            """, (tenant_id, product_id, tenant_id))
+            recipes_raw = cursor.fetchall()
+            # FIX: Convert to dict to ensure JSON serialization.
+            recipes = [dict(row) for row in recipes_raw]
 
             # Empaques
             cursor.execute("""
@@ -201,43 +202,43 @@ def get_recetas_por_producto(producto_id):
                 FROM recetas_empaques re
                 LEFT JOIN empaques e ON re.id_empaque = e.id_empaque AND e.tenant_id = %s
                 WHERE re.id_producto = %s AND re.tenant_id = %s
-            """, (tenant_id, producto_id, tenant_id))
-            empaques_raw = cursor.fetchall()
-            # FIX: Convertir a dict para asegurar la serialización JSON.
-            empaques = [dict(row) for row in empaques_raw]
+            """, (tenant_id, product_id, tenant_id))
+            packaging_raw = cursor.fetchall()
+            # FIX: Convert to dict to ensure JSON serialization.
+            packaging = [dict(row) for row in packaging_raw]
 
             # Costos
-            costos = calcular_costo_completo(producto_id, tenant_id)
+            costs = calculate_full_cost(product_id, tenant_id)
 
             return jsonify({
-                "recetas": recetas,
-                "empaques": empaques,
-                "costos": costos
+                "recipes": recipes,
+                "packaging": packaging,
+                "costs": costs
             })
     except Exception as e:
-        logger.error(f"Error en get_recetas_por_producto: {str(e)}")
-        return jsonify({"error": "Error al obtener los datos de la receta"}), 500
+        logger.error(f"Error in get_product_recipe_details: {str(e)}")
+        return jsonify({"error": "Error fetching recipe data"}), 500
 
 # ================================
 # CRUD Recetas
 # ================================
 @recetas_bp.route("/", methods=["POST"])
 @login_required
-def add_receta():
+def add_recipe_ingredient():
     tenant_id = current_user.tenant_id
     data = request.get_json()
-    id_producto = data.get("id_producto")
-    id_ingrediente = data.get("id_ingrediente")
-    cantidad_necesaria = data.get("cantidad_necesaria")
+    product_id = data.get("id_producto")
+    ingredient_id = data.get("id_ingrediente")
+    quantity_needed = data.get("cantidad_necesaria")
 
-    if not id_producto or not id_ingrediente or cantidad_necesaria is None:
-        return jsonify({"error": "Faltan campos obligatorios"}), 400
+    if not product_id or not ingredient_id or quantity_needed is None:
+        return jsonify({"error": "Required fields are missing"}), 400
     
     conn = get_db()
     try:
         with conn.cursor(cursor_factory=DictCursor) as cursor:
             # Obtener costo del ingrediente
-            cursor.execute("SELECT costo_por_unidad FROM ingredientes WHERE id_ingrediente = %s AND tenant_id = %s", (id_ingrediente, tenant_id))
+            cursor.execute("SELECT costo_por_unidad FROM ingredientes WHERE id_ingrediente = %s AND tenant_id = %s", (ingredient_id, tenant_id))
             ingrediente = cursor.fetchone()
             if not ingrediente:
                 return jsonify({"error": "Ingrediente no encontrado"}), 404
@@ -248,121 +249,121 @@ def add_receta():
             cursor.execute("""
                 INSERT INTO recetas_ingredientes (id_producto, id_ingrediente, cantidad_necesaria, costo_ingrediente, tenant_id)
                 VALUES (%s, %s, %s, %s, %s)
-            """, (id_producto, id_ingrediente, cantidad_necesaria, costo_ingrediente, tenant_id))
+            """, (product_id, ingredient_id, quantity_needed, costo_ingrediente, tenant_id))
             conn.commit()
             
-            calcular_costo_completo(id_producto, tenant_id)
-            return jsonify({"mensaje": "Receta agregada correctamente"}), 201
+            calculate_full_cost(product_id, tenant_id)
+            return jsonify({"message": "Ingredient added to recipe successfully"}), 201
     except Exception as e:
         if conn: conn.rollback()
-        logger.error(f"Error en add_receta: {e}", exc_info=True)
-        return jsonify({"error": "Error al agregar el ingrediente a la receta"}), 500
+        logger.error(f"Error in add_recipe_ingredient: {e}", exc_info=True)
+        return jsonify({"error": "Error adding ingredient to recipe"}), 500
 
 @recetas_bp.route("/multiple", methods=["POST"])
 @login_required
-def add_recetas_multiple():
+def add_multiple_recipe_ingredients():
     tenant_id = current_user.tenant_id
     data = request.get_json()
-    id_producto = data.get("id_producto")
+    product_id = data.get("id_producto")
     ingredientes = data.get("ingredientes", [])
 
-    if not id_producto or not ingredientes:
-        return jsonify({"error": "Faltan datos obligatorios"}), 400
+    if not product_id or not ingredientes:
+        return jsonify({"error": "Required data is missing"}), 400
 
     conn = get_db()
     try:
         with conn.cursor(cursor_factory=DictCursor) as cursor:
             for ing in ingredientes:
-                id_ingrediente = ing.get("id_ingrediente")
-                cantidad_necesaria = ing.get("cantidad_necesaria")
+                ingredient_id = ing.get("id_ingrediente")
+                quantity_needed = ing.get("cantidad_necesaria")
 
-                cursor.execute("SELECT costo_por_unidad FROM ingredientes WHERE id_ingrediente = %s AND tenant_id = %s", (id_ingrediente, tenant_id))
+                cursor.execute("SELECT costo_por_unidad FROM ingredientes WHERE id_ingrediente = %s AND tenant_id = %s", (ingredient_id, tenant_id))
                 ing_data = cursor.fetchone()
                 if not ing_data: continue # Opcional: manejar error si un ingrediente no existe
 
                 costo_unitario = float(ing_data['costo_por_unidad'])
-                costo_ingrediente = costo_unitario * float(cantidad_necesaria)
+                costo_ingrediente = costo_unitario * float(quantity_needed)
 
                 cursor.execute("""
                     INSERT INTO recetas_ingredientes (id_producto, id_ingrediente, cantidad_necesaria, costo_ingrediente, tenant_id)
                     VALUES (%s, %s, %s, %s, %s)
-                """, (id_producto, id_ingrediente, cantidad_necesaria, costo_ingrediente, tenant_id))
+                """, (product_id, ingredient_id, quantity_needed, costo_ingrediente, tenant_id))
             conn.commit()
-            calcular_costo_completo(id_producto, tenant_id)
-            return jsonify({"mensaje": "Ingredientes agregados correctamente"}), 201
+            calculate_full_cost(product_id, tenant_id)
+            return jsonify({"message": "Ingredients added successfully"}), 201
     except Exception as e:
         if conn: conn.rollback()
-        logger.error(f"Error en add_recetas_multiple: {e}", exc_info=True)
-        return jsonify({"error": "Error al agregar los ingredientes"}), 500
+        logger.error(f"Error in add_multiple_recipe_ingredients: {e}", exc_info=True)
+        return jsonify({"error": "Error adding ingredients"}), 500
 
 @recetas_bp.route("/<int:id>", methods=["PUT"])
 @login_required
-def update_receta(id):
+def update_recipe_ingredient(id):
     tenant_id = current_user.tenant_id
     data = request.get_json()
-    id_producto = data.get("id_producto")
-    id_ingrediente = data.get("id_ingrediente")
-    cantidad_necesaria = data.get("cantidad_necesaria")
+    product_id = data.get("id_producto")
+    ingredient_id = data.get("id_ingrediente")
+    quantity_needed = data.get("cantidad_necesaria")
 
     conn = get_db()
     try:
         with conn.cursor(cursor_factory=DictCursor) as cursor:
-            cursor.execute("SELECT costo_por_unidad FROM ingredientes WHERE id_ingrediente = %s AND tenant_id = %s", (id_ingrediente, tenant_id))
+            cursor.execute("SELECT costo_por_unidad FROM ingredientes WHERE id_ingrediente = %s AND tenant_id = %s", (ingredient_id, tenant_id))
             ing_data = cursor.fetchone()
             if not ing_data: return jsonify({"error": "Ingrediente no encontrado"}), 404
 
             costo_unitario = float(ing_data['costo_por_unidad'])
-            costo_ingrediente = costo_unitario * float(cantidad_necesaria)
+            costo_ingrediente = costo_unitario * float(quantity_needed)
 
             cursor.execute("""
                 UPDATE recetas_ingredientes
                 SET id_producto = %s, id_ingrediente = %s, cantidad_necesaria = %s, costo_ingrediente = %s
                 WHERE id = %s AND tenant_id = %s
-            """, (id_producto, id_ingrediente, cantidad_necesaria, costo_ingrediente, id, tenant_id))
+            """, (product_id, ingredient_id, quantity_needed, costo_ingrediente, id, tenant_id))
             conn.commit()
-            if id_producto:
-                calcular_costo_completo(id_producto, tenant_id)
-            return jsonify({"mensaje": "Receta actualizada correctamente"})
+            if product_id:
+                calculate_full_cost(product_id, tenant_id)
+            return jsonify({"message": "Recipe ingredient updated successfully"})
     except Exception as e:
         if conn: conn.rollback()
-        logger.error(f"Error en update_receta: {e}", exc_info=True)
-        return jsonify({"error": "Error al actualizar la receta"}), 500
+        logger.error(f"Error in update_recipe_ingredient: {e}", exc_info=True)
+        return jsonify({"error": "Error updating recipe ingredient"}), 500
 
 @recetas_bp.route("/<int:id>", methods=["DELETE"])
 @login_required
-def delete_receta(id):
+def delete_recipe_ingredient(id):
     tenant_id = current_user.tenant_id
     conn = get_db()
     try:
         with conn.cursor(cursor_factory=DictCursor) as cursor:
             cursor.execute("SELECT id_producto FROM recetas_ingredientes WHERE id = %s AND tenant_id = %s", (id, tenant_id))
             resultado = cursor.fetchone()
-            id_producto = resultado.get('id_producto') if resultado else None
+            product_id = resultado.get('id_producto') if resultado else None
 
             cursor.execute("DELETE FROM recetas_ingredientes WHERE id = %s AND tenant_id = %s", (id, tenant_id))
             conn.commit()
 
-            if id_producto:
-                calcular_costo_completo(id_producto, tenant_id)
+            if product_id:
+                calculate_full_cost(product_id, tenant_id)
 
-            return jsonify({"mensaje": "Receta eliminada correctamente"})
+            return jsonify({"message": "Recipe ingredient deleted successfully"})
     except Exception as e:
         if conn: conn.rollback()
-        logger.error(f"Error en delete_receta: {e}", exc_info=True)
-        return jsonify({"error": "Error al eliminar la receta"}), 500
+        logger.error(f"Error in delete_recipe_ingredient: {e}", exc_info=True)
+        return jsonify({"error": "Error deleting recipe ingredient"}), 500
 
-@recetas_bp.route("/producto/<int:producto_id>", methods=["DELETE"])
+@recetas_bp.route("/producto/<int:product_id>", methods=["DELETE"])
 @login_required
-def delete_recetas_producto(producto_id):
+def delete_all_product_recipes(product_id):
     tenant_id = current_user.tenant_id
     conn = get_db()
     try:
         with conn.cursor() as cursor:
-            cursor.execute("DELETE FROM recetas_ingredientes WHERE id_producto = %s AND tenant_id = %s", (producto_id, tenant_id))
+            cursor.execute("DELETE FROM recetas_ingredientes WHERE id_producto = %s AND tenant_id = %s", (product_id, tenant_id))
             conn.commit()
-            calcular_costo_completo(producto_id, tenant_id)
-            return jsonify({"mensaje": "Todas las recetas del producto fueron eliminadas"})
+            calculate_full_cost(product_id, tenant_id)
+            return jsonify({"message": "All recipes for the product were deleted"})
     except Exception as e:
         if conn: conn.rollback()
-        logger.error(f"Error en delete_recetas_producto: {e}", exc_info=True)
-        return jsonify({"error": "Error al eliminar las recetas del producto"}), 500
+        logger.error(f"Error in delete_all_product_recipes: {e}", exc_info=True)
+        return jsonify({"error": "Error deleting product recipes"}), 500
