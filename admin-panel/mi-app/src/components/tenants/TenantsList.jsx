@@ -1,5 +1,5 @@
+// c:\Proyectos de programacion\SWEETLAND FULL PROYECT\admin-panel\mi-app\src\components\tenants\TenantsList.jsx
 import React, { useState, useEffect } from 'react';
-// FIX: Ruta ajustada a la ubicación actual del archivo.
 import { tenantsService } from '../../services/tenantsService';
 import { modulesService } from '../../services/modulesService';
 import './TenantsList.css';
@@ -20,14 +20,12 @@ function TenantsList() {
 
   const fetchTenants = async () => {
     try {
-      setLoading(true);
+      // No es necesario setLoading(true) aquí si se llama desde otra función que ya lo gestiona
       const data = await tenantsService.getAllTenants();
       setTenants(data);
       setError('');
     } catch (err) {
       setError(err.message || 'Error al cargar los tenants');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -41,15 +39,17 @@ function TenantsList() {
         ]);
         setTenants(tenantsData);
         setAvailableModules(modulesData);
-        // 💡 FIX: Se inicializa el estado de las etiquetas personalizadas.
-        // Creamos una entrada para cada módulo con un string vacío.
-        // Esto asegura que cada input sea un "componente controlado" desde el inicio
-        // y soluciona el problema de no poder editar el texto.
+        
+        // FIX DEFINITIVO: Inicializa el estado de las etiquetas.
+        // Se crea una entrada para cada módulo con un string vacío.
+        // Esto asegura que cada input sea un "componente controlado" desde el inicio,
+        // solucionando el problema de no poder editar el texto.
         const initialLabels = modulesData.reduce((acc, module) => {
           acc[module.module_key] = '';
           return acc;
         }, {});
         setCustomLabels(initialLabels);
+
       } catch (err) {
         setError(err.message || 'Error al cargar datos iniciales.');
       } finally {
@@ -66,26 +66,27 @@ function TenantsList() {
 
   const handleLabelChange = (e) => {
     const { name, value } = e.target;
-    // El 'name' del input será la 'module_key', permitiendo actualizar el estado correctamente.
     setCustomLabels(prev => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setNotification({ message: '', type: '' }); // Limpiar notificaciones previas
+    setNotification({ message: '', type: '' });
     setLoading(true);
     try {
       const payload = { ...form, custom_labels: customLabels };
       await tenantsService.createTenant(payload);
       setNotification({ message: 'Tenant creado con éxito', type: 'success' });
       setForm({ tenant_name: '', admin_name: '', admin_email: '', admin_password: '' });
+      
       // Reseteamos las etiquetas a su estado inicial (vacío) para el siguiente formulario.
       const initialLabels = availableModules.reduce((acc, module) => {
         acc[module.module_key] = '';
         return acc;
       }, {});
       setCustomLabels(initialLabels);
-      fetchTenants(); // Recargar la lista
+      
+      await fetchTenants(); // Recargar la lista
     } catch (err) {
       setNotification({ message: err.message, type: 'error' });
     } finally {
@@ -100,7 +101,7 @@ function TenantsList() {
       try {
         await tenantsService.deleteTenant(id);
         setNotification({ message: 'Tenant eliminado con éxito', type: 'success' });
-        fetchTenants(); // Recargar la lista
+        await fetchTenants(); // Recargar la lista
       } catch (err) {
         setNotification({ message: err.message, type: 'error' });
       } finally {
@@ -145,7 +146,6 @@ function TenantsList() {
               <div className="row">
                 {availableModules.map(module => (
                   <div key={module.module_key} className="col-md-6 mb-3">
-                    {/* 💡 FIX 1: Etiqueta de referencia más visible y robusta. */}
                     <label htmlFor={`label-for-${module.module_key}`} className="form-label fw-bold">
                       {module.icon} {module.label || module.module_key}
                     </label>
@@ -155,13 +155,8 @@ function TenantsList() {
                         className="form-control"
                         name={module.module_key}
                         id={`label-for-${module.module_key}`}
-                        // 💡 FIX: El valor se toma del estado 'customLabels'. El '|| ""' asegura que siempre sea un string
-                        // y evita el bug de "uncontrolled to controlled" sin bloquear la edición.
                         value={customLabels[module.module_key] || ''}
                         onChange={handleLabelChange}
-                        // 💡 FIX: El placeholder ahora usa la etiqueta (label) del módulo o su clave (module_key)
-                        // como fallback. Esto garantiza que cada campo muestre a qué módulo corresponde,
-                        // por ejemplo: "Personalizar: productos".
                         placeholder={`Personalizar: ${module.label || module.module_key}`}
                       />
                     </div>
