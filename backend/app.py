@@ -16,20 +16,22 @@ load_dotenv()
 
 app = Flask(__name__)
 
-app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
-
 # ==========================================
 # 🛠️ WORKAROUNDS DE ENRUTAMIENTO
 # ==========================================
-@app.before_request
-def fix_path():
+class FixPathMiddleware:
     """
-    Soluciona URLs malformadas enviadas por el cliente.
-    1. Reemplaza múltiples barras (//) por una sola (/).
+    Middleware que intercepta las peticiones a nivel de WSGI para corregir
+    URLs malformadas (ej. con dobles barras) ANTES de que el router de Flask
+    las procese y potencialmente emita una redirección no deseada.
     """
-    if '//' in request.path:
-        new_path = re.sub('/+', '/', request.path)
-        request.environ['PATH_INFO'] = new_path
+    def __init__(self, app):
+        self.app = app
+    def __call__(self, environ, start_response):
+        path = environ.get('PATH_INFO', '')
+        if '//' in path:
+            environ['PATH_INFO'] = re.sub('/+', '/', path)
+        return self.app(environ, start_response)
 
 # ==========================================
 # �️ CONFIGURACIÓN DE SEGURIDAD Y SESIONES
@@ -51,11 +53,19 @@ app.config.update(
 # 🔴 La configuración de la base de datos ahora se gestiona con la variable DATABASE_URL en el archivo .env
 
 # ==========================================
+# 🚀 INICIALIZACIÓN DE MIDDLEWARE Y EXTENSIONES
+# ==========================================
+
+# ==========================================
 # 🚀 INICIALIZACIÓN DE EXTENSIONES
 # ==========================================
 db.init_app(app) # 2. 🟢 Inicializamos el nuevo gestor de base de datos PostgreSQL
 # 2. Desactivamos la regla estricta de barras al final de la URL (ej: /gastos y /gastos/ son iguales)
 # Esto hace la API más tolerante a errores del frontend.
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
+# Aplicamos nuestro middleware para limpiar las URLs
+app.wsgi_app = FixPathMiddleware(app.wsgi_app)
+
 app.url_map.strict_slashes = False
 
 limiter.init_app(app)
