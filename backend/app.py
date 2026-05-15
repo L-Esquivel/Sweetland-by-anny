@@ -101,6 +101,11 @@ def load_user(user_id):
 
 @login_manager.unauthorized_handler
 def unauthorized():
+    # FIX: Handle OPTIONS requests for unauthorized access to prevent CORS preflight errors.
+    # This ensures that preflight requests always receive a 200 OK, even if the user is not authenticated.
+    # Flask-CORS will then add the necessary headers.
+    if request.method == 'OPTIONS':
+        return jsonify(success=True), 200
     return jsonify({"error": "No autorizado", "mensaje": "Debes iniciar sesión para realizar esta acción."}), 401
 
 # ==========================================

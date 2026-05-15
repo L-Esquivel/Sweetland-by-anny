@@ -67,6 +67,7 @@ def add_empaque():
 @admin_required # FIX: Solo admins pueden modificar el catálogo.
 def update_empaque(id):
     tenant_id = current_user.tenant_id
+    conn = get_db()
     try:
         data = request.get_json()
         nombre = data.get("nombre")
@@ -76,30 +77,25 @@ def update_empaque(id):
         if not nombre:
             return jsonify({"error": "El nombre es obligatorio"}), 400
 
-        conn = get_db()
-        try:
-            with conn.cursor() as cursor:
-                # 💡 SAAS-IFICATION: Aseguramos que solo se pueda actualizar un empaque del tenant correcto.
-                cursor.execute(
-                    "UPDATE empaques SET nombre=%s, descripcion=%s, precio=%s WHERE id_empaque=%s AND tenant_id = %s",
-                    (nombre, descripcion, precio, id, tenant_id)
-                )
-                conn.commit()
-                return jsonify({"mensaje": "Empaque actualizado correctamente"})
-        except Exception as e:
-            get_db().rollback()
-            logger.error(f"Error en update_empaque: {str(e)}")
-            return jsonify({"error": "Error al actualizar el empaque"}), 500
+        with conn.cursor() as cursor:
+            # 💡 SAAS-IFICATION: Aseguramos que solo se pueda actualizar un empaque del tenant correcto.
+            cursor.execute(
+                "UPDATE empaques SET nombre=%s, descripcion=%s, precio=%s WHERE id_empaque=%s AND tenant_id = %s",
+                (nombre, descripcion, precio, id, tenant_id)
+            )
+            conn.commit()
+        return jsonify({"mensaje": "Empaque actualizado correctamente"})
     except Exception as e:
-        logger.error(f"Error en update_empaque: {str(e)}")
-        return jsonify({"error": "Error al procesar los datos del empaque"}), 500
+        conn.rollback()
+        logger.error(f"Error en update_empaque: {e}", exc_info=True)
+        return jsonify({"error": "Error al actualizar el empaque"}), 500
 
 @empaques_bp.route("/<int:id>", methods=["DELETE"])
 @admin_required # FIX: Solo admins pueden borrar del catálogo.
 def delete_empaque(id):
     tenant_id = current_user.tenant_id
+    conn = get_db()
     try:
-        conn = get_db()
         with conn.cursor(cursor_factory=DictCursor) as cursor:
             # VERIFICACIÓN: ¿Está este empaque en uso por algún producto?
             # 💡 SAAS-IFICATION: La verificación de uso también debe ser por tenant.
@@ -114,8 +110,8 @@ def delete_empaque(id):
             conn.commit()
             return jsonify({"mensaje": "Empaque eliminado del catálogo"})
     except Exception as e:
-        get_db().rollback()
-        logger.error(f"Error en delete_empaque: {str(e)}")
+        conn.rollback()
+        logger.error(f"Error en delete_empaque: {e}", exc_info=True)
         return jsonify({"error": "Error al eliminar el empaque"}), 500
 
 # ==================== EMPAQUES ASIGNADOS A PRODUCTOS ====================

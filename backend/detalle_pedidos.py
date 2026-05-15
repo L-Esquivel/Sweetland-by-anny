@@ -1,7 +1,6 @@
 from flask import Blueprint, jsonify, request
 from flask_login import login_required, current_user
 from db import get_db # 🟢 Importamos el nuevo gestor de DB
-from flask_cors import cross_origin
 from psycopg2.extras import DictCursor # 🟢 Para obtener resultados como diccionarios
 import logging
 
@@ -15,7 +14,6 @@ detalle_pedidos_bp = Blueprint("detalle_pedidos", __name__, url_prefix="/detalle
 # ========================================
 @detalle_pedidos_bp.route("/", methods=["GET"])
 @login_required
-@cross_origin()
 def get_detalles():
     tenant_id = current_user.tenant_id
     conn = get_db()
@@ -52,7 +50,6 @@ def get_detalles():
 # ========================================
 @detalle_pedidos_bp.route("/<int:id>", methods=["GET"])
 @login_required
-@cross_origin()
 def get_detalle(id):
     tenant_id = current_user.tenant_id
     conn = get_db()
@@ -89,7 +86,6 @@ def get_detalle(id):
 # ========================================
 @detalle_pedidos_bp.route("/pedido/<int:pedido_id>", methods=["GET"])
 @login_required
-@cross_origin()
 def get_detalles_por_pedido(pedido_id):
     """
     Obtiene todos los detalles de un pedido específico.
@@ -133,7 +129,6 @@ def get_detalles_por_pedido(pedido_id):
 # ========================================
 @detalle_pedidos_bp.route("/", methods=["POST"])
 @login_required
-@cross_origin()
 def create_detalle():
     tenant_id = current_user.tenant_id
     conn = get_db()
@@ -174,7 +169,6 @@ def create_detalle():
 # ========================================
 @detalle_pedidos_bp.route("/<int:id>", methods=["PUT"])
 @login_required
-@cross_origin()
 def update_detalle(id):
     tenant_id = current_user.tenant_id
     data = request.get_json()
@@ -203,6 +197,5 @@ def update_detalle(id):
 # ========================================
 @detalle_pedidos_bp.route("/<int:id>", methods=["DELETE"])
 @login_required
-@cross_origin()
 def delete_detalle(id):
     tenant_id = current_user.tenant_id

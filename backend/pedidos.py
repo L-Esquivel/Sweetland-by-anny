@@ -151,6 +151,7 @@ def get_pedidos():
 
 @pedidos_bp.route("/<int:id>/estado", methods=["PUT"])
 @login_required
+@admin_required # FIX: Se añade decorador de seguridad. Solo admins pueden cambiar el estado.
 def update_estado_pedido(id):
     data = request.get_json()
     nuevo_estado = data.get("estado")
