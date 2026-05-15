@@ -39,6 +39,7 @@ def get_ingredientes():
 @admin_required
 def create_ingrediente():
     tenant_id = current_user.tenant_id
+    conn = get_db()
     try:
         data = request.get_json() or {}
         nombre = data.get("nombre")
@@ -52,7 +53,6 @@ def create_ingrediente():
         if not nombre or not unidad_medida:
             return jsonify({"error": "Nombre y Unidad de Medida son obligatorios"}), 400
 
-        conn = get_db()
         with conn.cursor() as cursor:
             # 💡 SAAS-IFICATION: Insertamos el tenant_id.
             cursor.execute("""
@@ -66,7 +66,7 @@ def create_ingrediente():
         
         return jsonify({"mensaje": "Ingrediente creado correctamente"}), 201
     except Exception as e:
-        get_db().rollback()
+        conn.rollback()
         logger.error(f"Error en create_ingrediente: {e}", exc_info=True)
         return jsonify({"error": "Error al crear el insumo"}), 500
 
@@ -74,6 +74,7 @@ def create_ingrediente():
 @admin_required
 def update_ingrediente(id):
     tenant_id = current_user.tenant_id
+    conn = get_db()
     try:
         data = request.get_json() or {}
         nombre = data.get("nombre")
@@ -82,7 +83,6 @@ def update_ingrediente(id):
         stock = data.get("stock")
         costo_por_unidad = data.get("costo_por_unidad")
 
-        conn = get_db()
         with conn.cursor() as cursor:
             # 💡 SAAS-IFICATION: Aseguramos que solo se pueda actualizar un ingrediente del tenant correcto.
             cursor.execute("""
@@ -97,7 +97,7 @@ def update_ingrediente(id):
 
         return jsonify({"mensaje": "Ingrediente actualizado"})
     except Exception as e:
-        get_db().rollback()
+        conn.rollback()
         logger.error(f"Error en update_ingrediente: {e}", exc_info=True)
         return jsonify({"error": "Error al actualizar el insumo"}), 500
 
@@ -105,8 +105,8 @@ def update_ingrediente(id):
 @admin_required
 def delete_ingrediente(id):
     tenant_id = current_user.tenant_id
+    conn = get_db()
     try:
-        conn = get_db()
         with conn.cursor(cursor_factory=DictCursor) as cursor:
             # VERIFICACIÓN: ¿Está este ingrediente en uso por alguna receta?
             cursor.execute("SELECT COUNT(*) as total FROM recetas_ingredientes WHERE id_ingrediente = %s AND tenant_id = %s", (id, tenant_id))
@@ -126,6 +126,6 @@ def delete_ingrediente(id):
 
         return jsonify({"mensaje": "Eliminado correctamente"})
     except Exception as e:
-        get_db().rollback()
+        conn.rollback()
         logger.error(f"Error en delete_ingrediente: {e}", exc_info=True)
         return jsonify({"error": "Error al eliminar el insumo"}), 500

@@ -65,10 +65,12 @@ def add_merma_registro():
                 costo_unitario = item.get('costo_produccion', 0)
                 descripcion = f"Producto: {item.get('nombre')}"
             elif id_ingrediente:
-                cursor.execute("SELECT nombre, costo_unitario FROM ingredientes WHERE id_ingrediente = %s AND tenant_id = %s", (id_ingrediente, tenant_id))
+                # FIX: El nombre de la columna es 'costo_por_unidad', no 'costo_unitario'.
+                # Esto corrige un bug donde el costo de la merma de ingredientes siempre era 0.
+                cursor.execute("SELECT nombre, costo_por_unidad FROM ingredientes WHERE id_ingrediente = %s AND tenant_id = %s", (id_ingrediente, tenant_id))
                 item = cursor.fetchone()
                 if not item: return jsonify({"error": "Ingrediente no encontrado"}), 404
-                costo_unitario = item.get('costo_unitario', 0)
+                costo_unitario = item.get('costo_por_unidad', 0)
                 descripcion = f"Ingrediente: {item.get('nombre')}"
 
             costo_perdida = float(costo_unitario or 0) * float(cantidad)
