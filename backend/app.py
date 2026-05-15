@@ -97,7 +97,7 @@ from empaques import empaques_bp
 from gastos import gastos_bp
 from merma import merma_bp
 from tenants import tenants_bp
-from platform import platform_bp
+from platform_api import platform_bp
 
 app.register_blueprint(auth_bp)
 app.register_blueprint(usuarios_bp)
@@ -111,6 +111,7 @@ app.register_blueprint(gastos_bp)
 app.register_blueprint(merma_bp)
 app.register_blueprint(tenants_bp)
 app.register_blueprint(platform_bp)
+app.register_blueprint(modules_bp)
 
 # ==========================================
 # 🌍 RUTAS DE ARCHIVOS Y ESTADO
