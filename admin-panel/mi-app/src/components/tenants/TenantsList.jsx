@@ -37,6 +37,8 @@ function TenantsList() {
           tenantsService.getAllTenants(),
           modulesService.getAllModules()
         ]);
+        // DIAGNÓSTICO: Ver qué datos de módulos llegan realmente de la API.
+        console.log("MODULOS RECIBIDOS:", modulesData);
         setTenants(tenantsData);
         setAvailableModules(modulesData);
         
@@ -66,6 +68,8 @@ function TenantsList() {
 
   const handleLabelChange = (e) => {
     const { name, value } = e.target;
+    // DIAGNÓSTICO: Verificar si el evento se dispara y con qué datos.
+    console.log(`ACTUALIZANDO ETIQUETA: name='${name}', value='${value}'`);
     setCustomLabels(prev => ({ ...prev, [name]: value }));
   };
 
@@ -118,7 +122,8 @@ function TenantsList() {
 
   return (
     <div className="tenants-container">
-      <h2>Gestión de Tenants</h2>
+      {/* DIAGNÓSTICO: Cambio visual para confirmar que el archivo se actualizó. */}
+      <h2>Gestión de Tenants (v2 - Diagnóstico)</h2>
       
       <Notification message={notification.message} type={notification.type} />
       {error && <div className="alert alert-danger">{error}</div>}
