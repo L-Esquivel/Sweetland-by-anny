@@ -3,11 +3,11 @@ import './IngredientesList.css';
 import { ingredientesService } from '../../services/ingredientesService';
 
 const IngredientesList = () => {
-  const [ingredientes, setIngredientes] = useState([]);
+  const [ingredients, setIngredients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [mostrarModal, setMostrarModal] = useState(false);
-  const [ingredienteEditando, setIngredienteEditando] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+  const [editingIngredient, setEditingIngredient] = useState(null);
   const [formData, setFormData] = useState({
     nombre: '',
     unidad_medida: '',
@@ -15,52 +15,52 @@ const IngredientesList = () => {
     costo_por_unidad: ''
   });
 
-  // Unidades disponibles
-  const unidades = ['kg', 'g', 'lb', 'oz', 'lt', 'ml', 'unidad', 'paquete'];
+  // Available units
+  const units = ['kg', 'g', 'lb', 'oz', 'lt', 'ml', 'unit', 'package'];
 
   useEffect(() => {
-    cargarIngredientes();
+    fetchIngredients();
   }, []);
 
-  const cargarIngredientes = async () => {
+  const fetchIngredients = async () => {
     try {
       setLoading(true);
       setError('');
       const data = await ingredientesService.getIngredientes();
-      setIngredientes(data);
+      setIngredients(data);
     } catch (error) {
-      console.error('Error cargando ingredientes:', error);
-      setError('No se pudieron cargar los ingredientes');
+      console.error('Error loading ingredients:', error);
+      setError('Could not load ingredients');
     } finally {
       setLoading(false);
     }
   };
 
-  const abrirModalCrear = () => {
-    setIngredienteEditando(null);
+  const openCreateModal = () => {
+    setEditingIngredient(null);
     setFormData({
       nombre: '',
       unidad_medida: '',
       stock: '',
       costo_por_unidad: ''
     });
-    setMostrarModal(true);
+    setShowModal(true);
   };
 
-  const abrirModalEditar = (ingrediente) => {
-    setIngredienteEditando(ingrediente);
+  const openEditModal = (ingredient) => {
+    setEditingIngredient(ingredient);
     setFormData({
-      nombre: ingrediente.nombre,
-      unidad_medida: ingrediente.unidad_medida,
-      stock: ingrediente.stock || '',
-      costo_por_unidad: ingrediente.costo_por_unidad || ''
+      nombre: ingredient.nombre,
+      unidad_medida: ingredient.unidad_medida,
+      stock: ingredient.stock || '',
+      costo_por_unidad: ingredient.costo_por_unidad || ''
     });
-    setMostrarModal(true);
+    setShowModal(true);
   };
 
-  const cerrarModal = () => {
-    setMostrarModal(false);
-    setIngredienteEditando(null);
+  const closeModal = () => {
+    setShowModal(false);
+    setEditingIngredient(null);
   };
 
   const handleInputChange = (e) => {
@@ -76,58 +76,57 @@ const IngredientesList = () => {
     try {
       setError('');
 
-      // Validamos que los números sean válidos antes de enviar
-      const datosEnviar = {
+      // Validate that numbers are valid before sending
+      // The keys must match the backend API contract
+      const payload = {
         nombre: formData.nombre.trim(),
         unidad_medida: formData.unidad_medida,
-        // Si está vacío, enviamos 0 para evitar errores de DB
+        // If empty, send 0 to avoid DB errors
         stock: formData.stock === '' ? 0 : parseFloat(formData.stock),
         costo_por_unidad: formData.costo_por_unidad === '' ? 0 : parseFloat(formData.costo_por_unidad)
       };
 
-      if (!datosEnviar.nombre || !datosEnviar.unidad_medida) {
-        setError('Nombre y Unidad son obligatorios');
+      if (!payload.nombre || !payload.unidad_medida) {
+        setError('Name and Unit are required');
         return;
       }
 
-      console.log('Enviando ingrediente:', datosEnviar);
-
-      if (ingredienteEditando) {
-        await ingredientesService.updateIngrediente(ingredienteEditando.id_ingrediente, datosEnviar);
+      if (editingIngredient) {
+        await ingredientesService.updateIngrediente(editingIngredient.id_ingrediente, payload);
       } else {
-        await ingredientesService.createIngrediente(datosEnviar);
+        await ingredientesService.createIngrediente(payload);
       }
 
-      cerrarModal();
-      await cargarIngredientes(); // Recargar la lista
+      closeModal();
+      await fetchIngredients(); // Reload the list
     } catch (error) {
-      console.error('Error guardando ingrediente:', error);
-      setError(error.message || 'No se pudo guardar el ingrediente');
+      console.error('Error saving ingredient:', error);
+      setError(error.message || 'Could not save the ingredient');
     }
   };
 
-  const handleEliminar = async (id) => {
-    if (window.confirm('¿Estás seguro de que quieres eliminar este ingrediente?')) {
+  const handleDelete = async (id) => {
+    if (window.confirm('Are you sure you want to delete this ingredient?')) {
       try {
         await ingredientesService.deleteIngrediente(id);
-        cargarIngredientes();
+        fetchIngredients();
       } catch (error) {
-        console.error('Error eliminando ingrediente:', error);
-        setError('No se pudo eliminar el ingrediente');
+        console.error('Error deleting ingredient:', error);
+        setError(error.message || 'Could not delete the ingredient');
       }
     }
   };
 
-  const formatearMoneda = (valor) => {
-    if (!valor) return '$ 0';
-    return new Intl.NumberFormat('es-CO', {
+  const formatCurrency = (value) => {
+    if (!value) return '$0';
+    return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: 'COP'
+      currency: 'USD'
     }).format(valor);
   };
 
-  const getUnidadBadgeClass = (unidad) => {
-    switch (unidad) {
+  const getUnitBadgeClass = (unit) => {
+    switch (unit) {
       case 'kg':
       case 'lb':
         return 'bg-primary';
@@ -137,9 +136,9 @@ const IngredientesList = () => {
       case 'lt':
       case 'ml':
         return 'bg-info';
-      case 'unidad':
+      case 'unit':
         return 'bg-warning text-dark';
-      case 'paquete':
+      case 'package':
         return 'bg-secondary';
       default:
         return 'bg-light text-dark';
@@ -147,15 +146,15 @@ const IngredientesList = () => {
   };
 
   if (loading) {
-    return <div className="text-center p-4">Cargando ingredientes...</div>;
+    return <div className="text-center p-4">Loading ingredients...</div>;
   }
 
   return (
     <div className="ingredientes-container">
       <div className="d-flex justify-content-between align-items-center mb-4">
-        <h2 className="mb-0">🧂 Gestión de Ingredientes</h2>
-        <button className="btn btn-primary" onClick={abrirModalCrear}>
-          ➕ Nuevo Ingrediente
+        <h2 className="mb-0">🧂 Ingredients Management</h2>
+        <button className="btn btn-primary" onClick={openCreateModal}>
+          ➕ New Ingredient
         </button>
       </div>
 
@@ -171,56 +170,56 @@ const IngredientesList = () => {
             <table className="table table-striped table-hover mb-0">
               <thead className="table-dark">
                 <tr>
-                  <th>Nombre</th>
-                  <th>Unidad</th>
-                  <th>Cantidad en Stock</th>
-                  <th>Costo Unitario</th>
-                  <th className="text-center">Acciones</th>
+                  <th>Name</th>
+                  <th>Unit</th>
+                  <th>Quantity in Stock</th>
+                  <th>Unit Cost</th>
+                  <th className="text-center">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {ingredientes.length === 0 ? (
+                {ingredients.length === 0 ? (
                   <tr>
                     <td colSpan="5" className="text-center text-muted py-4">
-                      No hay ingredientes registrados
+                      No ingredients registered yet
                     </td>
                   </tr>
                 ) : (
-                  ingredientes.map(ingrediente => (
-                    <tr key={ingrediente.id_ingrediente}>
-                      <td className="fw-semibold">{ingrediente.nombre}</td>
+                  ingredients.map(ingredient => (
+                    <tr key={ingredient.id_ingrediente}>
+                      <td className="fw-semibold">{ingredient.nombre}</td>
                       <td>
-                        <span className={`badge ${getUnidadBadgeClass(ingrediente.unidad_medida)}`}>
-                          {ingrediente.unidad_medida}
+                        <span className={`badge ${getUnitBadgeClass(ingredient.unidad_medida)}`}>
+                          {ingredient.unidad_medida}
                         </span>
                       </td>
                       <td>
-                        {ingrediente.stock !== null ? (
+                        {ingredient.stock !== null ? (
                           <span className="fw-bold">
-                            {ingrediente.stock} {ingrediente.unidad_medida}
+                            {ingredient.stock} {ingredient.unidad_medida}
                           </span>
                         ) : (
                           <span className="text-muted">N/A</span>
                         )}
                       </td>
                       <td className="fw-bold text-success">
-                        {formatearMoneda(ingrediente.costo_por_unidad)}
+                        {formatCurrency(ingredient.costo_por_unidad)}
                       </td>
                       <td className="text-center">
                         <div className="btn-group" role="group">
                           <button 
                             className="btn btn-warning btn-sm me-1"
-                            onClick={() => abrirModalEditar(ingrediente)}
-                            title="Editar ingrediente"
+                            onClick={() => openEditModal(ingredient)}
+                            title="Edit ingredient"
                           >
-                            ✏️ Editar
+                            ✏️ Edit
                           </button>
                           <button 
                             className="btn btn-danger btn-sm"
-                            onClick={() => handleEliminar(ingrediente.id_ingrediente)}
-                            title="Eliminar ingrediente"
+                            onClick={() => handleDelete(ingredient.id_ingrediente)}
+                            title="Delete ingredient"
                           >
-                            🗑️ Eliminar
+                            🗑️ Delete
                           </button>
                         </div>
                       </td>
@@ -233,26 +232,26 @@ const IngredientesList = () => {
         </div>
       </div>
 
-      {/* Modal para crear/editar */}
-      {mostrarModal && (
+      {/* Modal for create/edit */}
+      {showModal && (
         <div className="modal fade show d-block" style={{backgroundColor: 'rgba(0,0,0,0.5)'}}>
           <div className="modal-dialog">
             <div className="modal-content">
               <div className="modal-header bg-primary text-white">
                 <h5 className="modal-title">
-                  {ingredienteEditando ? '✏️ Editar Ingrediente' : '➕ Nuevo Ingrediente'}
+                  {editingIngredient ? '✏️ Edit Ingredient' : '➕ New Ingredient'}
                 </h5>
                 <button 
                   type="button" 
                   className="btn-close btn-close-white" 
-                  onClick={cerrarModal}
+                  onClick={closeModal}
                 ></button>
               </div>
               
               <form onSubmit={handleSubmit}>
                 <div className="modal-body">
                   <div className="mb-3">
-                    <label className="form-label">Nombre del Ingrediente *</label>
+                    <label className="form-label">Ingredient Name *</label>
                     <input
                       type="text"
                       name="nombre"
@@ -260,12 +259,12 @@ const IngredientesList = () => {
                       value={formData.nombre}
                       onChange={handleInputChange}
                       required
-                      placeholder="Ej: Harina, Azúcar, Huevos..."
+                      placeholder="e.g., Flour, Sugar, Eggs..."
                     />
                   </div>
 
                   <div className="mb-3">
-                    <label className="form-label">Unidad de Medida *</label>
+                    <label className="form-label">Unit of Measurement *</label>
                     <select
                       name="unidad_medida"
                       className="form-select"
@@ -273,10 +272,10 @@ const IngredientesList = () => {
                       onChange={handleInputChange}
                       required
                     >
-                      <option value="">Seleccionar unidad</option>
-                      {unidades.map(unidad => (
-                        <option key={unidad} value={unidad}>
-                          {unidad}
+                      <option value="">Select unit</option>
+                      {units.map(unit => (
+                        <option key={unit} value={unit}>
+                          {unit}
                         </option>
                       ))}
                     </select>
@@ -285,7 +284,7 @@ const IngredientesList = () => {
                   <div className="row">
                     <div className="col-md-6">
                       <div className="mb-3">
-                        <label className="form-label">Cantidad en Stock</label>
+                        <label className="form-label">Quantity in Stock</label>
                         <input
                           type="number"
                           name="stock"
@@ -301,7 +300,7 @@ const IngredientesList = () => {
 
                     <div className="col-md-6">
                       <div className="mb-3">
-                        <label className="form-label">Costo Unitario (COP)</label>
+                        <label className="form-label">Unit Cost</label>
                         <input
                           type="number"
                           name="costo_por_unidad"
@@ -321,15 +320,15 @@ const IngredientesList = () => {
                   <button 
                     type="button"
                     className="btn btn-secondary"
-                    onClick={cerrarModal}
+                    onClick={closeModal}
                   >
-                    Cancelar
+                    Cancel
                   </button>
                   <button 
                     type="submit"
                     className="btn btn-primary"
                   >
-                    {ingredienteEditando ? '📝 Actualizar' : '✅ Crear'} Ingrediente
+                    {editingIngredient ? '📝 Update' : '✅ Create'} Ingredient
                   </button>
                 </div>
               </form>
