@@ -16,9 +16,9 @@ const Login = ({ onLogin }) => {
       if (!result.success) {
         setError(result.error);
       }
-      // La lógica de redirección y verificación de rol ahora vive en App.jsx
+      // The redirection and role verification logic now lives in App.jsx
     } catch (err) {
-      setError('Error de conexión con el servidor');
+      setError('Server connection error');
     } finally {
       setLoading(false);
     }
@@ -38,7 +38,7 @@ const Login = ({ onLogin }) => {
         maxWidth: '400px'
       }}>
         {/* Mensaje de bienvenida */}
-        <div style={{
+        <div className="login-welcome" style={{
           textAlign: 'center',
           color: 'white',
           marginBottom: '40px'
@@ -55,18 +55,18 @@ const Login = ({ onLogin }) => {
             opacity: 0.9,
             marginBottom: '5px'
           }}>
-            Bienvenido a tu Panel de Control
+            Welcome to your Control Panel
           </p>
           <p style={{ 
             fontSize: '0.9rem',
             opacity: 0.7
           }}>
-            Inteligencia de Negocio para Emprendedores
+            Business Intelligence for Entrepreneurs
           </p>
         </div>
 
         {/* Card de login */}
-        <div style={{
+        <div className="login-card" style={{
           backgroundColor: 'white',
           borderRadius: '12px',
           padding: '30px',
@@ -77,7 +77,7 @@ const Login = ({ onLogin }) => {
             marginBottom: '25px',
             color: '#333'
           }}>
-            Iniciar Sesión
+            Sign In
           </h4>
           
           <form onSubmit={handleSubmit}>
@@ -91,7 +91,7 @@ const Login = ({ onLogin }) => {
                   borderRadius: '6px',
                   fontSize: '1rem'
                 }}
-                placeholder="Correo electrónico"
+                placeholder="Email Address"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -109,7 +109,7 @@ const Login = ({ onLogin }) => {
                   borderRadius: '6px',
                   fontSize: '1rem'
                 }}
-                placeholder="Contraseña"
+                placeholder="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -132,14 +132,14 @@ const Login = ({ onLogin }) => {
               }}
               disabled={loading}
             >
-              {loading ? 'Cargando...' : 'Entrar'}
+              {loading ? 'Loading...' : 'Sign In'}
             </button>
           </form>
 
           {error && (
             <div style={{
-              backgroundColor: error.includes('Acceso denegado') ? '#f8d7da' : '#f8d7da',
-              color: error.includes('Acceso denegado') ? '#721c24' : '#721c24',
+              backgroundColor: '#f8d7da',
+              color: '#721c24',
               padding: '10px',
               borderRadius: '6px',
               marginTop: '20px',
