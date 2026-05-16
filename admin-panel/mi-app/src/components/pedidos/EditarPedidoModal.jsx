@@ -2,87 +2,87 @@ import React, { useState, useEffect } from 'react';
 import { pedidosService } from '../../services/pedidosService';
 
 const EditarPedidoModal = ({ pedido, productos, onSubmit, onClose }) => {
-  const [detalles, setDetalles] = useState([]);
+  const [details, setDetails] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [productoSeleccionado, setProductoSeleccionado] = useState('');
-  const [cantidad, setCantidad] = useState(1);
-  const [guardando, setGuardando] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState('');
+  const [quantity, setQuantity] = useState(1);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    cargarDetallesPedido();
+    fetchOrderDetails();
   }, [pedido.id]);
 
-  const cargarDetallesPedido = async () => {
+  const fetchOrderDetails = async () => {
     try {
       const data = await pedidosService.getDetallesPedido(pedido.id);
-      setDetalles(data);
+      setDetails(data);
     } catch (error) {
-      console.error('Error cargando detalles:', error);
-      setError('Error al cargar los detalles del pedido');
+      console.error('Error loading details:', error);
+      setError('Error loading order details');
     } finally {
       setLoading(false);
     }
   };
 
-  const agregarProducto = () => {
-    if (!productoSeleccionado || cantidad < 1) {
-      setError('Selecciona un producto y cantidad válida');
+  const addProduct = () => {
+    if (!selectedProduct || quantity < 1) {
+      setError('Select a valid product and quantity');
       return;
     }
 
-    const producto = productos.find(p => p.id_producto === parseInt(productoSeleccionado));
-    if (!producto) {
-      setError('Producto no encontrado');
+    const product = productos.find(p => p.id_producto === parseInt(selectedProduct));
+    if (!product) {
+      setError('Product not found');
       return;
     }
 
-    const subtotal = producto.precio * cantidad;
-    const nuevoDetalle = {
-      producto_id: producto.id_producto,
-      producto_nombre: producto.nombre,
-      cantidad: cantidad,
-      precio_unitario: producto.precio,
+    const subtotal = product.precio * quantity;
+    const newDetail = {
+      producto_id: product.id_producto,
+      producto_nombre: product.nombre,
+      cantidad: quantity,
+      precio_unitario: product.precio,
       subtotal: subtotal,
-      esNuevo: true
+      isNew: true
     };
 
-    setDetalles(prev => [...prev, nuevoDetalle]);
-    setProductoSeleccionado('');
-    setCantidad(1);
+    setDetails(prev => [...prev, newDetail]);
+    setSelectedProduct('');
+    setQuantity(1);
     setError('');
   };
 
-  const eliminarProducto = async (detalle, index) => {
+  const removeProduct = async (detail, index) => {
     try {
-      // Si el detalle ya existe en la BD (tiene ID), eliminarlo del backend
-      if (detalle.id && !detalle.esNuevo) {
-        await pedidosService.deleteDetallePedido(detalle.id);
-        console.log('✅ Producto eliminado de la BD:', detalle.id);
+      // If the detail already exists in the DB (has an ID), delete it from the backend
+      if (detail.id && !detail.isNew) {
+        await pedidosService.deleteDetallePedido(detail.id);
+        console.log('✅ Product removed from DB:', detail.id);
       }
       
-      // Eliminar de la lista local
-      setDetalles(prev => prev.filter((_, i) => i !== index));
-      console.log('✅ Producto eliminado de la lista');
+      // Remove from local list
+      setDetails(prev => prev.filter((_, i) => i !== index));
+      console.log('✅ Product removed from list');
       
     } catch (error) {
-      console.error('❌ Error eliminando producto:', error);
-      setError('Error al eliminar el producto del pedido');
+      console.error('❌ Error removing product:', error);
+      setError('Error removing product from order');
     }
   };
 
-  const calcularTotal = () => {
-    return detalles.reduce((total, detalle) => total + detalle.subtotal, 0);
+  const calculateTotal = () => {
+    return details.reduce((total, detail) => total + detail.subtotal, 0);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setGuardando(true);
+    setIsSaving(true);
     setError('');
     
     try {
-      // 1. Actualizar el pedido principal
-      const pedidoData = {
+      // 1. Update the main order
+      const orderData = {
         cliente_nombre: pedido.cliente_nombre,
         cliente_telefono: pedido.cliente_telefono,
         telefono: pedido.cliente_telefono,
@@ -91,43 +91,43 @@ const EditarPedidoModal = ({ pedido, productos, onSubmit, onClose }) => {
         estado: pedido.estado
       };
 
-      console.log('📤 Actualizando pedido con datos:', pedidoData);
-      await pedidosService.updatePedido(pedido.id, pedidoData);
-      console.log('✅ Pedido actualizado exitosamente');
+      console.log('📤 Updating order with data:', orderData);
+      await pedidosService.updatePedido(pedido.id, orderData);
+      console.log('✅ Order updated successfully');
 
-      // 2. Crear nuevos detalles usando el endpoint alternativo
-      const nuevosDetalles = detalles.filter(detalle => detalle.esNuevo);
-      console.log(`📝 Creando ${nuevosDetalles.length} nuevos detalles con endpoint alternativo`);
+      // 2. Create new details using the alternative endpoint
+      const newDetails = details.filter(detail => detail.isNew);
+      console.log(`📝 Creating ${newDetails.length} new details with alternative endpoint`);
 
-      for (const detalle of nuevosDetalles) {
+      for (const detail of newDetails) {
         try {
-          await pedidosService.createDetallePedidoAlternativo(pedido.id, {
-            producto_id: detalle.producto_id,
-            cantidad: detalle.cantidad,
-            precio_unitario: detalle.precio_unitario,
-            subtotal: detalle.subtotal
+          await pedidosService.createDetallePedido(pedido.id, {
+            producto_id: detail.producto_id,
+            cantidad: detail.cantidad,
+            precio_unitario: detail.precio_unitario,
+            subtotal: detail.subtotal
           });
-          console.log(`✅ Detalle creado para producto ${detalle.producto_nombre}`);
+          console.log(`✅ Detail created for product ${detail.producto_nombre}`);
         } catch (detalleError) {
-          console.error(`❌ Error creando detalle:`, detalleError);
-          throw new Error(`Error al agregar producto ${detalle.producto_nombre}: ${detalleError.message}`);
+          console.error(`❌ Error creating detail:`, detalleError);
+          throw new Error(`Error adding product ${detail.producto_nombre}: ${detalleError.message}`);
         }
       }
 
-      console.log('✅ Proceso completado con endpoint alternativo');
+      console.log('✅ Process completed with alternative endpoint');
       
-      // ✅ Emitir evento para actualizar la lista
-      window.dispatchEvent(new CustomEvent('pedidoActualizado', {
+      // ✅ Dispatch event to update the list
+      window.dispatchEvent(new CustomEvent('orderUpdated', {
         detail: { pedidoId: pedido.id }
       }));
       
       onClose();
       
     } catch (error) {
-      console.error('❌ Error general:', error);
-      setError('Error al actualizar el pedido: ' + error.message);
+      console.error('❌ General error:', error);
+      setError('Error updating order: ' + error.message);
     } finally {
-      setGuardando(false);
+      setIsSaving(false);
     }
   };
 
@@ -138,9 +138,9 @@ const EditarPedidoModal = ({ pedido, productos, onSubmit, onClose }) => {
           <div className="modal-content">
             <div className="modal-body text-center">
               <div className="spinner-border" role="status">
-                <span className="visually-hidden">Cargando...</span>
+                <span className="visually-hidden">Loading...</span>
               </div>
-              <p className="mt-2">Cargando detalles del pedido...</p>
+              <p className="mt-2">Loading order details...</p>
             </div>
           </div>
         </div>
@@ -153,7 +153,7 @@ const EditarPedidoModal = ({ pedido, productos, onSubmit, onClose }) => {
       <div className="modal-dialog modal-xl" style={{maxWidth: '95%', height: '95vh'}}>
         <div className="modal-content h-100">
           <div className="modal-header bg-warning text-dark">
-            <h5 className="modal-title">✏️ Editar Pedido #{pedido.id}</h5>
+            <h5 className="modal-title">✏️ Edit Order #{pedido.id}</h5>
             <button type="button" className="btn-close" onClick={onClose}></button>
           </div>
           <form onSubmit={handleSubmit}>
@@ -162,7 +162,7 @@ const EditarPedidoModal = ({ pedido, productos, onSubmit, onClose }) => {
 
               <div className="row mb-3">
                 <div className="col-md-6">
-                  <label className="form-label">Cliente</label>
+                  <label className="form-label">Customer</label>
                   <input
                     type="text"
                     className="form-control"
@@ -171,7 +171,7 @@ const EditarPedidoModal = ({ pedido, productos, onSubmit, onClose }) => {
                   />
                 </div>
                 <div className="col-md-6">
-                  <label className="form-label">Teléfono</label>
+                  <label className="form-label">Phone</label>
                   <input
                     type="text"
                     className="form-control"
@@ -183,7 +183,7 @@ const EditarPedidoModal = ({ pedido, productos, onSubmit, onClose }) => {
 
               <div className="row mb-3">
                 <div className="col-md-8">
-                  <label className="form-label">Dirección</label>
+                  <label className="form-label">Address</label>
                   <input
                     type="text"
                     className="form-control"
@@ -192,7 +192,7 @@ const EditarPedidoModal = ({ pedido, productos, onSubmit, onClose }) => {
                   />
                 </div>
                 <div className="col-md-4">
-                  <label className="form-label">Estado Actual</label>
+                  <label className="form-label">Current Status</label>
                   <input
                     type="text"
                     className="form-control"
@@ -204,17 +204,17 @@ const EditarPedidoModal = ({ pedido, productos, onSubmit, onClose }) => {
 
               <div className="card mb-3">
                 <div className="card-header bg-light">
-                  <h6 className="mb-0">🛒 Productos del Pedido</h6>
+                  <h6 className="mb-0">🛒 Order Products</h6>
                 </div>
                 <div className="card-body">
                   <div className="row g-2 mb-3">
                     <div className="col-md-6">
                       <select
                         className="form-select"
-                        value={productoSeleccionado}
-                        onChange={(e) => setProductoSeleccionado(e.target.value)}
+                        value={selectedProduct}
+                        onChange={(e) => setSelectedProduct(e.target.value)}
                       >
-                        <option value="">Seleccionar producto...</option>
+                        <option value="">Select a product...</option>
                         {productos.map(producto => (
                           <option key={producto.id_producto} value={producto.id_producto}>
                             {producto.nombre} - ${producto.precio.toLocaleString()}
@@ -227,49 +227,49 @@ const EditarPedidoModal = ({ pedido, productos, onSubmit, onClose }) => {
                         type="number"
                         className="form-control"
                         min="1"
-                        value={cantidad}
-                        onChange={(e) => setCantidad(parseInt(e.target.value) || 1)}
+                        value={quantity}
+                        onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
                       />
                     </div>
                     <div className="col-md-3">
                       <button
                         type="button"
                         className="btn btn-primary w-100"
-                        onClick={agregarProducto}
+                        onClick={addProduct}
                       >
-                        ➕ Agregar
+                        ➕ Add
                       </button>
                     </div>
                   </div>
 
-                  {detalles.length > 0 ? (
+                  {details.length > 0 ? (
                     <div className="table-responsive">
                       <table className="table table-sm">
                         <thead className="table-dark">
                           <tr>
-                            <th>Producto</th>
-                            <th>Cantidad</th>
-                            <th>Precio Unitario</th>
+                            <th>Product</th>
+                            <th>Quantity</th>
+                            <th>Unit Price</th>
                             <th>Subtotal</th>
-                            <th>Acciones</th>
+                            <th>Actions</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {detalles.map((detalle, index) => (
+                          {details.map((detail, index) => (
                             <tr key={index}>
                               <td>
-                                {detalle.producto_nombre}
-                                {detalle.esNuevo && <span className="badge bg-success ms-1">Nuevo</span>}
+                                {detail.producto_nombre}
+                                {detail.isNew && <span className="badge bg-success ms-1">New</span>}
                               </td>
-                              <td>{detalle.cantidad}</td>
-                              <td>${detalle.precio_unitario.toLocaleString()}</td>
-                              <td>${detalle.subtotal.toLocaleString()}</td>
+                              <td>{detail.cantidad}</td>
+                              <td>${detail.precio_unitario.toLocaleString()}</td>
+                              <td>${detail.subtotal.toLocaleString()}</td>
                               <td>
                                 <button
                                   type="button"
                                   className="btn btn-danger btn-sm"
-                                  onClick={() => eliminarProducto(detalle, index)}
-                                  title="Eliminar producto"
+                                  onClick={() => removeProduct(detail, index)}
+                                  title="Remove product"
                                 >
                                   🗑️
                                 </button>
@@ -280,7 +280,7 @@ const EditarPedidoModal = ({ pedido, productos, onSubmit, onClose }) => {
                         <tfoot>
                           <tr>
                             <td colSpan="3" className="text-end fw-bold">Total:</td>
-                            <td className="fw-bold text-success">${calcularTotal().toLocaleString()}</td>
+                            <td className="fw-bold text-success">${calculateTotal().toLocaleString()}</td>
                             <td></td>
                           </tr>
                         </tfoot>
@@ -288,7 +288,7 @@ const EditarPedidoModal = ({ pedido, productos, onSubmit, onClose }) => {
                     </div>
                   ) : (
                     <div className="text-center text-muted">
-                      No hay productos en este pedido
+                      There are no products in this order
                     </div>
                   )}
                 </div>
@@ -296,16 +296,16 @@ const EditarPedidoModal = ({ pedido, productos, onSubmit, onClose }) => {
             </div>
             <div className="modal-footer">
               <button type="button" className="btn btn-secondary" onClick={onClose}>
-                Cancelar
+                Cancel
               </button>
-              <button type="submit" className="btn btn-warning" disabled={guardando}>
-                {guardando ? (
+              <button type="submit" className="btn btn-warning" disabled={isSaving}>
+                {isSaving ? (
                   <>
-                    <span className="spinner-border spinner-border-sm me-2" role="status"></span>
-                    Guardando...
+                    <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                    Saving...
                   </>
                 ) : (
-                  '💾 Guardar Cambios'
+                  '💾 Save Changes'
                 )}
               </button>
             </div>

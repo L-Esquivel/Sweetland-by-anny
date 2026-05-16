@@ -6,168 +6,168 @@ import PedidoForm from './PedidoForm';
 import EditarPedidoModal from './EditarPedidoModal';
 
 const PedidosList = () => {
-  const [pedidos, setPedidos] = useState([]);
-  const [productos, setProductos] = useState([]);
+  const [orders, setOrders] = useState([]);
+  const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [pedidoSeleccionado, setPedidoSeleccionado] = useState(null);
-  const [detallesPedido, setDetallesPedido] = useState([]);
+  const [selectedOrderId, setSelectedOrderId] = useState(null);
+  const [orderDetails, setOrderDetails] = useState([]);
   const [error, setError] = useState('');
-  const [mostrarModalEstado, setMostrarModalEstado] = useState(false);
-  const [pedidoParaCambiar, setPedidoParaCambiar] = useState(null);
-  const [nuevoEstado, setNuevoEstado] = useState('');
-  const [mostrarModalNuevoPedido, setMostrarModalNuevoPedido] = useState(false);
-  const [mostrarModalEditarPedido, setMostrarModalEditarPedido] = useState(false);
-  const [pedidoParaEditar, setPedidoParaEditar] = useState(null);
+  const [showStatusModal, setShowStatusModal] = useState(false);
+  const [orderToChange, setOrderToChange] = useState(null);
+  const [newStatus, setNewStatus] = useState('');
+  const [showNewOrderModal, setShowNewOrderModal] = useState(false);
+  const [showEditOrderModal, setShowEditOrderModal] = useState(false);
+  const [orderToEdit, setOrderToEdit] = useState(null);
 
   useEffect(() => {
-    cargarDatosIniciales();
+    fetchInitialData();
   }, []);
 
-  const cargarDatosIniciales = async () => {
+  const fetchInitialData = async () => {
     try {
       setLoading(true);
       setError('');
       const [pedidosData, productosData] = await Promise.all([
         pedidosService.getPedidos(),
-        productosService.getProductos()
+        productosService.getProducts()
       ]);
-      setPedidos(pedidosData);
-      setProductos(productosData);
+      setOrders(pedidosData);
+      setProducts(productosData);
     } catch (error) {
-      console.error('Error cargando datos:', error);
-      setError('No se pudieron cargar los datos');
+      console.error('Error loading data:', error);
+      setError('Could not load data');
     } finally {
       setLoading(false);
     }
   };
 
-  const cargarDetallesPedido = async (pedidoId) => {
+  const fetchOrderDetails = async (pedidoId) => {
     try {
       setError('');
       const data = await pedidosService.getDetallesPedido(pedidoId);
-      setDetallesPedido(data);
-      setPedidoSeleccionado(pedidoId);
+      setOrderDetails(data);
+      setSelectedOrderId(pedidoId);
     } catch (error) {
-      console.error('Error cargando detalles:', error);
-      setError('No se pudieron cargar los detalles del pedido');
+      console.error('Error loading details:', error);
+      setError('Could not load order details');
     }
   };
 
-  const abrirModalCambioEstado = (pedido) => {
-    setPedidoParaCambiar(pedido);
-    setNuevoEstado(pedido.estado);
-    setMostrarModalEstado(true);
+  const openStatusChangeModal = (order) => {
+    setOrderToChange(order);
+    setNewStatus(order.estado);
+    setShowStatusModal(true);
   };
 
-  const cerrarModalEstado = () => {
-    setMostrarModalEstado(false);
-    setPedidoParaCambiar(null);
-    setNuevoEstado('');
+  const closeStatusModal = () => {
+    setShowStatusModal(false);
+    setOrderToChange(null);
+    setNewStatus('');
   };
 
-  const abrirModalNuevoPedido = () => setMostrarModalNuevoPedido(true);
-  const cerrarModalNuevoPedido = () => setMostrarModalNuevoPedido(false);
+  const openNewOrderModal = () => setShowNewOrderModal(true);
+  const closeNewOrderModal = () => setShowNewOrderModal(false);
 
-  const abrirModalEditarPedido = (pedido) => {
-    setPedidoParaEditar(pedido);
-    setMostrarModalEditarPedido(true);
+  const openEditOrderModal = (order) => {
+    setOrderToEdit(order);
+    setShowEditOrderModal(true);
   };
 
-  const cerrarModalEditarPedido = () => {
-    setMostrarModalEditarPedido(false);
-    setPedidoParaEditar(null);
+  const closeEditOrderModal = () => {
+    setShowEditOrderModal(false);
+    setOrderToEdit(null);
   };
 
-  const actualizarEstadoPedido = async () => {
-    if (!pedidoParaCambiar || !nuevoEstado) return;
+  const handleUpdateStatus = async () => {
+    if (!orderToChange || !newStatus) return;
     try {
       setError('');
-      await pedidosService.updateEstadoPedido(pedidoParaCambiar.id_pedido, nuevoEstado);
-      setPedidos(pedidos.map(pedido =>
-        pedido.id_pedido === pedidoParaCambiar.id_pedido
-          ? { ...pedido, estado: nuevoEstado }
-          : pedido
+      await pedidosService.updateEstadoPedido(orderToChange.id_pedido, newStatus);
+      setOrders(orders.map(order =>
+        order.id_pedido === orderToChange.id_pedido
+          ? { ...order, estado: newStatus }
+          : order
       ));
-      cerrarModalEstado();
+      closeStatusModal();
     } catch (error) {
-      console.error('Error actualizando estado:', error);
-      setError('No se pudo actualizar el estado del pedido');
+      console.error('Error updating status:', error);
+      setError('Could not update order status');
     }
   };
 
-  const handleCrearPedido = async () => {
+  const handleCreateOrder = async () => {
     try {
       setError('');
-      await cargarDatosIniciales();
-      cerrarModalNuevoPedido();
+      await fetchInitialData();
+      closeNewOrderModal();
     } catch (error) {
-      console.error('Error creando pedido:', error);
-      setError('No se pudo crear el pedido');
+      console.error('Error creating order:', error);
+      setError('Could not create order');
       throw error;
     }
   };
 
   useEffect(() => {
-    const handlePedidoCreado = () => {
-      console.log('🔄 Recargando lista por pedido creado...');
-      cargarDatosIniciales();
+    const handleOrderCreated = () => {
+      console.log('🔄 Reloading list due to new order...');
+      fetchInitialData();
     };
-    const handlePedidoActualizado = () => {
-      console.log('🔄 Recargando lista por pedido actualizado...');
-      cargarDatosIniciales();
+    const handleOrderUpdated = () => {
+      console.log('🔄 Reloading list due to updated order...');
+      fetchInitialData();
     };
-    window.addEventListener('pedidoCreado', handlePedidoCreado);
-    window.addEventListener('pedidoActualizado', handlePedidoActualizado);
+    window.addEventListener('orderCreated', handleOrderCreated);
+    window.addEventListener('orderUpdated', handleOrderUpdated);
     return () => {
-      window.removeEventListener('pedidoCreado', handlePedidoCreado);
-      window.removeEventListener('pedidoActualizado', handlePedidoActualizado);
+      window.removeEventListener('orderCreated', handleOrderCreated);
+      window.removeEventListener('orderUpdated', handleOrderUpdated);
     };
   }, []);
 
-  const handleEditarPedido = async (pedidoId, pedidoData) => {
+  const handleEditOrder = async (orderId, orderData) => {
     try {
       setError('');
-      await pedidosService.updatePedido(pedidoId, pedidoData);
-      await cargarDatosIniciales();
-      cerrarModalEditarPedido();
+      await pedidosService.updatePedido(orderId, orderData);
+      await fetchInitialData();
+      closeEditOrderModal();
     } catch (error) {
-      console.error('Error editando pedido:', error);
-      setError('No se pudo editar el pedido');
+      console.error('Error editing order:', error);
+      setError('Could not edit order');
       throw error;
     }
   };
 
-  const cerrarDetalles = () => {
-    setPedidoSeleccionado(null);
-    setDetallesPedido([]);
+  const closeDetailsPanel = () => {
+    setSelectedOrderId(null);
+    setOrderDetails([]);
   };
 
-  const formatearFecha = (fecha) => {
-    return new Date(fecha).toLocaleDateString('es-ES', {
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
-      month: 'long',
+      month: 'short',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
     });
   };
 
-  const formatearMoneda = (valor) => {
-    return new Intl.NumberFormat('es-CO', {
+  const formatCurrency = (value) => {
+    return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: 'COP'
-    }).format(valor);
+      currency: 'USD'
+    }).format(value || 0);
   };
 
-  const generarRecibo = async (pedido) => {
+  const generateReceipt = async (order) => {
     try {
-      const detalles = await pedidosService.getDetallesPedido(pedido.id_pedido);
-      const ventanaRecibo = window.open('', '_blank');
-      const contenidoRecibo = `
+      const details = await pedidosService.getDetallesPedido(order.id_pedido);
+      const receiptWindow = window.open('', '_blank');
+      const receiptContent = `
         <!DOCTYPE html>
         <html>
         <head>
-          <title>Recibo - Pedido #${pedido.id_pedido}</title>
+          <title>Receipt - Order #${order.id_pedido}</title>
           <style>
             body { font-family: 'Courier New', monospace; margin: 0; padding: 20px; background: white; }
             .recibo { max-width: 400px; margin: 0 auto; border: 2px solid #333; padding: 20px; background: white; }
@@ -188,72 +188,72 @@ const PedidosList = () => {
         <body>
           <div class="recibo">
             <div class="header">
-              <h1>Sweetland By Anny</h1>
-              <div class="subtitle">Delicias hechas con amor</div>
-              <div class="subtitle">Pedido #${pedido.id_pedido}</div>
+              <h1>Precivox Bakery</h1>
+              <div class="subtitle">Delicious treats made with love</div>
+              <div class="subtitle">Order #${order.id_pedido}</div>
             </div>
             <div class="info-section">
-              <h3>📋 Información del Pedido</h3>
-              <div class="info-row"><span>Fecha:</span><span>${new Date(pedido.fecha_pedido).toLocaleDateString('es-ES')}</span></div>
-              <div class="info-row"><span>Estado:</span><span>${pedido.estado}</span></div>
+              <h3>📋 Order Information</h3>
+              <div class="info-row"><span>Date:</span><span>${new Date(order.fecha_pedido).toLocaleDateString('en-US')}</span></div>
+              <div class="info-row"><span>Status:</span><span>${order.estado}</span></div>
             </div>
             <div class="info-section">
-              <h3>👤 Información del Cliente</h3>
-              <div class="info-row"><span>Nombre:</span><span>${pedido.cliente_nombre}</span></div>
-              <div class="info-row"><span>Teléfono:</span><span>${pedido.cliente_telefono}</span></div>
-              <div class="info-row"><span>Dirección:</span><span>${pedido.direccion}</span></div>
+              <h3>👤 Customer Information</h3>
+              <div class="info-row"><span>Name:</span><span>${order.cliente_nombre}</span></div>
+              <div class="info-row"><span>Phone:</span><span>${order.cliente_telefono}</span></div>
+              <div class="info-row"><span>Address:</span><span>${order.direccion}</span></div>
             </div>
             <div class="info-section">
-              <h3>🛒 Productos del Pedido</h3>
+              <h3>🛒 Order Items</h3>
               <table class="productos-table">
                 <thead>
-                  <tr><th>Producto</th><th>Cant</th><th>Precio</th><th>Subtotal</th></tr>
+                  <tr><th>Product</th><th>Qty</th><th>Price</th><th>Subtotal</th></tr>
                 </thead>
                 <tbody>
-                  ${detalles.map(detalle => `
+                  ${details.map(detail => `
                     <tr>
-                      <td>${detalle.producto_nombre}</td>
-                      <td>${detalle.cantidad}</td>
-                      <td>${new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP' }).format(parseFloat(detalle.precio_unitario) || 0)}</td>
-                      <td>${new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP' }).format(parseFloat(detalle.subtotal) || 0)}</td>
+                      <td>${detail.producto_nombre}</td>
+                      <td>${detail.cantidad}</td>
+                      <td>${formatCurrency(parseFloat(detail.precio_unitario) || 0)}</td>
+                      <td>${formatCurrency(parseFloat(detail.subtotal) || 0)}</td>
                     </tr>
                   `).join('')}
                   <tr class="total-row">
                     <td colspan="3" style="text-align: right;"><strong>TOTAL:</strong></td>
-                    <td><strong>${new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP' }).format(detalles.reduce((sum, d) => sum + (parseFloat(d.subtotal) || 0), 0))}</strong></td>
+                    <td><strong>${formatCurrency(details.reduce((sum, d) => sum + (parseFloat(d.subtotal) || 0), 0))}</strong></td>
                   </tr>
                 </tbody>
               </table>
             </div>
             <div class="footer">
-              <div>¡Gracias por su compra!</div>
-              <div>Sweetland By Anny - ${new Date().getFullYear()}</div>
+              <div>Thank you for your purchase!</div>
+              <div>Precivox Bakery - ${new Date().getFullYear()}</div>
               <button class="no-print" onclick="window.print()" style="margin-top: 10px; padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer;">
-                🖨️ Imprimir Recibo
+                🖨️ Print Receipt
               </button>
             </div>
           </div>
         </body>
         </html>
       `;
-      ventanaRecibo.document.write(contenidoRecibo);
-      ventanaRecibo.document.close();
+      receiptWindow.document.write(receiptContent);
+      receiptWindow.document.close();
     } catch (error) {
-      console.error('Error generando recibo:', error);
-      alert('Error al generar el recibo. Intente nuevamente.');
+      console.error('Error generating receipt:', error);
+      alert('Error generating receipt. Please try again.');
     }
   };
 
-  const estados = [
-    { value: 'pendiente', label: '⏳ Pendiente' },
-    { value: 'confirmado', label: '✅ Confirmado' },
-    { value: 'en_preparacion', label: '👨‍🍳 En Preparación' },
-    { value: 'completado', label: '🎉 Completado' },
-    { value: 'cancelado', label: '❌ Cancelado' }
+  const statuses = [
+    { value: 'pendiente', label: '⏳ Pending' },
+    { value: 'confirmado', label: '✅ Confirmed' },
+    { value: 'en_preparacion', label: '👨‍🍳 In Preparation' },
+    { value: 'completado', label: '🎉 Completed' },
+    { value: 'cancelado', label: '❌ Canceled' }
   ];
 
-  const getEstadoBadgeClass = (estado) => {
-    switch (estado) {
+  const getStatusBadgeClass = (status) => {
+    switch (status) {
       case 'pendiente':     return 'bg-warning text-dark';
       case 'confirmado':    return 'bg-info';
       case 'en_preparacion':return 'bg-primary';
@@ -263,25 +263,25 @@ const PedidosList = () => {
     }
   };
 
-  if (loading) return <div className="text-center p-4">Cargando pedidos...</div>;
+  if (loading) return <div className="text-center p-4">Loading orders...</div>;
 
   return (
     <div className="pedidos-container">
       <div className="d-flex justify-content-between align-items-center mb-4">
-        <h2 className="mb-0">📦 Gestión de Pedidos</h2>
-        <button className="btn btn-success" onClick={abrirModalNuevoPedido}>
-          ➕ Nuevo Pedido
+        <h2 className="mb-0">📦 Order Management</h2>
+        <button className="btn btn-success" onClick={openNewOrderModal}>
+          ➕ New Order
         </button>
       </div>
 
       {error && <div className="alert alert-danger">{error}</div>}
 
       <div className="row">
-        {/* Lista de Pedidos */}
-        <div className={pedidoSeleccionado ? 'col-md-8' : 'col-12'}>
+        {/* Orders List */}
+        <div className={selectedOrderId ? 'col-md-8' : 'col-12'}>
           <div className="card">
             <div className="card-header bg-light">
-              <h5 className="mb-0">Lista de Pedidos</h5>
+              <h5 className="mb-0">Orders List</h5>
             </div>
             <div className="card-body p-0">
               <div className="table-responsive">
@@ -289,57 +289,57 @@ const PedidosList = () => {
                   <thead className="table-dark">
                     <tr>
                       <th>ID</th>
-                      <th>Cliente</th>
-                      <th>Fecha</th>
-                      <th>Estado</th>
+                      <th>Customer</th>
+                      <th>Date</th>
+                      <th>Status</th>
                       <th>Total</th>
-                      <th className="text-center">Acciones</th>
+                      <th className="text-center">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {pedidos.length === 0 ? (
+                    {orders.length === 0 ? (
                       <tr>
                         <td colSpan="6" className="text-center text-muted py-4">
-                          No hay pedidos registrados
+                          No orders registered yet
                         </td>
                       </tr>
                     ) : (
-                      pedidos.map(pedido => (
+                      orders.map(order => (
                         <tr
-                          key={pedido.id_pedido}
-                          className={pedidoSeleccionado === pedido.id_pedido ? 'table-active' : ''}
+                          key={order.id_pedido}
+                          className={selectedOrderId === order.id_pedido ? 'table-active' : ''}
                         >
-                          <td className="fw-bold">#{pedido.id_pedido}</td>
+                          <td className="fw-bold">#{order.id_pedido}</td>
                           <td>
-                            <div className="fw-semibold">{pedido.cliente_nombre}</div>
-                            <small className="text-muted">{pedido.cliente_telefono}</small>
+                            <div className="fw-semibold">{order.cliente_nombre}</div>
+                            <small className="text-muted">{order.cliente_telefono}</small>
                           </td>
-                          <td><small>{formatearFecha(pedido.fecha_pedido)}</small></td>
+                          <td><small>{formatDate(order.fecha_pedido)}</small></td>
                           <td>
                             <button
-                              className={`btn btn-sm ${getEstadoBadgeClass(pedido.estado)}`}
-                              onClick={() => abrirModalCambioEstado(pedido)}
-                              title="Click para cambiar estado"
+                              className={`btn btn-sm ${getStatusBadgeClass(order.estado)}`}
+                              onClick={() => openStatusChangeModal(order)}
+                              title="Click to change status"
                             >
-                              {estados.find(e => e.value === pedido.estado)?.label || pedido.estado}
+                              {statuses.find(e => e.value === order.estado)?.label || order.estado}
                             </button>
                           </td>
-                          <td className="fw-bold text-success">{formatearMoneda(pedido.total)}</td>
+                          <td className="fw-bold text-success">{formatCurrency(order.total)}</td>
                           <td className="text-center">
                             <div className="btn-group" role="group">
                               <button
                                 className="btn btn-info btn-sm me-1"
-                                onClick={() => cargarDetallesPedido(pedido.id_pedido)}
-                                title="Ver detalles"
+                                onClick={() => fetchOrderDetails(order.id_pedido)}
+                                title="View details"
                               >
-                                👁️ Detalles
+                                👁️ Details
                               </button>
                               <button
                                 className="btn btn-outline-primary btn-sm"
-                                onClick={() => generarRecibo(pedido)}
-                                title="Generar recibo"
+                                onClick={() => generateReceipt(order)}
+                                title="Generate receipt"
                               >
-                                🧾 Recibo
+                                🧾 Receipt
                               </button>
                             </div>
                           </td>
@@ -353,49 +353,49 @@ const PedidosList = () => {
           </div>
         </div>
 
-        {/* Panel de Detalles */}
-        {pedidoSeleccionado && (
+        {/* Details Panel */}
+        {selectedOrderId && (
           <div className="col-md-4">
             <div className="card">
               <div className="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                <h5 className="mb-0">Detalles del Pedido #{pedidoSeleccionado}</h5>
-                <button className="btn btn-sm btn-light" onClick={cerrarDetalles}>✕</button>
+                <h5 className="mb-0">Order Details #{selectedOrderId}</h5>
+                <button className="btn btn-sm btn-light" onClick={closeDetailsPanel}>✕</button>
               </div>
               <div className="card-body">
-                {detallesPedido.length > 0 ? (
+                {orderDetails.length > 0 ? (
                   <div>
                     <div className="d-flex justify-content-between align-items-center mb-3">
-                      <h6 className="mb-0">Productos del Pedido</h6>
+                      <h6 className="mb-0">Order Products</h6>
                       <button
                         className="btn btn-warning btn-sm"
                         onClick={() => {
-                          const pedido = pedidos.find(p => p.id_pedido === pedidoSeleccionado);
-                          if (pedido) abrirModalEditarPedido(pedido);
+                          const order = orders.find(p => p.id_pedido === selectedOrderId);
+                          if (order) openEditOrderModal(order);
                         }}
                       >
-                        ✏️ Editar Pedido
+                        ✏️ Edit Order
                       </button>
                     </div>
                     <div className="table-responsive">
                       <table className="table table-sm">
                         <thead>
                           <tr>
-                            <th>Producto</th>
-                            <th>Cant</th>
-                            <th>Precio</th>
+                            <th>Product</th>
+                            <th>Qty</th>
+                            <th>Price</th>
                             <th>Subtotal</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {detallesPedido.map(detalle => (
-                            <tr key={detalle.id}>
+                          {orderDetails.map(detail => (
+                            <tr key={detail.id}>
                               <td>
-                                <div className="fw-semibold">{detalle.producto_nombre}</div>
-                                <small className="text-muted">{detalle.categoria}</small>
+                                <div className="fw-semibold">{detail.producto_nombre}</div>
+                                <small className="text-muted">{detail.categoria}</small>
                               </td>
-                              <td className="fw-bold">{detalle.cantidad}</td>
-                              <td>{formatearMoneda(parseFloat(detalle.precio_unitario) || 0)}</td>
-                              <td className="fw-bold text-success">{formatearMoneda(parseFloat(detalle.subtotal) || 0)}</td>
+                              <td className="fw-bold">{detail.cantidad}</td>
+                              <td>{formatCurrency(parseFloat(detail.precio_unitario) || 0)}</td>
+                              <td className="fw-bold text-success">{formatCurrency(parseFloat(detail.subtotal) || 0)}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -403,7 +403,7 @@ const PedidosList = () => {
                           <tr>
                             <td colSpan="3" className="fw-bold">Total:</td>
                             <td className="fw-bold text-success">
-                              {formatearMoneda(detallesPedido.reduce((sum, d) => sum + (parseFloat(d.subtotal) || 0), 0))}
+                              {formatCurrency(orderDetails.reduce((sum, d) => sum + (parseFloat(d.subtotal) || 0), 0))}
                             </td>
                           </tr>
                         </tfoot>
@@ -412,7 +412,7 @@ const PedidosList = () => {
                   </div>
                 ) : (
                   <div className="text-center text-muted">
-                    No se encontraron detalles para este pedido
+                    No details found for this order
                   </div>
                 )}
               </div>
@@ -421,63 +421,63 @@ const PedidosList = () => {
         )}
       </div>
 
-      {/* Modal cambiar estado */}
-      {mostrarModalEstado && pedidoParaCambiar && (
+      {/* Status Change Modal */}
+      {showStatusModal && orderToChange && (
         <div className="modal fade show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
           <div className="modal-dialog">
             <div className="modal-content">
               <div className="modal-header bg-warning text-dark">
-                <h5 className="modal-title">🔄 Cambiar Estado del Pedido</h5>
-                <button type="button" className="btn-close" onClick={cerrarModalEstado}></button>
+                <h5 className="modal-title">🔄 Change Order Status</h5>
+                <button type="button" className="btn-close" onClick={closeStatusModal}></button>
               </div>
               <div className="modal-body">
-                <p>Pedido <strong>#{pedidoParaCambiar.id_pedido}</strong> - {pedidoParaCambiar.cliente_nombre}</p>
+                <p>Order <strong>#{orderToChange.id_pedido}</strong> - {orderToChange.cliente_nombre}</p>
                 <div className="mb-3">
-                  <label className="form-label fw-semibold">Nuevo Estado:</label>
+                  <label className="form-label fw-semibold">New Status:</label>
                   <select
                     className="form-select"
-                    value={nuevoEstado}
-                    onChange={(e) => setNuevoEstado(e.target.value)}
+                    value={newStatus}
+                    onChange={(e) => setNewStatus(e.target.value)}
                   >
-                    {estados.map(estado => (
-                      <option key={estado.value} value={estado.value}>{estado.label}</option>
+                    {statuses.map(status => (
+                      <option key={status.value} value={status.value}>{status.label}</option>
                     ))}
                   </select>
                 </div>
               </div>
               <div className="modal-footer">
-                <button className="btn btn-secondary" onClick={cerrarModalEstado}>Cancelar</button>
-                <button className="btn btn-warning" onClick={actualizarEstadoPedido}>✅ Actualizar Estado</button>
+                <button className="btn btn-secondary" onClick={closeStatusModal}>Cancel</button>
+                <button className="btn btn-warning" onClick={handleUpdateStatus}>✅ Update Status</button>
               </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* Modal nuevo pedido */}
-      {mostrarModalNuevoPedido && (
+      {/* New Order Modal */}
+      {showNewOrderModal && (
         <PedidoForm
-          productos={productos}
-          onSubmit={handleCrearPedido}
+          productos={products}
+          onSubmit={handleCreateOrder}
           onClose={() => {
-            cerrarModalNuevoPedido();
-            cargarDatosIniciales();
+            closeNewOrderModal();
+            fetchInitialData();
           }}
-          titulo="➕ Crear Nuevo Pedido"
+          titulo="➕ Create New Order"
         />
       )}
 
-      {/* Modal editar pedido */}
-      {mostrarModalEditarPedido && pedidoParaEditar && (
+      {/* Edit Order Modal */}
+      {showEditOrderModal && orderToEdit && (
         <EditarPedidoModal
-          pedido={pedidoParaEditar}
-          productos={productos}
-          onSubmit={handleEditarPedido}
+          pedido={orderToEdit}
+          productos={products}
+          onSubmit={handleEditOrder}
           onClose={() => {
-            cerrarModalEditarPedido();
-            cargarDatosIniciales();
-            if (pedidoSeleccionado === pedidoParaEditar.id_pedido) {
-              cargarDetallesPedido(pedidoParaEditar.id_pedido);
+            closeEditOrderModal();
+            fetchInitialData();
+            if (selectedOrderId === orderToEdit.id_pedido) {
+              fetchOrderDetails(orderToEdit.id_pedido);
             }
           }}
         />

@@ -2,79 +2,79 @@ import React, { useState, useEffect } from 'react';
 import { pedidosService } from '../../services/pedidosService';
 import { usuariosService } from '../../services/usuariosService';
 
-const PedidoForm = ({ productos, onSubmit, onClose, titulo = "➕ Nuevo Pedido" }) => {
+const PedidoForm = ({ productos, onSubmit, onClose, titulo = "➕ New Order" }) => {
   const [formData, setFormData] = useState({
-    cliente_email: '',
-    cliente_telefono: '',
-    cliente_nombre: '',
-    direccion: '',
-    detalles: []
+    customer_email: '',
+    customer_phone: '',
+    customer_name: '',
+    address: '',
+    details: []
   });
   
-  const [productoSeleccionado, setProductoSeleccionado] = useState('');
-  const [cantidad, setCantidad] = useState(1);
+  const [selectedProduct, setSelectedProduct] = useState('');
+  const [quantity, setQuantity] = useState(1);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [verificandoUsuario, setVerificandoUsuario] = useState(false);
-  const [usuarioEncontrado, setUsuarioEncontrado] = useState(null);
-  const [usuarios, setUsuarios] = useState([]);
-  const [cargandoUsuarios, setCargandoUsuarios] = useState(true);
-  const [credencialesUsuario, setCredencialesUsuario] = useState(null);
+  const [isCheckingUser, setIsCheckingUser] = useState(false);
+  const [foundUser, setFoundUser] = useState(null);
+  const [users, setUsers] = useState([]);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(true);
+  const [newUserCredentials, setNewUserCredentials] = useState(null);
 
-  // Cargar usuarios REALES de la base de datos
+  // Load REAL users from the database
   useEffect(() => {
-    const cargarUsuariosReales = async () => {
+    const fetchRealUsers = async () => {
       try {
-        console.log('🔄 Cargando usuarios reales...');
-        setCargandoUsuarios(true);
+        console.log('🔄 Loading real users...');
+        setIsLoadingUsers(true);
         const usuariosReales = await usuariosService.getUsuarios();
-        console.log('✅ Usuarios cargados de la BD:', usuariosReales);
-        setUsuarios(usuariosReales);
+        console.log('✅ Users loaded from DB:', usuariosReales);
+        setUsers(usuariosReales);
       } catch (error) {
-        console.error('❌ Error cargando usuarios:', error);
-        setError('Error al cargar la lista de clientes');
-        setUsuarios([]);
+        console.error('❌ Error loading users:', error);
+        setError('Error loading customer list');
+        setUsers([]);
       } finally {
-        setCargandoUsuarios(false);
+        setIsLoadingUsers(false);
       }
     };
 
-    cargarUsuariosReales();
+    fetchRealUsers();
   }, []);
 
-  // Verificar usuario cuando cambia email o teléfono
+  // Check user when email or phone changes
   useEffect(() => {
-    const verificarUsuario = () => {
-      const email = formData.cliente_email.trim();
-      const telefono = formData.cliente_telefono.trim();
+    const checkUser = () => {
+      const email = formData.customer_email.trim();
+      const phone = formData.customer_phone.trim();
       
-      if (!email && !telefono) {
-        setUsuarioEncontrado(null);
+      if (!email && !phone) {
+        setFoundUser(null);
         return;
       }
 
-      if (cargandoUsuarios) {
-        console.log('⏳ Esperando a que carguen los usuarios...');
+      if (isLoadingUsers) {
+        console.log('⏳ Waiting for users to load...');
         return;
       }
 
-      if (usuarios.length === 0) {
-        console.log('📭 No hay usuarios cargados para buscar');
-        setUsuarioEncontrado(null);
+      if (users.length === 0) {
+        console.log('📭 No users loaded to search');
+        setFoundUser(null);
         return;
       }
 
-      setVerificandoUsuario(true);
+      setIsCheckingUser(true);
       
-      console.log('🔍 Buscando usuario con:', { email, telefono });
-      console.log('📋 Buscando en', usuarios.length, 'usuarios:', usuarios);
+      console.log('🔍 Searching for user with:', { email, phone });
+      console.log('📋 Searching in', users.length, 'users:', users);
 
-      const usuarioExistente = usuarios.find(usuario => {
+      const existingUser = users.find(user => {
         const usuarioEmail = usuario.email ? usuario.email.toLowerCase().trim() : '';
         const inputEmail = email ? email.toLowerCase().trim() : '';
         
         const usuarioTel = usuario.telefono ? usuario.telefono.replace(/\D/g, '') : '';
-        const inputTel = telefono ? telefono.replace(/\D/g, '') : '';
+        const inputTel = phone ? phone.replace(/\D/g, '') : '';
         
         const emailMatch = inputEmail && usuarioEmail === inputEmail;
         const telefonoMatch = inputTel && usuarioTel === inputTel && inputTel.length > 5;
@@ -83,66 +83,66 @@ const PedidoForm = ({ productos, onSubmit, onClose, titulo = "➕ Nuevo Pedido" 
       });
       
       setTimeout(() => {
-        if (usuarioExistente) {
-          console.log('✅ USUARIO ENCONTRADO:', usuarioExistente);
-          setUsuarioEncontrado(usuarioExistente);
+        if (existingUser) {
+          console.log('✅ USER FOUND:', existingUser);
+          setFoundUser(existingUser);
           setFormData(prev => ({
             ...prev,
-            cliente_nombre: usuarioExistente.nombre,
-            direccion: usuarioExistente.direccion || prev.direccion
+            customer_name: existingUser.nombre,
+            address: existingUser.address || prev.address
           }));
         } else {
-          console.log('❌ Usuario no encontrado - será nuevo cliente');
-          setUsuarioEncontrado(null);
+          console.log('❌ User not found - will be a new customer');
+          setFoundUser(null);
         }
-        setVerificandoUsuario(false);
+        setIsCheckingUser(false);
       }, 500);
     };
 
-    const timeoutId = setTimeout(verificarUsuario, 600);
+    const timeoutId = setTimeout(checkUser, 600);
     return () => clearTimeout(timeoutId);
-  }, [formData.cliente_email, formData.cliente_telefono, usuarios, cargandoUsuarios]);
+  }, [formData.customer_email, formData.customer_phone, users, isLoadingUsers]);
 
-  const agregarProducto = () => {
-    if (!productoSeleccionado || cantidad < 1) {
-      setError('Selecciona un producto y cantidad válida');
+  const addProduct = () => {
+    if (!selectedProduct || quantity < 1) {
+      setError('Select a valid product and quantity');
       return;
     }
 
-    const producto = productos.find(p => p.id_producto === parseInt(productoSeleccionado));
-    if (!producto) {
-      setError('Producto no encontrado');
+    const product = productos.find(p => p.id_producto === parseInt(selectedProduct));
+    if (!product) {
+      setError('Product not found');
       return;
     }
 
-    const subtotal = producto.precio * cantidad;
-    const nuevoDetalle = {
-      producto_id: producto.id_producto,
-      producto_nombre: producto.nombre,
-      cantidad: cantidad,
-      precio_unitario: producto.precio,
+    const subtotal = product.precio * quantity;
+    const newDetail = {
+      producto_id: product.id_producto,
+      producto_nombre: product.nombre,
+      cantidad: quantity,
+      precio_unitario: product.precio,
       subtotal: subtotal
     };
 
     setFormData(prev => ({
       ...prev,
-      detalles: [...prev.detalles, nuevoDetalle]
+      details: [...prev.details, newDetail]
     }));
 
-    setProductoSeleccionado('');
-    setCantidad(1);
+    setSelectedProduct('');
+    setQuantity(1);
     setError('');
   };
 
-  const eliminarProducto = (index) => {
+  const removeProduct = (index) => {
     setFormData(prev => ({
       ...prev,
-      detalles: prev.detalles.filter((_, i) => i !== index)
+      details: prev.details.filter((_, i) => i !== index)
     }));
   };
 
-  const calcularTotal = () => {
-    return formData.detalles.reduce((total, detalle) => total + detalle.subtotal, 0);
+  const calculateTotal = () => {
+    return formData.details.reduce((total, detail) => total + detail.subtotal, 0);
   };
 
   const handleSubmit = async (e) => {
@@ -151,90 +151,89 @@ const PedidoForm = ({ productos, onSubmit, onClose, titulo = "➕ Nuevo Pedido" 
     setError('');
 
     try {
-      if (!formData.cliente_email && !formData.cliente_telefono) {
-        throw new Error('Debe ingresar al menos email o teléfono');
+      if (!formData.customer_email && !formData.customer_phone) {
+        throw new Error('You must enter at least an email or a phone number');
       }
 
-      if (!formData.cliente_nombre) {
-        throw new Error('El nombre del cliente es obligatorio');
+      if (!formData.customer_name) {
+        throw new Error('Customer name is required');
       }
 
-      if (!formData.direccion) {
-        throw new Error('La dirección de entrega es obligatoria');
+      if (!formData.address) {
+        throw new Error('Delivery address is required');
       }
 
-      if (formData.detalles.length === 0) {
-        throw new Error('Debe agregar al menos un producto al pedido');
+      if (formData.details.length === 0) {
+        throw new Error('You must add at least one product to the order');
       }
 
-      let usuarioId;
-      let nuevoUsuarioCreado = false;
+      let userId;
+      let isNewUserCreated = false;
 
-      if (usuarioEncontrado) {
-        usuarioId = usuarioEncontrado.id_usuario;
-        console.log('✅ Usando usuario existente:', usuarioEncontrado.nombre);
+      if (foundUser) {
+        userId = foundUser.id_usuario;
+        console.log('✅ Using existing user:', foundUser.nombre);
       } else {
-        console.log('🆕 Creando nuevo usuario...');
-        const nuevoUsuarioData = {
-          nombre: formData.cliente_nombre,
-          email: formData.cliente_email || null,
-          telefono: formData.cliente_telefono || '',
-          direccion: formData.direccion
+        console.log('🆕 Creating new user...');
+        const newUserData = {
+          nombre: formData.customer_name,
+          email: formData.customer_email || null,
+          telefono: formData.customer_phone || '',
+          direccion: formData.address
         };
 
-        const nuevoUsuario = await usuariosService.createUsuario(nuevoUsuarioData);
-        usuarioId = nuevoUsuario.id_usuario;
-        nuevoUsuarioCreado = true;
+        const newUser = await usuariosService.createUsuario(newUserData);
+        userId = newUser.id_usuario;
+        isNewUserCreated = true;
         
-        console.log('✅ Nuevo usuario creado:', nuevoUsuario);
-        setCredencialesUsuario({
-          email: nuevoUsuario.email,
-          password: nuevoUsuario.password_temporal,
-          nombre: nuevoUsuario.nombre
+        console.log('✅ New user created:', newUser);
+        setNewUserCredentials({
+          email: newUser.email,
+          password: newUser.password_temporal,
+          nombre: newUser.nombre
         });
         
-        const usuariosActualizados = await usuariosService.getUsuarios();
-        setUsuarios(usuariosActualizados);
+        const updatedUsers = await usuariosService.getUsuarios();
+        setUsers(updatedUsers);
       }
 
-      // Construir el payload para el endpoint de creación de pedidos
-      const items = formData.detalles.map(d => ({
+      // Build the payload for the order creation endpoint
+      const items = formData.details.map(d => ({
         producto_id: d.producto_id,
         cantidad: d.cantidad
       }));
 
-      const pedidoData = {
-        usuario_id: usuarioId,
-        cliente_nombre: formData.cliente_nombre,
-        telefono: formData.cliente_telefono,
-        direccion: formData.direccion,
+      const orderData = {
+        usuario_id: userId,
+        telefono: formData.customer_phone,
+        direccion: formData.address,
         items: items
       };
 
-      console.log('📦 Enviando datos del pedido al backend:', pedidoData);
-      await pedidosService.createPedido(pedidoData);
+      console.log('📦 Sending order data to backend:', orderData);
+      await pedidosService.createPedido(orderData);
 
-      console.log('🎉 Pedido completado exitosamente!');
+      console.log('🎉 Order completed successfully!');
       onClose();
       
     } catch (error) {
-      console.error('❌ Error creando pedido:', error);
-      setError('Error al crear el pedido: ' + error.message);
+      console.error('❌ Error creating order:', error);
+      setError('Error creating order: ' + error.message);
     } finally {
       setLoading(false);
     }
   };
 
-  if (cargandoUsuarios) {
+  if (isLoadingUsers) {
     return (
       <div className="modal fade show d-block" style={{backgroundColor: 'rgba(0,0,0,0.5)'}}>
         <div className="modal-dialog">
           <div className="modal-content">
             <div className="modal-body text-center py-4">
               <div className="spinner-border text-primary" role="status">
-                <span className="visually-hidden">Cargando...</span>
+                <span className="visually-hidden">Loading...</span>
               </div>
-              <p className="mt-2">Cargando lista de clientes...</p>
+              <p className="mt-2">Loading customer list...</p>
             </div>
           </div>
         </div>
@@ -254,11 +253,11 @@ const PedidoForm = ({ productos, onSubmit, onClose, titulo = "➕ Nuevo Pedido" 
             <div className="modal-body" style={{overflowY: 'auto', maxHeight: 'calc(95vh - 120px)'}}>
               {error && <div className="alert alert-danger">{error}</div>}
 
-              {/* Sección de Información del Cliente */}
+              {/* Customer Information Section */}
               <div className="card mb-3">
                 <div className="card-header bg-light">
-                  <h6 className="mb-0">👤 Información del Cliente</h6>
-                  <small className="text-muted">Base de datos: {usuarios.length} clientes</small>
+                  <h6 className="mb-0">👤 Customer Information</h6>
+                  <small className="text-muted">Database: {users.length} customers</small>
                 </div>
                 <div className="card-body">
                   <div className="row mb-3">
@@ -267,60 +266,60 @@ const PedidoForm = ({ productos, onSubmit, onClose, titulo = "➕ Nuevo Pedido" 
                       <input
                         type="email"
                         className="form-control"
-                        placeholder="correo@ejemplo.com"
-                        value={formData.cliente_email}
-                        onChange={(e) => setFormData(prev => ({...prev, cliente_email: e.target.value}))}
+                        placeholder="customer@example.com"
+                        value={formData.customer_email}
+                        onChange={(e) => setFormData(prev => ({...prev, customer_email: e.target.value}))}
                       />
                     </div>
                     <div className="col-md-6">
-                      <label className="form-label">Teléfono</label>
+                      <label className="form-label">Phone</label>
                       <input
                         type="text"
                         className="form-control"
-                        placeholder="3001234567"
-                        value={formData.cliente_telefono}
-                        onChange={(e) => setFormData(prev => ({...prev, cliente_telefono: e.target.value}))}
+                        placeholder="555-123-4567"
+                        value={formData.customer_phone}
+                        onChange={(e) => setFormData(prev => ({...prev, customer_phone: e.target.value}))}
                       />
                     </div>
                   </div>
 
-                  {verificandoUsuario && (
+                  {isCheckingUser && (
                     <div className="alert alert-info py-2">
-                      <small>🔍 Buscando en {usuarios.length} clientes...</small>
+                      <small>🔍 Searching in {users.length} customers...</small>
                     </div>
                   )}
 
-                  {usuarioEncontrado && (
+                  {foundUser && (
                     <div className="alert alert-success py-2">
-                      <small>✅ Cliente encontrado: <strong>{usuarioEncontrado.nombre}</strong></small>
+                      <small>✅ Customer found: <strong>{foundUser.nombre}</strong></small>
                     </div>
                   )}
 
-                  {!usuarioEncontrado && (formData.cliente_email || formData.cliente_telefono) && !verificandoUsuario && (
+                  {!foundUser && (formData.customer_email || formData.customer_phone) && !isCheckingUser && (
                     <div className="alert alert-warning py-2">
-                      <small>🆕 Cliente nuevo - Complete los datos</small>
+                      <small>🆕 New customer - Please complete the details</small>
                     </div>
                   )}
 
                   <div className="row">
                     <div className="col-md-6">
-                      <label className="form-label">Nombre Completo *</label>
+                      <label className="form-label">Full Name *</label>
                       <input
                         type="text"
                         className="form-control"
-                        value={formData.cliente_nombre}
-                        onChange={(e) => setFormData(prev => ({...prev, cliente_nombre: e.target.value}))}
+                        value={formData.customer_name}
+                        onChange={(e) => setFormData(prev => ({...prev, customer_name: e.target.value}))}
                         required
                       />
                     </div>
                     <div className="col-md-6">
-                      <label className="form-label">Dirección de Entrega *</label>
+                      <label className="form-label">Delivery Address *</label>
                       <input
                         type="text"
                         className="form-control"
-                        placeholder="Dirección completa"
-                        value={formData.direccion}
-                        onChange={(e) => setFormData(prev => ({...prev, direccion: e.target.value}))}
+                        placeholder="Full address"
+                        value={formData.address}
+                        onChange={(e) => setFormData(prev => ({...prev, address: e.target.value}))}
                         required
                       />
                     </div>
@@ -328,20 +327,20 @@ const PedidoForm = ({ productos, onSubmit, onClose, titulo = "➕ Nuevo Pedido" 
                 </div>
               </div>
 
-              {/* Sección de Productos */}
+              {/* Products Section */}
               <div className="card mb-3">
                 <div className="card-header bg-light">
-                  <h6 className="mb-0">🛒 Agregar Productos</h6>
+                  <h6 className="mb-0">🛒 Add Products</h6>
                 </div>
                 <div className="card-body">
                   <div className="row g-2">
                     <div className="col-md-6">
                       <select
                         className="form-select"
-                        value={productoSeleccionado}
-                        onChange={(e) => setProductoSeleccionado(e.target.value)}
+                        value={selectedProduct}
+                        onChange={(e) => setSelectedProduct(e.target.value)}
                       >
-                        <option value="">Seleccionar producto...</option>
+                        <option value="">Select a product...</option>
                         {productos.map(producto => (
                           <option key={producto.id_producto} value={producto.id_producto}>
                             {producto.nombre} - ${producto.precio.toLocaleString()}
@@ -354,48 +353,48 @@ const PedidoForm = ({ productos, onSubmit, onClose, titulo = "➕ Nuevo Pedido" 
                         type="number"
                         className="form-control"
                         min="1"
-                        value={cantidad}
-                        onChange={(e) => setCantidad(parseInt(e.target.value) || 1)}
+                        value={quantity}
+                        onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
                       />
                     </div>
                     <div className="col-md-3">
                       <button
                         type="button"
                         className="btn btn-primary w-100"
-                        onClick={agregarProducto}
+                        onClick={addProduct}
                       >
-                        ➕ Agregar
+                        ➕ Add
                       </button>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Lista de Productos */}
-              {formData.detalles.length > 0 && (
+              {/* Products List */}
+              {formData.details.length > 0 && (
                 <div className="table-responsive">
                   <table className="table table-sm">
                     <thead className="table-dark">
                       <tr>
-                        <th>Producto</th>
-                        <th>Cantidad</th>
-                        <th>Precio Unitario</th>
+                        <th>Product</th>
+                        <th>Quantity</th>
+                        <th>Unit Price</th>
                         <th>Subtotal</th>
-                        <th>Acciones</th>
+                        <th>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {formData.detalles.map((detalle, index) => (
+                      {formData.details.map((detail, index) => (
                         <tr key={index}>
-                          <td>{detalle.producto_nombre}</td>
-                          <td>{detalle.cantidad}</td>
-                          <td>${detalle.precio_unitario.toLocaleString()}</td>
-                          <td>${detalle.subtotal.toLocaleString()}</td>
+                          <td>{detail.producto_nombre}</td>
+                          <td>{detail.cantidad}</td>
+                          <td>${detail.precio_unitario.toLocaleString()}</td>
+                          <td>${detail.subtotal.toLocaleString()}</td>
                           <td>
                             <button
                               type="button"
                               className="btn btn-danger btn-sm"
-                              onClick={() => eliminarProducto(index)}
+                              onClick={() => removeProduct(index)}
                             >
                               🗑️
                             </button>
@@ -406,7 +405,7 @@ const PedidoForm = ({ productos, onSubmit, onClose, titulo = "➕ Nuevo Pedido" 
                     <tfoot>
                       <tr>
                         <td colSpan="3" className="text-end fw-bold">Total:</td>
-                        <td className="fw-bold text-success">${calcularTotal().toLocaleString()}</td>
+                        <td className="fw-bold text-success">${calculateTotal().toLocaleString()}</td>
                         <td></td>
                       </tr>
                     </tfoot>
@@ -416,7 +415,7 @@ const PedidoForm = ({ productos, onSubmit, onClose, titulo = "➕ Nuevo Pedido" 
             </div>
             <div className="modal-footer">
               <button type="button" className="btn btn-secondary" onClick={onClose}>
-                Cancelar
+                Cancel
               </button>
               <button 
                 type="submit" 
@@ -425,46 +424,46 @@ const PedidoForm = ({ productos, onSubmit, onClose, titulo = "➕ Nuevo Pedido" 
               >
                 {loading ? (
                   <>
-                    <span className="spinner-border spinner-border-sm me-2" role="status"></span>
-                    Creando...
+                    <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                    Creating...
                   </>
                 ) : (
-                  '✅ Crear Pedido'
+                  '✅ Create Order'
                 )}
               </button>
             </div>
           </form>
 
-          {credencialesUsuario && (
+          {newUserCredentials && (
             <div className="modal fade show d-block" style={{backgroundColor: 'rgba(0,0,0,0.7)', position: 'fixed', top: '0', left: '0', zIndex: 9999}}>
               <div className="modal-dialog">
                 <div className="modal-content">
-                  <div className="modal-header bg-info text-white">
-                    <h5 className="modal-title">🔐 Credenciales del Nuevo Usuario</h5>
+                  <div className="modal-header bg-info">
+                    <h5 className="modal-title text-white">🔐 New User Credentials</h5>
                   </div>
                   <div className="modal-body">
                     <div className="alert alert-info">
-                      <strong>Usuario creado exitosamente!</strong>
-                      <br/>Comparte estas credenciales con el cliente.
+                      <strong>User created successfully!</strong>
+                      <br/>Share these credentials with the customer.
                     </div>
                     
                     <div className="mb-3">
-                      <label className="form-label fw-bold">👤 Nombre:</label>
-                      <input type="text" className="form-control" value={credencialesUsuario.nombre} readOnly />
+                      <label className="form-label fw-bold">👤 Name:</label>
+                      <input type="text" className="form-control" value={newUserCredentials.nombre} readOnly />
                     </div>
                     
                     <div className="mb-3">
                       <label className="form-label fw-bold">📧 Email:</label>
-                      <input type="text" className="form-control" value={credencialesUsuario.email} readOnly />
+                      <input type="text" className="form-control" value={newUserCredentials.email} readOnly />
                     </div>
                     
                     <div className="mb-3">
-                      <label className="form-label fw-bold">🔑 Contraseña Temporal:</label>
-                      <input type="text" className="form-control fw-bold text-success" value={credencialesUsuario.password} readOnly />
+                      <label className="form-label fw-bold">🔑 Temporary Password:</label>
+                      <input type="text" className="form-control fw-bold text-success" value={newUserCredentials.password} readOnly />
                     </div>
                     
                     <div className="alert alert-warning">
-                      <small>⚠️ <strong>Importante:</strong> El cliente debe cambiar su contraseña en el primer inicio de sesión.</small>
+                      <small>⚠️ <strong>Important:</strong> The customer should change their password on first login.</small>
                     </div>
                   </div>
                   <div className="modal-footer">
@@ -472,19 +471,19 @@ const PedidoForm = ({ productos, onSubmit, onClose, titulo = "➕ Nuevo Pedido" 
                       type="button" 
                       className="btn btn-primary"
                       onClick={() => {
-                        navigator.clipboard.writeText(`Email: ${credencialesUsuario.email}\nContraseña: ${credencialesUsuario.password}`);
-                        alert('Credenciales copiadas al portapapeles!');
-                        setCredencialesUsuario(null);
+                        navigator.clipboard.writeText(`Email: ${newUserCredentials.email}\nPassword: ${newUserCredentials.password}`);
+                        alert('Credentials copied to clipboard!');
+                        setNewUserCredentials(null);
                       }}
                     >
-                      📋 Copiar Credenciales
+                      📋 Copy Credentials
                     </button>
                     <button 
                       type="button" 
                       className="btn btn-secondary"
-                      onClick={() => setCredencialesUsuario(null)}
+                      onClick={() => setNewUserCredentials(null)}
                     >
-                      Cerrar
+                      Close
                     </button>
                   </div>
                 </div>
