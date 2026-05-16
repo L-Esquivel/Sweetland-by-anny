@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-const RecetaForm = ({ receta, producto, ingredientes = [], empaques = [], onSubmit, onClose }) => {
+const RecetaForm = ({ recipeItem, product, ingredients = [], packagingCatalog = [], onSubmit, onClose }) => {
   const [formData, setFormData] = useState({
     id_ingrediente: '',
     cantidad_necesaria: '',
@@ -8,16 +8,16 @@ const RecetaForm = ({ receta, producto, ingredientes = [], empaques = [], onSubm
     cantidad_empaque: 1
   });
 
-  const [isEmpaqueMode, setIsEmpaqueMode] = useState(false);
+  const [isPackagingMode, setIsPackagingMode] = useState(false);
 
   useEffect(() => {
-    if (receta) {
+    if (recipeItem) {
       setFormData({
-        id_ingrediente: receta.id_ingrediente || '',
-        cantidad_necesaria: receta.cantidad_necesaria || '',
+        id_ingrediente: recipeItem.id_ingrediente || '',
+        cantidad_necesaria: recipeItem.cantidad_necesaria || '',
       });
     }
-  }, [receta]);
+  }, [recipeItem]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -26,7 +26,7 @@ const RecetaForm = ({ receta, producto, ingredientes = [], empaques = [], onSubm
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSubmit(formData, isEmpaqueMode);
+    onSubmit(formData, isPackagingMode);
   };
 
   return (
@@ -35,7 +35,7 @@ const RecetaForm = ({ receta, producto, ingredientes = [], empaques = [], onSubm
         <div className="modal-content">
           <div className="modal-header">
             <h5 className="modal-title">
-              {receta ? 'Editar' : 'Agregar'} {isEmpaqueMode ? 'Empaque' : 'Ingrediente'}
+              {recipeItem ? 'Edit' : 'Add'} {isPackagingMode ? 'Packaging' : 'Ingredient'}
             </h5>
             <button type="button" className="btn-close" onClick={onClose}></button>
           </div>
@@ -45,62 +45,62 @@ const RecetaForm = ({ receta, producto, ingredientes = [], empaques = [], onSubm
               <div className="btn-group mb-3 w-100">
                 <button 
                   type="button"
-                  className={`btn ${!isEmpaqueMode ? 'btn-primary' : 'btn-outline-primary'}`}
-                  onClick={() => setIsEmpaqueMode(false)}
+                  className={`btn ${!isPackagingMode ? 'btn-primary' : 'btn-outline-primary'}`}
+                  onClick={() => setIsPackagingMode(false)}
                 >
-                  Ingrediente
+                  Ingredient
                 </button>
                 <button 
                   type="button"
-                  className={`btn ${isEmpaqueMode ? 'btn-primary' : 'btn-outline-primary'}`}
-                  onClick={() => setIsEmpaqueMode(true)}
+                  className={`btn ${isPackagingMode ? 'btn-primary' : 'btn-outline-primary'}`}
+                  onClick={() => setIsPackagingMode(true)}
                 >
-                  Empaque
+                  Packaging
                 </button>
               </div>
 
-              {isEmpaqueMode ? (
+              {isPackagingMode ? (
                 <>
                   <div className="mb-3">
-                    <label className="form-label">Empaque</label>
+                    <label className="form-label">Packaging</label>
                     <select name="id_empaque" className="form-select" value={formData.id_empaque} onChange={handleChange} required>
-                      <option value="">Seleccionar empaque</option>
-                      {empaques && empaques.length > 0 ? (
-                        empaques.map(e => (
+                      <option value="">Select packaging</option>
+                      {packagingCatalog && packagingCatalog.length > 0 ? (
+                        packagingCatalog.map(e => (
                           <option key={e.id_empaque} value={e.id_empaque}>
                             {e.nombre} - ${e.precio}
                           </option>
                         ))
                       ) : (
-                        <option value="">No hay empaques disponibles</option>
+                        <option value="">No packaging items available</option>
                       )}
                     </select>
                   </div>
                   <div className="mb-3">
-                    <label className="form-label">Cantidad</label>
+                    <label className="form-label">Quantity</label>
                     <input type="number" name="cantidad_empaque" className="form-control" value={formData.cantidad_empaque} onChange={handleChange} min="1" required />
                   </div>
                 </>
               ) : (
                 <>
                   <div className="mb-3">
-                    <label className="form-label">Ingrediente</label>
+                    <label className="form-label">Ingredient</label>
                     <select name="id_ingrediente" className="form-select" value={formData.id_ingrediente} onChange={handleChange} required>
-                      <option value="">Seleccionar ingrediente</option>
-                      {ingredientes && ingredientes.length > 0 ? (
-                        ingredientes.map(i => (
+                      <option value="">Select ingredient</option>
+                      {ingredients && ingredients.length > 0 ? (
+                        ingredients.map(i => (
                           <option key={i.id_ingrediente} value={i.id_ingrediente}>
                             {/* FIX: El backend envía 'unidad_medida', no 'unidad'. */}
                             {i.nombre} ({i.unidad_medida})
                           </option>
                         ))
                       ) : (
-                        <option value="">No hay ingredientes disponibles</option>
+                        <option value="">No ingredients available</option>
                       )}
                     </select>
                   </div>
                   <div className="mb-3">
-                    <label className="form-label">Cantidad Necesaria</label>
+                    <label className="form-label">Quantity Needed</label>
                     <input type="number" name="cantidad_necesaria" className="form-control" value={formData.cantidad_necesaria} onChange={handleChange} step="0.01" required />
                   </div>
                 </>
@@ -108,8 +108,8 @@ const RecetaForm = ({ receta, producto, ingredientes = [], empaques = [], onSubm
             </div>
 
             <div className="modal-footer">
-              <button type="button" className="btn btn-secondary" onClick={onClose}>Cancelar</button>
-              <button type="submit" className="btn btn-primary">Guardar</button>
+              <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>
+              <button type="submit" className="btn btn-primary">Save</button>
             </div>
           </form>
         </div>

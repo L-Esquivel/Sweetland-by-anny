@@ -7,256 +7,256 @@ import RecetaForm from './RecetaForm';
 import './RecetasList.css';
 
 const RecetasList = () => {
-  const [productos, setProductos] = useState([]);
-  const [ingredientes, setIngredientes] = useState([]);
-  const [empaques, setEmpaques] = useState([]);
-  const [productoSeleccionado, setProductoSeleccionado] = useState(null);
-  const [recetasProducto, setRecetasProducto] = useState([]);
-  const [empaquesProducto, setEmpaquesProducto] = useState([]);
-  const [costos, setCostos] = useState(null);
+  const [products, setProducts] = useState([]);
+  const [ingredients, setIngredients] = useState([]);
+  const [packagingCatalog, setPackagingCatalog] = useState([]);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [productRecipes, setProductRecipes] = useState([]);
+  const [productPackaging, setProductPackaging] = useState([]);
+  const [costs, setCosts] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
-  const [isUpdating, setIsUpdating] = useState(false); // Para mostrar feedback visual de carga
+  const [isUpdating, setIsUpdating] = useState(false); // For visual loading feedback
 
   useEffect(() => {
-    cargarDatosIniciales();
+    fetchInitialData();
   }, []);
 
-  const cargarDatosIniciales = async () => {
+  const fetchInitialData = async () => {
     try {
       setLoading(true);
       const [productosData, ingredientesData, empaquesData] = await Promise.all([
-        productosService.getProductos(),
+        productosService.getProducts(),
         ingredientesService.getIngredientes(),
         empaquesService.getEmpaques()
       ]);
-      setProductos(productosData);
-      setIngredientes(ingredientesData);
-      setEmpaques(empaquesData);
+      setProducts(productosData);
+      setIngredients(ingredientesData);
+      setPackagingCatalog(empaquesData);
     } catch (error) {
-      console.error('Error cargando datos:', error);
+      console.error('Error loading initial data:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const cargarRecetasProducto = async (productoId) => {
+  const fetchProductRecipes = async (productId) => {
     try {
-      const producto = productos.find(p => p.id_producto === productoId);
-      setProductoSeleccionado(producto);
+      const product = products.find(p => p.id_producto === productId);
+      setSelectedProduct(product);
 
-      const data = await recetasService.getRecetasPorProducto(productoId);
-      setRecetasProducto(data.recetas || []);
-      setEmpaquesProducto(data.empaques || []);
-      setCostos(data.costos || null);
+      const data = await recetasService.getProductRecipeDetails(productId);
+      setProductRecipes(data.recipes || []);
+      setProductPackaging(data.packaging || []);
+      setCosts(data.costs || null);
     } catch (error) {
-      console.error('Error cargando recetas:', error);
+      console.error('Error loading product recipes:', error);
     }
   };
 
-  // OPTIMIZADO: Llamada única al backend para recalcular y guardar
-  const actualizarCampoProducto = async (campo, valor) => {
-    if (!productoSeleccionado) return;
+  // OPTIMIZED: Single backend call to recalculate and save
+  const updateProductField = async (field, value) => {
+    if (!selectedProduct) return;
 
-    // 1. Actualización instantánea en la UI para que no se sienta lag
-    const productoActualizado = { ...productoSeleccionado, [campo]: valor };
-    setProductoSeleccionado(productoActualizado);
+    // 1. Instant UI update to avoid lag
+    const updatedProduct = { ...selectedProduct, [field]: value };
+    setSelectedProduct(updatedProduct);
     setIsUpdating(true);
 
     try {
-      const nuevoPax = campo === 'pax' ? valor : productoActualizado.pax;
-      const nuevaUtilidad = campo === 'utilidad_porcentaje' ? valor : productoActualizado.utilidad_porcentaje;
+      const newPax = field === 'pax' ? value : updatedProduct.pax;
+      const newProfit = field === 'utilidad_porcentaje' ? value : updatedProduct.utilidad_porcentaje;
 
-      // 2. Solo llamamos a recalcular. El backend ya hace el UPDATE en la tabla productos.
-      const data = await recetasService.recalcularCostos(
-        productoSeleccionado.id_producto,
-        parseInt(nuevoPax) || 1,
-        parseFloat(nuevaUtilidad) || 0
+      // 2. We only call recalculate. The backend already handles the UPDATE on the products table.
+      const data = await recetasService.recalculateCosts(
+        selectedProduct.id_producto,
+        parseInt(newPax) || 1,
+        parseFloat(newProfit) || 0
       );
 
-      // 3. Sincronizamos el estado de costos con la respuesta del servidor
-      setCostos(data.costos || null);
+      // 3. Sync the costs state with the server's response
+      setCosts(data.costs || null);
     } catch (error) {
-      console.error('Error al recalcular:', error);
+      console.error('Error recalculating:', error);
     } finally {
       setIsUpdating(false);
     }
   };
 
-  const handleEliminarReceta = async (id_receta) => {
-    if (window.confirm('¿Eliminar este ingrediente?')) {
+  const handleDeleteRecipe = async (recipeId) => {
+    if (window.confirm('Delete this ingredient?')) {
       try {
-        await recetasService.deleteReceta(id_receta);
-        cargarRecetasProducto(productoSeleccionado.id_producto);
+        await recetasService.deleteRecipeIngredient(recipeId);
+        fetchProductRecipes(selectedProduct.id_producto);
       } catch (error) { console.error(error); }
     }
   };
 
-  const handleEliminarEmpaque = async (id) => {
-    if (window.confirm('¿Eliminar este empaque?')) {
+  const handleDeletePackaging = async (id) => {
+    if (window.confirm('Delete this packaging?')) {
       try {
-        await empaquesService.deleteEmpaqueProducto(id); // Asegúrate que el service tenga este nombre
-        cargarRecetasProducto(productoSeleccionado.id_producto);
+        await empaquesService.deleteEmpaqueProducto(id);
+        fetchProductRecipes(selectedProduct.id_producto);
       } catch (error) { console.error(error); }
     }
   };
 
-  const handleCrearReceta = () => {
-    if (!productoSeleccionado) return alert('Selecciona un producto primero');
+  const handleCreateRecipeItem = () => {
+    if (!selectedProduct) return alert('Select a product first');
     setShowModal(true);
   };
 
-  const handleSubmitReceta = async (data, isEmpaque = false) => {
+  const handleRecipeFormSubmit = async (data, isPackaging = false) => {
     try {
-      if (isEmpaque) {
-        await empaquesService.addEmpaqueProducto(productoSeleccionado.id_producto, data);
+      if (isPackaging) {
+        await empaquesService.addEmpaqueProducto(selectedProduct.id_producto, data);
       } else {
-        await recetasService.createReceta({ ...data, id_producto: productoSeleccionado.id_producto });
+        await recetasService.createReceta({ ...data, id_producto: selectedProduct.id_producto });
       }
       setShowModal(false);
-      cargarRecetasProducto(productoSeleccionado.id_producto);
-    } catch (error) { console.error('Error guardando:', error); }
+      fetchProductRecipes(selectedProduct.id_producto);
+    } catch (error) { console.error('Error saving:', error); }
   };
 
-  const formatearMoneda = (valor) => {
-    return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(valor || 0);
+  const formatCurrency = (value) => {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 }).format(value || 0);
   };
 
-  if (loading) return <div className="text-center p-5"><h3>Cargando sistema de costeo...</h3></div>;
+  if (loading) return <div className="text-center p-5"><h3>Loading costing system...</h3></div>;
 
   return (
     <div className="recetas-container container-fluid p-4">
-      <h2 className="mb-4 text-center">📋 Análisis de Costos y Recetas</h2>
+      <h2 className="mb-4 text-center">📋 Costing & Recipe Analysis</h2>
 
       <div className="card shadow-sm mb-4">
         <div className="card-body bg-light">
-          <label className="form-label fw-bold">Seleccionar Producto para Costear:</label>
+          <label className="form-label fw-bold">Select Product for Costing:</label>
           <select 
             className="form-select form-select-lg"
-            value={productoSeleccionado?.id_producto || ''}
+            value={selectedProduct?.id_producto || ''}
             onChange={(e) => {
               const selectedId = e.target.value;
               if (selectedId) {
-                cargarRecetasProducto(parseInt(selectedId));
+                fetchProductRecipes(parseInt(selectedId));
               } else {
-                // Si el usuario deselecciona, limpiamos el estado
-                setProductoSeleccionado(null);
-                setCostos(null);
+                // If the user deselects, clear the state
+                setSelectedProduct(null);
+                setCosts(null);
               }
             }}
           >
-            <option value="">-- Seleccione un producto del catálogo --</option>
-            {productos.map(p => (
+            <option value="">-- Select a product from the catalog --</option>
+            {products.map(p => (
               <option key={p.id_producto} value={p.id_producto}>{p.nombre}</option>
             ))}
           </select>
         </div>
       </div>
 
-      {productoSeleccionado && costos && (
+      {selectedProduct && costs && (
         <div className="row">
-          {/* Columna Izquierda: Ajustes */}
+          {/* Left Column: Adjustments */}
           <div className="col-lg-5">
             <div className="card shadow-sm border-0 mb-4">
               <div className="card-header bg-dark text-white">
-                <h5 className="mb-0">⚙️ Parámetros de Venta</h5>
+                <h5 className="mb-0">⚙️ Sale Parameters</h5>
               </div>
               <div className="card-body">
-                <h4 className="text-primary">{productoSeleccionado.nombre}</h4>
+                <h4 className="text-primary">{selectedProduct.nombre}</h4>
                 <hr />
                 
                 <div className="mb-4">
-                  <label className="form-label fw-bold">PAX (Unidades que rinde la receta):</label>
+                  <label className="form-label fw-bold">PAX (Units per recipe):</label>
                   <div className="input-group">
                     <span className="input-group-text">📦</span>
                     <input 
                       type="number" 
                       className="form-control form-control-lg" 
-                      // 💡 FIX: Se cambia `|| 1` por `?? ''`.
-                      // Esto permite que el campo de texto esté momentáneamente vacío
-                      // para que el usuario pueda borrar el valor y escribir uno nuevo,
-                      // en lugar de forzarlo a ser '1' inmediatamente.
-                      value={productoSeleccionado.pax ?? ''}
-                      onChange={(e) => actualizarCampoProducto('pax', e.target.value)}
+                      // 💡 FIX: Changed `|| 1` to `?? ''`.
+                      // This allows the text field to be momentarily empty
+                      // so the user can clear the value and type a new one,
+                      // instead of immediately forcing it to '1'.
+                      value={selectedProduct.pax ?? ''}
+                      onChange={(e) => updateProductField('pax', e.target.value)}
                     />
                   </div>
-                  <small className="text-muted">El precio final se dividirá por este número.</small>
+                  <small className="text-muted">The final price will be divided by this number.</small>
                 </div>
 
                 <div className="mb-4">
-                  <label className="form-label fw-bold">Utilidad Deseada (%):</label>
+                  <label className="form-label fw-bold">Desired Profit (%):</label>
                   <div className="input-group">
                     <input 
                       type="number"
                       className="form-control form-control-lg"
-                      value={productoSeleccionado.utilidad_porcentaje ?? ''}
-                      onChange={(e) => actualizarCampoProducto('utilidad_porcentaje', e.target.value)}
+                      value={selectedProduct.utilidad_porcentaje ?? ''}
+                      onChange={(e) => updateProductField('utilidad_porcentaje', e.target.value)}
                     />
                     <span className="input-group-text">%</span>
                   </div>
-                  <small className="text-muted">Porcentaje de ganancia sobre el costo total de producción.</small>
+                  <small className="text-muted">Percentage of profit over the total production cost.</small>
                 </div>
 
-                {isUpdating && <div className="text-primary"><span className="spinner-border spinner-border-sm me-2"></span>Recalculando...</div>}
+                {isUpdating && <div className="text-primary"><span className="spinner-border spinner-border-sm me-2"></span>Recalculating...</div>}
               </div>
             </div>
           </div>
 
-          {/* Columna Derecha: Desglose (Las 8 líneas) */}
+          {/* Right Column: Breakdown */}
           <div className="col-lg-7">
             <div className="card shadow-sm border-0">
               <div className="card-header bg-success text-white">
-                <h5 className="mb-0">💰 Desglose Detallado de Precio</h5>
+                <h5 className="mb-0">💰 Detailed Price Breakdown</h5>
               </div>
               <div className="card-body p-0">
                 <table className="table table-hover mb-0">
                   <tbody>
                     <tr>
-                      <td className="ps-4">Costo Base (Ingredientes)</td>
-                      <td className="text-end pe-4 fw-bold">{formatearMoneda(costos.costo_base)}</td>
+                      <td className="ps-4">Base Cost (Ingredients)</td>
+                      <td className="text-end pe-4 fw-bold">{formatCurrency(costs.base_cost)}</td>
                     </tr>
                     <tr className="table-light">
-                      <td className="ps-4 text-muted small">+ 35% Gastos Operativos</td>
-                      <td className="text-end pe-4">{formatearMoneda(costos.gastos_operativos)}</td>
+                      <td className="ps-4 text-muted small">+ 35% Operational Expenses</td>
+                      <td className="text-end pe-4">{formatCurrency(costs.operational_expenses)}</td>
                     </tr>
                     <tr className="table-light">
-                      <td className="ps-4 text-muted small">+ 10% Depreciación Mercado</td>
-                      <td className="text-end pe-4">{formatearMoneda(costos.dep_mercado)}</td>
+                      <td className="ps-4 text-muted small">+ 10% Market Depreciation</td>
+                      <td className="text-end pe-4">{formatCurrency(costs.market_depreciation)}</td>
                     </tr>
                     <tr className="table-light border-bottom">
-                      <td className="ps-4 text-muted small">+ 5% Depreciación Equipos</td>
-                      <td className="text-end pe-4">{formatearMoneda(costos.dep_equipos)}</td>
+                      <td className="ps-4 text-muted small">+ 5% Equipment Depreciation</td>
+                      <td className="text-end pe-4">{formatCurrency(costs.equipment_depreciation)}</td>
                     </tr>
                     <tr>
-                      <td className="ps-4">+ Valor Total Empaques</td>
-                      <td className="text-end pe-4">{formatearMoneda(costos.costo_empaques)}</td>
+                      <td className="ps-4">+ Total Packaging Value</td>
+                      <td className="text-end pe-4">{formatCurrency(costs.packaging_cost)}</td>
                     </tr>
                     <tr className="fw-bold bg-light">
-                      <td className="ps-4 text-primary">TOTAL ANTES DE UTILIDAD</td>
-                      <td className="text-end pe-4 text-primary">{formatearMoneda(costos.total3)}</td>
+                      <td className="ps-4 text-primary">TOTAL BEFORE PROFIT</td>
+                      <td className="text-end pe-4 text-primary">{formatCurrency(costs.production_cost)}</td>
                     </tr>
                     <tr>
-                      <td className="ps-4">{costos.utilidad_porcentaje}% Utilidad Seleccionada</td>
-                      <td className="text-end pe-4 text-success">+ {formatearMoneda(costos.utilidad)}</td>
+                      <td className="ps-4">{costs.profit_percentage}% Selected Profit</td>
+                      <td className="text-end pe-4 text-success">+ {formatCurrency(costs.profit)}</td>
                     </tr>
                     <tr className="fw-bold">
-                      <td className="ps-4">TOTAL CON UTILIDAD</td>
-                      <td className="text-end pe-4">{formatearMoneda(costos.total4)}</td>
+                      <td className="ps-4">TOTAL WITH PROFIT</td>
+                      <td className="text-end pe-4">{formatCurrency(costs.pre_tax_total)}</td>
                     </tr>
                     <tr>
-                      <td className="ps-4">8% Impuesto al Consumo (I.C.)</td>
-                      <td className="text-end pe-4">{formatearMoneda(costos.ic)}</td>
+                      <td className="ps-4">8% Consumption Tax (I.C.)</td>
+                      <td className="text-end pe-4">{formatCurrency(costs.consumption_tax)}</td>
                     </tr>
                     <tr className="table-dark">
-                      <td className="ps-4 fs-5 py-3 fw-bold">PRECIO SUGERIDO FINAL (por unidad)</td>
-                      <td className="text-end pe-4 fs-5 py-3 fw-bold text-warning">{formatearMoneda(costos.precio_sugerido)}</td>
+                      <td className="ps-4 fs-5 py-3 fw-bold">FINAL SUGGESTED PRICE (per unit)</td>
+                      <td className="text-end pe-4 fs-5 py-3 fw-bold text-warning">{formatCurrency(costs.suggested_price)}</td>
                     </tr>
                   </tbody>
                 </table>
               </div>
               <div className="card-footer text-center bg-white border-0 py-3">
-                <button className="btn btn-outline-primary btn-lg" onClick={handleCrearReceta}>
-                  ➕ Agregar Ingrediente o Empaque
+                <button className="btn btn-outline-primary btn-lg" onClick={handleCreateRecipeItem}>
+                  ➕ Add Ingredient or Packaging
                 </button>
               </div>
             </div>
@@ -264,24 +264,24 @@ const RecetasList = () => {
         </div>
       )}
 
-      {/* Tablas Detalladas (Ingredientes / Empaques) abajo para orden */}
-      {productoSeleccionado && (
+      {/* Detailed Tables (Ingredients / Packaging) below for order */}
+      {selectedProduct && (
         <div className="row mt-4">
             <div className="col-md-6">
                 <div className="card shadow-sm">
-                    <div className="card-header bg-secondary text-white">Ingredientes</div>
+                    <div className="card-header bg-secondary text-white">Ingredients</div>
                     <div className="table-responsive">
                         <table className="table table-sm mb-0">
-                            <thead><tr><th>Item</th><th>Cant.</th><th>Subtotal</th><th></th></tr></thead>
+                            <thead><tr><th>Item</th><th>Qty.</th><th>Subtotal</th><th></th></tr></thead>
                             <tbody>
-                                {recetasProducto.map((r) => (
-                                    // FIX: Usar el ID único del registro como key y para la función de borrado.
-                                    // El backend envía 'id', no 'id_receta'.
+                                {productRecipes.map((r) => (
+                                    // FIX: Use the unique record ID as key and for the delete function.
+                                    // The backend sends 'id', not 'id_receta'.
                                     <tr key={r.id}>
                                         <td>{r.ingrediente}</td>
                                         <td>{r.cantidad_necesaria} {r.unidad}</td>
-                                        <td className="fw-bold">{formatearMoneda(r.costo_ingrediente)}</td>
-                                        <td><button className="btn btn-link btn-sm text-danger" onClick={() => handleEliminarReceta(r.id)}>🗑️</button></td>
+                                        <td className="fw-bold">{formatCurrency(r.costo_ingrediente)}</td>
+                                        <td><button className="btn btn-link btn-sm text-danger" onClick={() => handleDeleteRecipe(r.id)}>🗑️</button></td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -291,17 +291,17 @@ const RecetasList = () => {
             </div>
             <div className="col-md-6">
                 <div className="card shadow-sm">
-                    <div className="card-header bg-secondary text-white">Empaques</div>
+                    <div className="card-header bg-secondary text-white">Packaging</div>
                     <div className="table-responsive">
                         <table className="table table-sm mb-0">
-                            <thead><tr><th>Item</th><th>Cant.</th><th>Subtotal</th><th></th></tr></thead>
+                            <thead><tr><th>Item</th><th>Qty.</th><th>Subtotal</th><th></th></tr></thead>
                             <tbody>
-                                {empaquesProducto.map((e, i) => (
+                                {productPackaging.map((e, i) => (
                                     <tr key={i}>
                                         <td>{e.nombre}</td>
                                         <td>{e.cantidad}</td>
-                                        <td className="fw-bold">{formatearMoneda(e.subtotal)}</td>
-                                        <td><button className="btn btn-link btn-sm text-danger" onClick={() => handleEliminarEmpaque(e.id)}>🗑️</button></td>
+                                        <td className="fw-bold">{formatCurrency(e.subtotal)}</td>
+                                        <td><button className="btn btn-link btn-sm text-danger" onClick={() => handleDeletePackaging(e.id)}>🗑️</button></td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -314,10 +314,10 @@ const RecetasList = () => {
 
       {showModal && (
         <RecetaForm
-          producto={productoSeleccionado}
-          ingredientes={ingredientes}
-          empaques={empaques}
-          onSubmit={handleSubmitReceta}
+          product={selectedProduct}
+          ingredients={ingredients}
+          packagingCatalog={packagingCatalog}
+          onSubmit={handleRecipeFormSubmit}
           onClose={() => setShowModal(false)}
         />
       )}
