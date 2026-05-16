@@ -1,10 +1,12 @@
 import { useState } from 'react';
+import { useAuth } from '../context/AuthContext';
 
-const Login = ({ onLogin }) => {
+const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const { login } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -12,11 +14,11 @@ const Login = ({ onLogin }) => {
     setError('');
 
     try {
-      const result = await onLogin(email, password);
+      const result = await login(email, password);
       if (!result.success) {
         setError(result.error);
       }
-      // The redirection and role verification logic now lives in App.jsx
+      // The redirection and role verification logic now lives in AuthContext and App.jsx
     } catch (err) {
       setError('Server connection error');
     } finally {
