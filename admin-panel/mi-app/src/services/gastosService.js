@@ -1,57 +1,65 @@
-// 🚀 URL del backend en producción (Render)
+// 🚀 Backend URL
 const BASE = import.meta.env.VITE_API_URL || 'https://precivox-backend.onrender.com';
 const GASTOS_URL = `${BASE.replace(/\/$/, '')}/gastos`;
 
 export const gastosService = {
   /**
-   * Obtiene la lista de gastos, opcionalmente filtrada por mes y año.
-   * @param {number} mes - El mes para filtrar (1-12).
-   * @param {number} ano - El año para filtrar.
-   * @returns {Promise<Array>} La lista de gastos.
+   * Gets the list of expenses, optionally filtered by month and year.
+   * @param {number} month - The month to filter by (1-12).
+   * @param {number} year - The year to filter by.
+   * @returns {Promise<Array>} The list of expenses.
    */
-  async getGastos(mes, ano) {
+  async getExpenses(month, year) {
     try {
       let url = GASTOS_URL;
-      if (mes && ano) {
-        const params = new URLSearchParams({ mes, ano });
+      if (month && year) {
+        const params = new URLSearchParams({ month, year });
         url += `?${params.toString()}`;
       }
       const response = await fetch(url, { credentials: 'include' });
-      if (!response.ok) throw new Error('Error al cargar gastos');
+      if (!response.ok) throw new Error('Error loading expenses');
       return await response.json();
     } catch (error) {
-      console.error('Error en gastosService.getGastos:', error);
+      console.error('Error in gastosService.getExpenses:', error);
       throw error;
     }
   },
 
   /**
-   * Crea un nuevo registro de gasto.
-   * @param {object} gastoData - Los datos del gasto a crear.
-   * @returns {Promise<object>} La respuesta del servidor.
+   * Creates a new expense record.
+   * @param {object} expenseData - The expense data to create.
+   * @returns {Promise<object>} The server's response.
    */
-  async createGasto(gastoData) {
+  async createExpense(expenseData) {
     try {
       const response = await fetch(GASTOS_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify(gastoData)
+        body: JSON.stringify(expenseData)
       });
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Error al crear el gasto');
+        throw new Error(errorData.error || 'Error creating expense');
       }
       return await response.json();
     } catch (error) {
-      console.error('Error en gastosService.createGasto:', error);
+      console.error('Error in gastosService.createExpense:', error);
       throw error;
     }
   },
 
-  async deleteGasto(id) {
-    const response = await fetch(`${GASTOS_URL}/${id}`, { method: 'DELETE', credentials: 'include' });
-    if (!response.ok) throw new Error('Error al eliminar el gasto');
-    return await response.json();
+  async deleteExpense(id) {
+    try {
+      const response = await fetch(`${GASTOS_URL}/${id}`, { method: 'DELETE', credentials: 'include' });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Error deleting expense');
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Error in gastosService.deleteExpense:', error);
+      throw error;
+    }
   }
 };
