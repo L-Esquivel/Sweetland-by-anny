@@ -1,73 +1,62 @@
 // src/services/recetasService.js
-// 🚀 URL del backend en producción (Render)
+// 🚀 Backend URL
 const BASE = import.meta.env.VITE_API_URL || 'https://precivox-backend.onrender.com';
-const API_URL = `${BASE}/recetas`;
+const API_URL = `${BASE.replace(/\/$/, '')}/recipes`;
 
 export const recetasService = {
-  async getRecetas() {
+  async getRecipes() {
     try {
       const response = await fetch(`${API_URL}/`, { credentials: 'include' });
-      if (!response.ok) throw new Error('Error al cargar recetas');
+      if (!response.ok) throw new Error('Error loading recipes');
       return await response.json();
     } catch (error) {
-      console.error('Error en recetasService.getRecetas:', error);
+      console.error('Error in recetasService.getRecipes:', error);
       throw error;
     }
   },
 
-  async getRecetasPorProducto(productoId) {
+  async getProductRecipeDetails(productId) {
     try {
-      const response = await fetch(`${API_URL}/producto/${productoId}`, { credentials: 'include' });
-      if (!response.ok) throw new Error('Error al cargar recetas del producto');
+      const response = await fetch(`${API_URL}/producto/${productId}`, { credentials: 'include' });
+      if (!response.ok) throw new Error('Error loading product recipe details');
       return await response.json();
     } catch (error) {
-      console.error('Error en recetasService.getRecetasPorProducto:', error);
+      console.error('Error in recetasService.getProductRecipeDetails:', error);
       throw error;
     }
   },
 
-  // NUEVO: Recalcular costos con PAX y Utilidad personalizados
-  async recalcularCostos(productoId, pax, utilidadPorcentaje) {
+  // Recalculate costs with custom PAX and Profit
+  async recalculateCosts(productId, pax, profitPercentage) {
     try {
       const response = await fetch(`${API_URL}/recalcular`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
-          id_producto: productoId,
+          id_producto: productId,
           pax: pax,
-          utilidad_porcentaje: utilidadPorcentaje
+          utilidad_porcentaje: profitPercentage
         })
       });
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Error al recalcular costos');
+        throw new Error(errorData.error || 'Error recalculating costs');
       }
       return await response.json();
     } catch (error) {
-      console.error('Error en recetasService.recalcularCostos:', error);
+      console.error('Error in recetasService.recalculateCosts:', error);
       throw error;
     }
   },
 
-  async getCostoProduccion(productoId) {
-    try {
-      const response = await fetch(`${API_URL}/costo-produccion/${productoId}`, { credentials: 'include' });
-      if (!response.ok) throw new Error('Error al calcular costo de producción');
-      return await response.json();
-    } catch (error) {
-      console.error('Error en recetasService.getCostoProduccion:', error);
-      throw error;
-    }
-  },
-
-  async createReceta(recetaData) {
+  async addRecipeIngredient(recipeData) {
     try {
       const response = await fetch(`${API_URL}/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify(recetaData)
+        body: JSON.stringify(recipeData)
       });
       if (!response.ok) {
         const errorData = await response.json();
@@ -75,70 +64,70 @@ export const recetasService = {
       }
       return await response.json();
     } catch (error) {
-      console.error('Error en recetasService.createReceta:', error);
+      console.error('Error in recetasService.addRecipeIngredient:', error);
       throw error;
     }
   },
 
-  async createRecetasMultiples(productoId, ingredientes) {
+  async addMultipleRecipeIngredients(productId, ingredients) {
     try {
       const response = await fetch(`${API_URL}/multiple`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ id_producto: productoId, ingredientes })
+        body: JSON.stringify({ id_producto: productId, ingredientes })
       });
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Error al crear recetas');
+        throw new Error(errorData.error || 'Error creating recipes');
       }
       return await response.json();
     } catch (error) {
-      console.error('Error en recetasService.createRecetasMultiples:', error);
+      console.error('Error in recetasService.addMultipleRecipeIngredients:', error);
       throw error;
     }
   },
 
-  async updateReceta(recetaId, recetaData) {
+  async updateRecipeIngredient(recipeId, recipeData) {
     try {
       const response = await fetch(`${API_URL}/${recetaId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify(recetaData)
+        body: JSON.stringify(recipeData)
       });
-      if (!response.ok) throw new Error('Error al actualizar receta');
+      if (!response.ok) throw new Error('Error updating recipe');
       return await response.json();
     } catch (error) {
-      console.error('Error en recetasService.updateReceta:', error);
+      console.error('Error in recetasService.updateRecipeIngredient:', error);
       throw error;
     }
   },
 
-  async deleteReceta(recetaId) {
+  async deleteRecipeIngredient(recipeId) {
     try {
       const response = await fetch(`${API_URL}/${recetaId}`, {
         method: 'DELETE',
         credentials: 'include'
       });
-      if (!response.ok) throw new Error('Error al eliminar receta');
+      if (!response.ok) throw new Error('Error deleting recipe');
       return await response.json();
     } catch (error) {
-      console.error('Error en recetasService.deleteReceta:', error);
+      console.error('Error in recetasService.deleteRecipeIngredient:', error);
       throw error;
     }
   },
 
-  async deleteRecetasProducto(productoId) {
+  async deleteAllProductRecipes(productId) {
     try {
-      const response = await fetch(`${API_URL}/producto/${productoId}`, {
+      const response = await fetch(`${API_URL}/producto/${productId}`, {
         method: 'DELETE',
         credentials: 'include'
       });
-      if (!response.ok) throw new Error('Error al eliminar recetas del producto');
+      if (!response.ok) throw new Error('Error deleting product recipes');
       return await response.json();
     } catch (error) {
-      console.error('Error en recetasService.deleteRecetasProducto:', error);
+      console.error('Error in recetasService.deleteAllProductRecipes:', error);
       throw error;
     }
   }
