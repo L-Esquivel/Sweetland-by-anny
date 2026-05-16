@@ -1,27 +1,27 @@
 import React, { useState, useEffect } from 'react';
 
-const UsuarioForm = ({ usuario, onSubmit, onClose }) => {
+const UserForm = ({ user, onSubmit, onClose }) => {
   const [formData, setFormData] = useState({
     nombre: '',
     email: '',
     password: '',
     telefono: '',
     direccion: '',
-    rol: 'cliente'
+    rol: 'cliente' // Default role
   });
 
   useEffect(() => {
-    if (usuario) {
+    if (user) {
       setFormData({
-        nombre: usuario.nombre || '',
-        email: usuario.email || '',
+        nombre: user.nombre || '',
+        email: user.email || '',
         password: '',
-        telefono: usuario.telefono || '',
-        direccion: usuario.direccion || '',
-        rol: usuario.rol || 'cliente'
+        telefono: user.telefono || '',
+        direccion: user.direccion || '',
+        rol: user.rol || 'cliente'
       });
     }
-  }, [usuario]);
+  }, [user]);
 
   const handleChange = (e) => {
     setFormData({
@@ -41,7 +41,7 @@ const UsuarioForm = ({ usuario, onSubmit, onClose }) => {
         <div className="modal-content">
           <div className="modal-header bg-primary text-white">
             <h5 className="modal-title">
-              {usuario ? '✏️ Editar Usuario' : '➕ Nuevo Usuario'}
+              {user ? '✏️ Edit User' : '➕ New User'}
             </h5>
             <button 
               type="button" 
@@ -55,7 +55,7 @@ const UsuarioForm = ({ usuario, onSubmit, onClose }) => {
               <div className="row">
                 <div className="col-md-6">
                   <div className="mb-3">
-                    <label className="form-label">Nombre *</label>
+                    <label className="form-label">Name *</label>
                     <input
                       type="text"
                       name="nombre"
@@ -84,7 +84,7 @@ const UsuarioForm = ({ usuario, onSubmit, onClose }) => {
 
               <div className="mb-3">
                 <label className="form-label">
-                  Password {!usuario && '*'}
+                  Password {!user && '*'}
                 </label>
                 <input
                   type="password"
@@ -92,12 +92,12 @@ const UsuarioForm = ({ usuario, onSubmit, onClose }) => {
                   className="form-control"
                   value={formData.password}
                   onChange={handleChange}
-                  required={!usuario}
-                  placeholder={usuario ? "Dejar vacío para mantener la actual" : ""}
+                  required={!user}
+                  placeholder={user ? "Leave empty to keep current password" : ""}
                 />
-                {usuario && (
+                {user && (
                   <div className="form-text">
-                    Dejar vacío para mantener la contraseña actual
+                    Leave empty to keep current password
                   </div>
                 )}
               </div>
@@ -105,7 +105,7 @@ const UsuarioForm = ({ usuario, onSubmit, onClose }) => {
               <div className="row">
                 <div className="col-md-6">
                   <div className="mb-3">
-                    <label className="form-label">Teléfono</label>
+                    <label className="form-label">Phone</label>
                     <input
                       type="tel"
                       name="telefono"
@@ -118,23 +118,23 @@ const UsuarioForm = ({ usuario, onSubmit, onClose }) => {
                 
                 <div className="col-md-6">
                   <div className="mb-3">
-                    <label className="form-label">Rol</label>
+                    <label className="form-label">Role</label>
                     <select
                       name="rol"
                       className="form-select"
                       value={formData.rol}
                       onChange={handleChange}
                     >
-                      <option value="cliente">Cliente</option>
-                      <option value="empleado">Empleado</option>
-                      <option value="admin">Administrador</option>
+                      <option value="cliente">Customer</option>
+                      <option value="empleado">Employee</option>
+                      <option value="admin">Administrator</option>
                     </select>
                   </div>
                 </div>
               </div>
 
               <div className="mb-3">
-                <label className="form-label">Dirección</label>
+                <label className="form-label">Address</label>
                 <input
                   type="text"
                   name="direccion"
@@ -151,13 +151,13 @@ const UsuarioForm = ({ usuario, onSubmit, onClose }) => {
                 className="btn btn-secondary" 
                 onClick={onClose}
               >
-                Cancelar
+                Cancel
               </button>
               <button 
                 type="submit" 
                 className="btn btn-primary"
               >
-                {usuario ? '📝 Actualizar' : '✅ Crear'} Usuario
+                {user ? '📝 Update' : '✅ Create'} User
               </button>
             </div>
           </form>
@@ -167,4 +167,4 @@ const UsuarioForm = ({ usuario, onSubmit, onClose }) => {
   );
 };
 
-export default UsuarioForm;
+export default UserForm;
