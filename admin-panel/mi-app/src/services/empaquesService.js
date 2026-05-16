@@ -1,63 +1,63 @@
-// 🚀 URL del backend en producción (Render)
+// 🚀 Backend URL
 const BASE = import.meta.env.VITE_API_URL || 'https://precivox-backend.onrender.com';
-// Limpiamos posibles slashes duplicados
+// Clean up potential duplicate slashes
 const API_URL = `${BASE.replace(/\/$/, '')}/empaques`;
 
 export const empaquesService = {
   
-  // ==================== 1. GESTIÓN DEL CATÁLOGO GENERAL ====================
-  // (Se usará en la nueva pestaña de "Empaques" dentro de Insumos)
+  // ==================== 1. GENERAL CATALOG MANAGEMENT ====================
+  // (Used in the "Packaging" tab within Supplies)
 
-  async getEmpaques() {
+  async getPackagingCatalog() {
     try {
       const response = await fetch(`${API_URL}/`, { credentials: 'include' });
-      if (!response.ok) throw new Error('Error al cargar el catálogo de empaques');
+      if (!response.ok) throw new Error('Error loading packaging catalog');
       return await response.json();
     } catch (error) {
-      console.error('Error en getEmpaques:', error);
+      console.error('Error in getPackagingCatalog:', error);
       throw error;
     }
   },
 
-  async createEmpaque(empaqueData) {
+  async createPackagingItem(packagingData) {
     try {
       const response = await fetch(`${API_URL}/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify(empaqueData)
+        body: JSON.stringify(packagingData)
       });
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Error al crear empaque');
+        throw new Error(errorData.error || 'Error creating packaging item');
       }
       return await response.json();
     } catch (error) {
-      console.error('Error en createEmpaque:', error);
+      console.error('Error in createPackagingItem:', error);
       throw error;
     }
   },
 
-  async updateEmpaque(id, empaqueData) {
+  async updatePackagingItem(id, packagingData) {
     try {
       const response = await fetch(`${API_URL}/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify(empaqueData)
+        body: JSON.stringify(packagingData)
       });
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Error al actualizar empaque');
+        throw new Error(errorData.error || 'Error updating packaging item');
       }
       return await response.json();
     } catch (error) {
-      console.error('Error en updateEmpaque:', error);
+      console.error('Error in updatePackagingItem:', error);
       throw error;
     }
   },
 
-  async deleteEmpaqueCatalogo(id) {
+  async deletePackagingFromCatalog(id) {
     try {
       const response = await fetch(`${API_URL}/${id}`, {
         method: 'DELETE',
@@ -65,57 +65,57 @@ export const empaquesService = {
       });
       if (!response.ok) {
         const errorData = await response.json();
-        // Esto capturará el error "En uso" que pusimos en el backend
-        throw new Error(errorData.error || 'Error al eliminar empaque');
+        // This will capture the "In use" error from the backend
+        throw new Error(errorData.error || 'Error deleting packaging item');
       }
       return await response.json();
     } catch (error) {
-      console.error('Error en deleteEmpaqueCatalogo:', error);
+      console.error('Error in deletePackagingFromCatalog:', error);
       throw error;
     }
   },
 
 
-  // ==================== 2. ASIGNACIÓN A PRODUCTOS (RECETAS) ====================
-  // (Se usa dentro de la sección de Recetas)
+  // ==================== 2. ASSIGNMENT TO PRODUCTS (RECIPES) ====================
+  // (Used within the Recipes section)
 
-  async getEmpaquesProducto(productoId) {
+  async getPackagingForProduct(productId) {
     try {
-      const response = await fetch(`${API_URL}/producto/${productoId}`, { credentials: 'include' });
-      if (!response.ok) throw new Error('Error al cargar empaques del producto');
+      const response = await fetch(`${API_URL}/producto/${productId}`, { credentials: 'include' });
+      if (!response.ok) throw new Error('Error loading packaging for product');
       return await response.json();
     } catch (error) {
-      console.error('Error en getEmpaquesProducto:', error);
+      console.error('Error in getPackagingForProduct:', error);
       throw error;
     }
   },
 
-  async addEmpaqueProducto(productoId, data) {
+  async addPackagingToProduct(productId, data) {
     try {
-      const response = await fetch(`${API_URL}/producto/${productoId}`, {
+      const response = await fetch(`${API_URL}/producto/${productId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify(data)
       });
-      if (!response.ok) throw new Error('Error al asignar empaque al producto');
+      if (!response.ok) throw new Error('Error assigning packaging to product');
       return await response.json();
     } catch (error) {
-      console.error('Error en addEmpaqueProducto:', error);
+      console.error('Error in addPackagingToProduct:', error);
       throw error;
     }
   },
 
-  async deleteEmpaqueProducto(id) {
+  async deletePackagingFromProduct(id) {
     try {
       const response = await fetch(`${API_URL}/producto/item/${id}`, {
         method: 'DELETE',
         credentials: 'include'
       });
-      if (!response.ok) throw new Error('Error al eliminar empaque del producto');
+      if (!response.ok) throw new Error('Error removing packaging from product');
       return await response.json();
     } catch (error) {
-      console.error('Error en deleteEmpaqueProducto:', error);
+      console.error('Error in deletePackagingFromProduct:', error);
       throw error;
     }
   }
