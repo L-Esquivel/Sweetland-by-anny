@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { platformService } from '../../services/platformService'; // La ruta ahora es correcta desde su nueva ubicación
+import { platformService } from '../../services/platformService';
 import './Dashboard.css';
 
 function SuperAdminDashboard() {
@@ -14,7 +14,7 @@ function SuperAdminDashboard() {
         const data = await platformService.getPlatformStats();
         setStats(data);
       } catch (err) {
-        setError('Error al cargar las estadísticas de la plataforma.');
+        setError('Error loading platform statistics.');
       } finally {
         setLoading(false);
       }
@@ -22,47 +22,51 @@ function SuperAdminDashboard() {
     fetchStats();
   }, []);
 
-  if (loading) return <div className="loading">Cargando estadísticas de la plataforma...</div>;
+  const formatCurrency = (value) => {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(value || 0);
+  };
+
+  if (loading) return <div className="loading">Loading platform statistics...</div>;
   if (error) return <div className="error-message">{error}</div>;
-  if (!stats) return <div className="error-message">No se pudieron cargar los datos.</div>;
+  if (!stats) return <div className="error-message">Could not load data.</div>;
 
   return (
     <div className="dashboard-container">
-      <h1>Dashboard de la Plataforma</h1>
-      <p>Visión general del estado de Precivox.</p>
+      <h1>Platform Dashboard</h1>
+      <p>Overview of the Precivox platform status.</p>
 
       <div className="row mt-4">
         <div className="col-md-3">
           <div className="stat-card">
-            <h3>Ingresos Totales</h3>
-            <p className="stat-number">${(stats.total_revenue || 0).toLocaleString('es-CO')}</p>
-            <small>Ventas completadas en toda la plataforma.</small>
+            <h3>Total Revenue</h3>
+            <p className="stat-number">{formatCurrency(stats.total_revenue)}</p>
+            <small>Total payments received from tenants.</small>
           </div>
         </div>
         <div className="col-md-3">
           <div className="stat-card">
-            <h3>Total de Tenants</h3>
+            <h3>Total Tenants</h3>
             <p className="stat-number">{stats.total_tenants}</p>
-            <small>Organizaciones activas en la plataforma.</small>
+            <small>Active organizations on the platform.</small>
           </div>
         </div>
         <div className="col-md-3">
           <div className="stat-card">
-            <h3>Nuevos Tenants (30 días)</h3>
+            <h3>New Tenants (30 days)</h3>
             <p className="stat-number">{stats.new_tenants_30_days}</p>
-            <small>Crecimiento reciente de la plataforma.</small>
+            <small>Recent platform growth.</small>
           </div>
         </div>
         <div className="col-md-3">
           <div className="stat-card">
-            <h3>Total de Usuarios</h3>
+            <h3>Total Users</h3>
             <p className="stat-number">{stats.total_users}</p>
-            <small>Usuarios registrados en todas las organizaciones.</small>
+            <small>Registered users across all organizations.</small>
           </div>
         </div>
       </div>
 
-      {/* Aquí se podrían añadir más componentes, como una lista de logs recientes o una gráfica de crecimiento */}
+      {/* More components could be added here, like a list of recent logs or a growth chart */}
     </div>
   );
 }
