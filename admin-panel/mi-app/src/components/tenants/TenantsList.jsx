@@ -23,17 +23,17 @@ function TenantsList() {
 
   const fetchTenants = async () => {
     try {
-      // No es necesario setLoading(true) aquí si se llama desde otra función que ya lo gestiona
+      // No need to set loading to true here if called from another function that already handles it
       const data = await tenantsService.getAllTenants();
       setTenants(data);
       setError('');
     } catch (err) {
-      setError(err.message || 'Error al cargar los tenants');
+      setError(err.message || 'Error loading tenants');
     }
   };
 
   useEffect(() => {
-    const loadInitialData = async () => {
+    const fetchInitialData = async () => {
       setLoading(true);
       try {
         const [tenantsData, modulesRawData] = await Promise.all([
@@ -41,22 +41,15 @@ function TenantsList() {
           modulesService.getAllModules()
         ]);
 
-        // 💡 FIX: La API devuelve un array de arrays. Lo transformamos a un array de objetos.
-        // El formato esperado es [{ module_key: '...', label: '...' }, ...].
-        // El formato recibido es [['usuarios', 'Usuarios', ...], ...].
-        const modulesData = modulesRawData.map(mod => ({
-          module_key: mod[0],
-          label: mod[1],
-          icon: mod[2],
-          description: mod[3]
-        }));
+        // The API returns an array of objects, which is the correct format.
+        // The previous mapping was incorrect and has been removed.
+        const modulesData = modulesRawData;
 
         setTenants(tenantsData);
         setAvailableModules(modulesData);
         
-        // Ahora que modulesData tiene el formato correcto, esto funcionará.
-        // Esto asegura que cada input sea un "componente controlado" desde el inicio,
-        // solucionando el problema de no poder editar el texto.
+        // This ensures that each input is a "controlled component" from the start,
+        // fixing the issue of not being able to edit the text.
         const initialLabels = modulesData.reduce((acc, module) => {
           acc[module.module_key] = '';
           return acc;
@@ -64,12 +57,12 @@ function TenantsList() {
         setCustomLabels(initialLabels);
 
       } catch (err) {
-        setError(err.message || 'Error al cargar datos iniciales.');
+        setError(err.message || 'Error loading initial data.');
       } finally {
         setLoading(false);
       }
     };
-    loadInitialData();
+    fetchInitialData();
   }, []);
 
   const handleInputChange = (e) => {
@@ -94,17 +87,17 @@ function TenantsList() {
     try {
       const payload = { ...form, custom_labels: customLabels };
       await tenantsService.createTenant(payload);
-      setNotification({ message: 'Tenant creado con éxito', type: 'success' });
+      setNotification({ message: 'Tenant created successfully', type: 'success' });
       setForm({ tenant_name: '', admin_name: '', admin_email: '', admin_password: '' });
       
-      // Reseteamos las etiquetas a su estado inicial (vacío) para el siguiente formulario.
+      // Reset labels to their initial (empty) state for the next form.
       const initialLabels = availableModules.reduce((acc, module) => {
         acc[module.module_key] = '';
         return acc;
       }, {});
       setCustomLabels(initialLabels);
       
-      await fetchTenants(); // Recargar la lista
+      await fetchTenants(); // Reload the list
     } catch (err) {
       setNotification({ message: err.message, type: 'error' });
     } finally {
@@ -113,13 +106,13 @@ function TenantsList() {
   };
 
   const handleDelete = async (id, name) => {
-    if (window.confirm(`¿Estás seguro de que quieres eliminar el tenant "${name}"? Esta acción es irreversible y borrará todos sus datos.`)) {
+    if (window.confirm(`Are you sure you want to delete the tenant "${name}"? This action is irreversible and will delete all its data.`)) {
       setNotification({ message: '', type: '' });
       setLoading(true);
       try {
         await tenantsService.deleteTenant(id);
-        setNotification({ message: 'Tenant eliminado con éxito', type: 'success' });
-        await fetchTenants(); // Recargar la lista
+        setNotification({ message: 'Tenant deleted successfully', type: 'success' });
+        await fetchTenants(); // Reload the list
       } catch (err) {
         setNotification({ message: err.message, type: 'error' });
       } finally {
@@ -137,31 +130,31 @@ function TenantsList() {
   return (
     <>
       <div className="tenants-container">
-        <h2>Gestión de Tenants</h2>
+        <h2>Tenant Management</h2>
       
       <Notification message={notification.message} type={notification.type} />
       {error && <div className="alert alert-danger">{error}</div>}
 
       <div className="card mb-4">
         <div className="card-header">
-          <h5>Crear Nuevo Tenant y Administrador</h5>
+          <h5>Create New Tenant and Administrator</h5>
         </div>
         <div className="card-body">
           <form onSubmit={handleSubmit} className="row g-3" aria-busy={loading}>
             <div className="col-md-6">
-              <input type="text" name="tenant_name" value={form.tenant_name} onChange={handleInputChange} className="form-control" placeholder="Nombre de la Organización" required />
+              <input type="text" name="tenant_name" value={form.tenant_name} onChange={handleInputChange} className="form-control" placeholder="Organization Name" required />
             </div>
             <div className="col-md-6">
-              <input type="text" name="admin_name" value={form.admin_name} onChange={handleInputChange} className="form-control" placeholder="Nombre del Admin" required />
+              <input type="text" name="admin_name" value={form.admin_name} onChange={handleInputChange} className="form-control" placeholder="Admin Name" required />
             </div>
             <div className="col-md-6">
-              <input type="email" name="admin_email" value={form.admin_email} onChange={handleInputChange} className="form-control" placeholder="Email del Admin" required />
+              <input type="email" name="admin_email" value={form.admin_email} onChange={handleInputChange} className="form-control" placeholder="Admin Email" required />
             </div>
             <div className="col-md-6">
-              <input type="password" name="admin_password" value={form.admin_password} onChange={handleInputChange} className="form-control" placeholder="Contraseña del Admin" required />
+              <input type="password" name="admin_password" value={form.admin_password} onChange={handleInputChange} className="form-control" placeholder="Admin Password" required />
             </div>
             <div className="col-12 mt-4">
-              <h6>Personalizar Etiquetas de Módulos:</h6>
+              <h6>Customize Module Labels:</h6>
               <div className="row">
                 {availableModules.map(module => (
                   <div key={module.module_key} className="col-md-6 mb-3">
@@ -176,7 +169,7 @@ function TenantsList() {
                         id={`label-for-${module.module_key}`}
                         value={customLabels[module.module_key] || ''}
                         onChange={handleLabelChange}
-                        placeholder={`Personalizar: ${module.label || module.module_key}`}
+                        placeholder={`Customize: ${module.label || module.module_key}`}
                       />
                     </div>
                   </div>
@@ -184,7 +177,7 @@ function TenantsList() {
               </div>
             </div>
             <div className="col-12">
-              <button type="submit" className="btn btn-primary" disabled={loading}>{loading ? 'Creando...' : 'Crear Tenant'}</button>
+              <button type="submit" className="btn btn-primary" disabled={loading}>{loading ? 'Creating...' : 'Create Tenant'}</button>
             </div>
           </form>
         </div>
@@ -195,13 +188,13 @@ function TenantsList() {
           <thead className="thead-dark">
             <tr>
               <th>ID</th>
-              <th>Nombre de la Organización</th>
-              <th>Fecha de Creación</th>
-              <th>Acciones</th>
+              <th>Organization Name</th>
+              <th>Creation Date</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
-            {loading && tenants.length === 0 && <tr><td colSpan="4" className="text-center">Cargando...</td></tr>}
+            {loading && tenants.length === 0 && <tr><td colSpan="4" className="text-center">Loading...</td></tr>}
             {tenants.map(tenant => (
               <tr key={tenant.id_tenant}>
                 <td>{tenant.id_tenant}</td>
@@ -211,16 +204,16 @@ function TenantsList() {
                   <button 
                     className="btn btn-info btn-sm"
                     onClick={() => openPaymentModal(tenant)}
-                    title="Gestionar Pagos"
+                    title="Manage Payments"
                   >
-                    💰 Pagos
+                    💰 Payments
                   </button>
                   <button 
                     className="btn btn-danger btn-sm"
                     onClick={() => handleDelete(tenant.id_tenant, tenant.nombre)}
                     disabled={loading}
                   >
-                    Eliminar
+                    Delete
                   </button>
                 </td>
               </tr>
