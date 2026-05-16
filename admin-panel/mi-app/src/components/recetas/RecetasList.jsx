@@ -16,6 +16,7 @@ const RecetasList = () => {
   const [costs, setCosts] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [error, setError] = useState('');
   const [isUpdating, setIsUpdating] = useState(false); // For visual loading feedback
 
   useEffect(() => {
@@ -42,6 +43,7 @@ const RecetasList = () => {
 
   const fetchProductRecipes = async (productId) => {
     try {
+      setError(''); // Clear previous errors
       const product = products.find(p => p.id_producto === productId);
       setSelectedProduct(product);
 
@@ -51,6 +53,8 @@ const RecetasList = () => {
       setCosts(data.costs || null);
     } catch (error) {
       console.error('Error loading product recipes:', error);
+      setError('Failed to load recipe and cost data. Please check the connection and try again.');
+      setCosts(null); // Ensure costs are cleared on error
     }
   };
 
@@ -152,6 +156,8 @@ const RecetasList = () => {
           </select>
         </div>
       </div>
+
+      {error && <div className="alert alert-danger mt-3">{error}</div>}
 
       {selectedProduct && costs && (
         <div className="row">
