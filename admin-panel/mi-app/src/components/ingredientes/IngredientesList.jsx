@@ -122,7 +122,7 @@ const IngredientesList = () => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD'
-    }).format(valor);
+    }).format(value);
   };
 
   const getUnitBadgeClass = (unit) => {
