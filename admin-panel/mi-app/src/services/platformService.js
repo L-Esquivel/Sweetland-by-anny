@@ -12,7 +12,7 @@ export const platformService = {
       });
       const responseData = await response.json();
       if (!response.ok) {
-        throw new Error(responseData.error || 'Error al enviar la solicitud de soporte');
+        throw new Error(responseData.error || 'Error sending support request');
       }
       return responseData;
     } catch (error) {
@@ -25,7 +25,7 @@ export const platformService = {
       const response = await fetch(`${API_URL}/dashboard-stats`, { credentials: 'include' });
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Error al obtener estadísticas');
+        throw new Error(errorData.error || 'Error fetching statistics');
       }
       return await response.json();
     } catch (error) {
