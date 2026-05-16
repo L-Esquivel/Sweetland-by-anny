@@ -15,7 +15,7 @@ function SupportModal({ show, onClose }) {
     setNotification({ message: '', type: '' });
     try {
       const response = await platformService.contactSupport({ subject, message });
-      setNotification({ message: response.mensaje, type: 'success' });
+      setNotification({ message: response.message, type: 'success' });
       setSubject('');
       setMessage('');
       setTimeout(() => {
@@ -34,7 +34,7 @@ function SupportModal({ show, onClose }) {
       <div className="modal-dialog modal-dialog-centered">
         <div className="modal-content">
           <div className="modal-header">
-            <h5 className="modal-title">Contactar a Soporte</h5>
+            <h5 className="modal-title">Contact Support</h5>
             <button type="button" className="btn-close" onClick={onClose} disabled={loading}></button>
           </div>
           <div className="modal-body">
@@ -45,15 +45,15 @@ function SupportModal({ show, onClose }) {
             )}
             <form onSubmit={handleSubmit}>
               <div className="mb-3">
-                <label htmlFor="support-subject" className="form-label">Asunto</label>
+                <label htmlFor="support-subject" className="form-label">Subject</label>
                 <input type="text" className="form-control" id="support-subject" value={subject} onChange={(e) => setSubject(e.target.value)} required />
               </div>
               <div className="mb-3">
-                <label htmlFor="support-message" className="form-label">Describe tu consulta o problema:</label>
+                <label htmlFor="support-message" className="form-label">Describe your query or issue:</label>
                 <textarea className="form-control" id="support-message" rows="5" value={message} onChange={(e) => setMessage(e.target.value)} required></textarea>
               </div>
               <div className="modal-footer border-0">
-                <button type="submit" className="btn btn-primary w-100" disabled={loading}>{loading ? 'Enviando...' : 'Enviar Solicitud'}</button>
+                <button type="submit" className="btn btn-primary w-100" disabled={loading}>{loading ? 'Sending...' : 'Send Request'}</button>
               </div>
             </form>
           </div>
