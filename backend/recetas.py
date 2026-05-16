@@ -185,7 +185,7 @@ def get_product_recipe_details(product_id):
             # Ingredientes
             cursor.execute("""
                 SELECT ri.id, ri.id_ingrediente, ri.cantidad_necesaria,
-                       i.nombre AS ingrediente, i.unidad_medida as unidad, i.costo_por_unidad,
+                       i.nombre AS ingrediente, i.unidad_medida, i.costo_por_unidad,
                        ri.costo_ingrediente
                 FROM recetas_ingredientes ri
                 LEFT JOIN ingredientes i ON ri.id_ingrediente = i.id_ingrediente AND i.tenant_id = %s

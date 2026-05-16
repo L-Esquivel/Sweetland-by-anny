@@ -90,7 +90,7 @@ export const recetasService = {
 
   async updateRecipeIngredient(recipeId, recipeData) {
     try {
-      const response = await fetch(`${API_URL}/${recetaId}`, {
+      const response = await fetch(`${API_URL}/${recipeId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

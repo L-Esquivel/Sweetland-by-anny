@@ -279,7 +279,7 @@ const RecetasList = () => {
                                     // The backend sends 'id', not 'id_receta'.
                                     <tr key={r.id}>
                                         <td>{r.ingrediente}</td>
-                                        <td>{r.cantidad_necesaria} {r.unidad}</td>
+                                        <td>{r.cantidad_necesaria} {r.unidad_medida}</td>
                                         <td className="fw-bold">{formatCurrency(r.costo_ingrediente)}</td>
                                         <td><button className="btn btn-link btn-sm text-danger" onClick={() => handleDeleteRecipe(r.id)}>🗑️</button></td>
                                     </tr>
