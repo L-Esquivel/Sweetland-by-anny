@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { empaquesService } from '../../services/empaquesService';
-import '../ingredientes/IngredientesList.css'; // Reutilizamos tu CSS base
 
 const EmpaquesList = () => {
-  const [empaques, setEmpaques] = useState([]);
+  const [packagingItems, setPackagingItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [mostrarModal, setMostrarModal] = useState(false);
-  const [editando, setEditando] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+  const [editingItem, setEditingItem] = useState(null);
   
   const [formData, setFormData] = useState({
     nombre: '',
@@ -16,37 +15,42 @@ const EmpaquesList = () => {
   });
 
   useEffect(() => {
-    cargarEmpaques();
+    fetchPackaging();
   }, []);
 
-  const cargarEmpaques = async () => {
+  const fetchPackaging = async () => {
     try {
       setLoading(true);
       setError('');
       const data = await empaquesService.getEmpaques();
-      setEmpaques(data);
+      setPackagingItems(data);
     } catch (err) {
       console.error('Error:', err);
-      setError('No se pudo cargar el catálogo de empaques');
+      setError('Could not load packaging catalog');
     } finally {
       setLoading(false);
     }
   };
 
-  const abrirModalCrear = () => {
-    setEditando(null);
+  const openCreateModal = () => {
+    setEditingItem(null);
     setFormData({ nombre: '', descripcion: '', precio: '' });
-    setMostrarModal(true);
+    setShowModal(true);
   };
 
-  const abrirModalEditar = (empaque) => {
-    setEditando(empaque);
+  const openEditModal = (item) => {
+    setEditingItem(item);
     setFormData({
-      nombre: empaque.nombre,
-      descripcion: empaque.descripcion || '',
-      precio: empaque.precio
+      nombre: item.nombre,
+      descripcion: item.descripcion || '',
+      precio: item.precio
     });
-    setMostrarModal(true);
+    setShowModal(true);
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setEditingItem(null);
   };
 
   const handleInputChange = (e) => {
@@ -58,76 +62,83 @@ const EmpaquesList = () => {
     e.preventDefault();
     try {
       setError('');
-      const datosEnviar = {
+      const payload = {
         ...formData,
         precio: parseFloat(formData.precio) || 0
       };
 
-      if (editando) {
-        await empaquesService.updateEmpaque(editando.id_empaque, datosEnviar);
+      if (editingItem) {
+        await empaquesService.updateEmpaque(editingItem.id_empaque, payload);
       } else {
-        await empaquesService.createEmpaque(datosEnviar);
+        await empaquesService.createEmpaque(payload);
       }
 
-      setMostrarModal(false);
-      cargarEmpaques();
+      closeModal();
+      fetchPackaging();
     } catch (err) {
       console.error('Error guardando:', err);
-      setError(err.message || 'Error al guardar');
+      setError(err.message || 'Error saving item');
     }
   };
 
-  const handleEliminar = async (id) => {
-    if (window.confirm('¿Eliminar este empaque del catálogo general?')) {
+  const handleDelete = async (id) => {
+    if (window.confirm('Delete this packaging item from the general catalog?')) {
       try {
         await empaquesService.deleteEmpaqueCatalogo(id);
-        cargarEmpaques();
+        fetchPackaging();
       } catch (err) {
         alert(err.message);
       }
     }
   };
 
-  if (loading) return <div className="text-center p-5"><h5>Cargando empaques...</h5></div>;
+  const formatCurrency = (value) => {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value || 0);
+  };
+
+  if (loading) return <div className="text-center p-5"><h5>Loading packaging items...</h5></div>;
 
   return (
-    <div className="ingredientes-container">
-      <div className="ingredientes-header d-flex justify-content-between align-items-center mb-4">
-        <h2>🛍️ Catálogo de Empaques</h2>
-        <button className="btn-nuevo-ingrediente" onClick={abrirModalCrear}>
-          ➕ Nuevo Empaque
+    <div>
+      <div className="d-flex justify-content-between align-items-center mb-4">
+        <h2 className="mb-0">🛍️ Packaging Catalog</h2>
+        <button className="btn btn-primary" onClick={openCreateModal}>
+          ➕ New Packaging Item
         </button>
       </div>
 
       {error && <div className="alert alert-danger">{error}</div>}
 
-      <div className="ingredientes-content shadow-sm rounded">
-        <div className="table-container">
-          <table className="ingredientes-table">
-            <thead>
+      <div className="card">
+        <div className="card-body p-0">
+          <div className="table-responsive">
+            <table className="table table-striped table-hover mb-0">
+              <thead className="table-dark">
               <tr>
-                <th>Nombre</th>
-                <th>Descripción</th>
-                <th>Precio Base</th>
-                <th className="text-center">Acciones</th>
+                <th>Name</th>
+                <th>Description</th>
+                <th>Base Price</th>
+                <th className="text-center">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {empaques.length === 0 ? (
+              {packagingItems.length === 0 ? (
                 <tr>
-                  <td colSpan="4" className="text-center py-5 text-muted">No hay empaques en el catálogo</td>
+                  <td colSpan="4" className="text-center py-4 text-muted">No packaging items in the catalog yet</td>
                 </tr>
               ) : (
-                empaques.map(e => (
+                packagingItems.map(e => (
                   <tr key={e.id_empaque}>
-                    <td className="nombre">{e.nombre}</td>
-                    <td>{e.descripcion || <span className="text-muted italic">Sin descripción</span>}</td>
-                    <td className="costo">
-                      {new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(e.precio)}
+                    <td className="fw-semibold">{e.nombre}</td>
+                    <td>{e.descripcion || <span className="text-muted">No description</span>}</td>
+                    <td className="fw-bold text-success">
+                      {formatCurrency(e.precio)}
                     </td>
-                    <td className="acciones">
-                      <button className="btn-editar" onClick={() => abrirModalEditar(e)}>✏️ Editar</button>
-                      <button className="btn-eliminar" onClick={() => handleEliminar(e.id_empaque)}>🗑️ Borrar</button>
+                    <td className="text-center">
+                      <div className="btn-group" role="group">
+                        <button className="btn btn-warning btn-sm me-1" onClick={() => openEditModal(e)}>✏️ Edit</button>
+                        <button className="btn btn-danger btn-sm" onClick={() => handleDelete(e.id_empaque)}>🗑️ Delete</button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -138,27 +149,27 @@ const EmpaquesList = () => {
       </div>
 
       {/* Modal para Crear/Editar */}
-      {mostrarModal && (
-        <div className="modal fade show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.7)', zIndex: 1050 }}>
+      {showModal && (
+        <div className="modal fade show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
           <div className="modal-dialog modal-dialog-centered">
-            <div className="modal-content shadow-lg border-0" style={{ borderRadius: '15px' }}>
+            <div className="modal-content">
               
-              <div className="modal-header text-white" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
+              <div className="modal-header bg-primary text-white">
                 <h5 className="modal-title fw-bold">
-                  {editando ? '✏️ Editar Empaque' : '➕ Nuevo Empaque'}
+                  {editingItem ? '✏️ Edit Packaging Item' : '➕ New Packaging Item'}
                 </h5>
-                <button type="button" className="btn-close btn-close-white" onClick={() => setMostrarModal(false)}></button>
+                <button type="button" className="btn-close btn-close-white" onClick={closeModal}></button>
               </div>
               
               <form onSubmit={handleSubmit}>
                 <div className="modal-body p-4">
                   <div className="mb-3">
-                    <label className="form-label fw-bold">Nombre del Empaque *</label>
+                    <label className="form-label fw-bold">Packaging Name *</label>
                     <input
                       type="text"
                       name="nombre"
                       className="form-control"
-                      placeholder="Ej: Caja para Torta 25x25"
+                      placeholder="e.g., Cake Box 10x10"
                       value={formData.nombre}
                       onChange={handleInputChange}
                       required
@@ -166,19 +177,19 @@ const EmpaquesList = () => {
                   </div>
 
                   <div className="mb-3">
-                    <label className="form-label fw-bold">Descripción</label>
+                    <label className="form-label fw-bold">Description</label>
                     <input
                       type="text"
                       name="descripcion"
                       className="form-control"
-                      placeholder="Ej: Material resistente"
+                      placeholder="e.g., Sturdy material"
                       value={formData.descripcion}
                       onChange={handleInputChange}
                     />
                   </div>
 
                   <div className="mb-3">
-                    <label className="form-label fw-bold">Precio Unitario *</label>
+                    <label className="form-label fw-bold">Unit Price *</label>
                     <div className="input-group">
                       <span className="input-group-text">$</span>
                       <input
@@ -195,12 +206,12 @@ const EmpaquesList = () => {
                   </div>
                 </div>
 
-                <div className="modal-footer bg-light p-3">
-                  <button type="button" className="btn btn-secondary px-4" onClick={() => setMostrarModal(false)}>
-                    Cancelar
+                <div className="modal-footer">
+                  <button type="button" className="btn btn-secondary" onClick={closeModal}>
+                    Cancel
                   </button>
-                  <button type="submit" className="btn btn-primary px-4 fw-bold" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', border: 'none' }}>
-                    {editando ? 'Actualizar' : 'Guardar'}
+                  <button type="submit" className="btn btn-primary">
+                    {editingItem ? '📝 Update' : '✅ Save'}
                   </button>
                 </div>
               </form>
