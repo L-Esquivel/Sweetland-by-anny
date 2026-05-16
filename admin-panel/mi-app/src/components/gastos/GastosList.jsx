@@ -2,146 +2,146 @@ import React, { useState, useEffect } from 'react';
 import { gastosService } from '../../services/gastosService';
 
 const GastosList = () => {
-  const [gastos, setGastos] = useState([]);
+  const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [nuevoGasto, setNuevoGasto] = useState({
-    descripcion: '',
-    monto: '',
+  const [newExpense, setNewExpense] = useState({
+    descripcion: '', // These keys must match the backend API
+    monto: '',       //
     fecha: new Date().toISOString().split('T')[0],
-    categoria: 'Operativo'
+    categoria: 'Operational'
   });
 
-  const cargarGastos = async () => {
+  const fetchExpenses = async () => {
     try {
       setLoading(true);
-      const data = await gastosService.getGastos();
-      setGastos(data);
+      const data = await gastosService.getExpenses();
+      setExpenses(data);
     } catch (err) {
-      setError('No se pudieron cargar los gastos.');
+      setError('Could not load expenses.');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    cargarGastos();
+    fetchExpenses();
   }, []);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setNuevoGasto(prev => ({ ...prev, [name]: value }));
+    setNewExpense(prev => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!nuevoGasto.descripcion || !nuevoGasto.monto || !nuevoGasto.fecha) {
-      alert('Por favor, completa todos los campos.');
+    if (!newExpense.descripcion || !newExpense.monto || !newExpense.fecha) {
+      alert('Please fill in all fields.');
       return;
     }
     try {
-      await gastosService.createGasto(nuevoGasto);
-      // Limpiar formulario
-      setNuevoGasto({
+      await gastosService.createExpense(newExpense);
+      // Clear form
+      setNewExpense({
         descripcion: '',
         monto: '',
         fecha: new Date().toISOString().split('T')[0],
-        categoria: 'Operativo'
+        categoria: 'Operational'
       });
-      // Recargar la lista
-      cargarGastos();
+      // Reload list
+      fetchExpenses();
     } catch (err) {
-      alert('Error al registrar el gasto.');
+      alert('Error creating expense.');
     }
   };
 
-  const handleEliminar = async (id) => {
-    if (window.confirm('¿Estás seguro de que quieres eliminar este gasto?')) {
+  const handleDelete = async (id) => {
+    if (window.confirm('Are you sure you want to delete this expense?')) {
       try {
-        await gastosService.deleteGasto(id);
-        cargarGastos();
+        await gastosService.deleteExpense(id);
+        fetchExpenses();
       } catch (err) {
-        alert('Error al eliminar el gasto.');
+        alert('Error deleting expense.');
       }
     }
   };
 
-  const formatearMoneda = (valor) => {
-    return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(valor || 0);
+  const formatCurrency = (value) => {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(value || 0);
   };
 
   return (
     <div className="container-fluid p-4">
-      <h2 className="mb-4">💸 Gestión de Gastos Fijos y Operativos</h2>
+      <h2 className="mb-4">💸 Fixed and Operational Expenses Management</h2>
 
       <div className="row">
-        {/* Columna del Formulario */}
+        {/* Form Column */}
         <div className="col-lg-4 mb-4">
           <div className="card shadow-sm">
             <div className="card-header">
-              <h5>Registrar Nuevo Gasto</h5>
+              <h5>Register New Expense</h5>
             </div>
             <div className="card-body">
               <form onSubmit={handleSubmit}>
                 <div className="mb-3">
-                  <label htmlFor="descripcion" className="form-label">Descripción</label>
-                  <input type="text" id="descripcion" name="descripcion" className="form-control" value={nuevoGasto.descripcion} onChange={handleInputChange} required />
+                  <label htmlFor="descripcion" className="form-label">Description</label>
+                  <input type="text" id="descripcion" name="descripcion" className="form-control" value={newExpense.descripcion} onChange={handleInputChange} required />
                 </div>
                 <div className="mb-3">
-                  <label htmlFor="monto" className="form-label">Monto</label>
-                  <input type="number" id="monto" name="monto" className="form-control" value={nuevoGasto.monto} onChange={handleInputChange} required placeholder="Ej: 50000" />
+                  <label htmlFor="monto" className="form-label">Amount</label>
+                  <input type="number" id="monto" name="monto" className="form-control" value={newExpense.monto} onChange={handleInputChange} required placeholder="e.g., 50" />
                 </div>
                 <div className="mb-3">
-                  <label htmlFor="fecha" className="form-label">Fecha del Gasto</label>
-                  <input type="date" id="fecha" name="fecha" className="form-control" value={nuevoGasto.fecha} onChange={handleInputChange} required />
+                  <label htmlFor="fecha" className="form-label">Expense Date</label>
+                  <input type="date" id="fecha" name="fecha" className="form-control" value={newExpense.fecha} onChange={handleInputChange} required />
                 </div>
                 <div className="mb-3">
-                  <label htmlFor="categoria" className="form-label">Categoría</label>
-                  <select id="categoria" name="categoria" className="form-select" value={nuevoGasto.categoria} onChange={handleInputChange}>
-                    <option value="Operativo">Operativo</option>
-                    <option value="Arriendo">Arriendo</option>
-                    <option value="Servicios">Servicios Públicos</option>
-                    <option value="Salarios">Salarios</option>
+                  <label htmlFor="categoria" className="form-label">Category</label>
+                  <select id="categoria" name="categoria" className="form-select" value={newExpense.categoria} onChange={handleInputChange}>
+                    <option value="Operational">Operational</option>
+                    <option value="Rent">Rent</option>
+                    <option value="Utilities">Utilities</option>
+                    <option value="Salaries">Salaries</option>
                     <option value="Marketing">Marketing</option>
-                    <option value="Varios">Varios</option>
+                    <option value="Miscellaneous">Miscellaneous</option>
                   </select>
                 </div>
-                <button type="submit" className="btn btn-primary w-100">Agregar Gasto</button>
+                <button type="submit" className="btn btn-primary w-100">Add Expense</button>
               </form>
             </div>
           </div>
         </div>
 
-        {/* Columna de la Tabla */}
+        {/* Table Column */}
         <div className="col-lg-8">
           <div className="card shadow-sm">
             <div className="card-header">
-              <h5>Historial de Gastos</h5>
+              <h5>Expense History</h5>
             </div>
             <div className="card-body p-0">
-              {loading && <p className="p-3">Cargando...</p>}
+              {loading && <p className="p-3">Loading...</p>}
               {error && <p className="p-3 text-danger">{error}</p>}
               {!loading && !error && (
                 <div className="table-responsive">
                   <table className="table table-hover mb-0">
                     <thead>
                       <tr>
-                        <th>Fecha</th>
-                        <th>Descripción</th>
-                        <th>Categoría</th>
-                        <th className="text-end">Monto</th>
+                        <th>Date</th>
+                        <th>Description</th>
+                        <th>Category</th>
+                        <th className="text-end">Amount</th>
                         <th></th>
                       </tr>
                     </thead>
                     <tbody>
-                      {gastos.map(gasto => (
-                        <tr key={gasto.id_gasto}>
-                          <td>{gasto.fecha}</td>
-                          <td>{gasto.descripcion}</td>
-                          <td><span className="badge bg-secondary">{gasto.categoria}</span></td>
-                          <td className="text-end fw-bold">{formatearMoneda(gasto.monto)}</td>
+                      {expenses.map(expense => (
+                        <tr key={expense.id_gasto}>
+                          <td>{expense.fecha}</td>
+                          <td>{expense.descripcion}</td>
+                          <td><span className="badge bg-secondary">{expense.categoria}</span></td>
+                          <td className="text-end fw-bold">{formatCurrency(expense.monto)}</td>
                           <td className="text-center">
-                            <button className="btn btn-sm btn-outline-danger" onClick={() => handleEliminar(gasto.id_gasto)}>🗑️</button>
+                            <button className="btn btn-sm btn-outline-danger" onClick={() => handleDelete(expense.id_gasto)}>🗑️</button>
                           </td>
                         </tr>
                       ))}
