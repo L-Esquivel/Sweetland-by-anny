@@ -27,7 +27,7 @@ const PedidoForm = ({ productos, onSubmit, onClose, titulo = "➕ New Order" }) 
       try {
         console.log('🔄 Loading real users...');
         setIsLoadingUsers(true);
-        const usuariosReales = await usuariosService.getUsuarios();
+        const usuariosReales = await usuariosService.getUsers();
         console.log('✅ Users loaded from DB:', usuariosReales);
         setUsers(usuariosReales);
       } catch (error) {
@@ -182,7 +182,7 @@ const PedidoForm = ({ productos, onSubmit, onClose, titulo = "➕ New Order" }) 
           direccion: formData.address
         };
 
-        const newUser = await usuariosService.createUsuario(newUserData);
+        const newUser = await usuariosService.createUser(newUserData);
         userId = newUser.id_usuario;
         isNewUserCreated = true;
         
@@ -193,7 +193,7 @@ const PedidoForm = ({ productos, onSubmit, onClose, titulo = "➕ New Order" }) 
           nombre: newUser.nombre
         });
         
-        const updatedUsers = await usuariosService.getUsuarios();
+        const updatedUsers = await usuariosService.getUsers();
         setUsers(updatedUsers);
       }
 
@@ -211,7 +211,7 @@ const PedidoForm = ({ productos, onSubmit, onClose, titulo = "➕ New Order" }) 
       };
 
       console.log('📦 Sending order data to backend:', orderData);
-      await pedidosService.createPedido(orderData);
+      await pedidosService.createOrder(orderData);
 
       console.log('🎉 Order completed successfully!');
       onClose();

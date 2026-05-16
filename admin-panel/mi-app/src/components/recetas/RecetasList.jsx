@@ -27,8 +27,8 @@ const RecetasList = () => {
       setLoading(true);
       const [productosData, ingredientesData, empaquesData] = await Promise.all([
         productosService.getProducts(),
-        ingredientesService.getIngredientes(),
-        empaquesService.getEmpaques()
+        ingredientesService.getIngredients(),
+        empaquesService.getPackagingCatalog()
       ]);
       setProducts(productosData);
       setIngredients(ingredientesData);
@@ -95,7 +95,7 @@ const RecetasList = () => {
   const handleDeletePackaging = async (id) => {
     if (window.confirm('Delete this packaging?')) {
       try {
-        await empaquesService.deleteEmpaqueProducto(id);
+        await empaquesService.deletePackagingFromProduct(id);
         fetchProductRecipes(selectedProduct.id_producto);
       } catch (error) { console.error(error); }
     }
@@ -109,9 +109,9 @@ const RecetasList = () => {
   const handleRecipeFormSubmit = async (data, isPackaging = false) => {
     try {
       if (isPackaging) {
-        await empaquesService.addEmpaqueProducto(selectedProduct.id_producto, data);
+        await empaquesService.addPackagingToProduct(selectedProduct.id_producto, data);
       } else {
-        await recetasService.createReceta({ ...data, id_producto: selectedProduct.id_producto });
+        await recetasService.addRecipeIngredient({ ...data, id_producto: selectedProduct.id_producto });
       }
       setShowModal(false);
       fetchProductRecipes(selectedProduct.id_producto);

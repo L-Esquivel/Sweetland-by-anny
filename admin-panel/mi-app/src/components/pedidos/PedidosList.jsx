@@ -28,8 +28,8 @@ const PedidosList = () => {
       setLoading(true);
       setError('');
       const [pedidosData, productosData] = await Promise.all([
-        pedidosService.getPedidos(),
-        productosService.getProducts()
+        pedidosService.getOrders(),
+        productosService.getProducts(),
       ]);
       setOrders(pedidosData);
       setProducts(productosData);
@@ -44,7 +44,7 @@ const PedidosList = () => {
   const fetchOrderDetails = async (pedidoId) => {
     try {
       setError('');
-      const data = await pedidosService.getDetallesPedido(pedidoId);
+      const data = await pedidosService.getOrderDetails(pedidoId);
       setOrderDetails(data);
       setSelectedOrderId(pedidoId);
     } catch (error) {
@@ -82,7 +82,7 @@ const PedidosList = () => {
     if (!orderToChange || !newStatus) return;
     try {
       setError('');
-      await pedidosService.updateEstadoPedido(orderToChange.id_pedido, newStatus);
+      await pedidosService.updateOrderStatus(orderToChange.id_pedido, newStatus);
       setOrders(orders.map(order =>
         order.id_pedido === orderToChange.id_pedido
           ? { ...order, estado: newStatus }
@@ -127,7 +127,7 @@ const PedidosList = () => {
   const handleEditOrder = async (orderId, orderData) => {
     try {
       setError('');
-      await pedidosService.updatePedido(orderId, orderData);
+      await pedidosService.updateOrder(orderId, orderData);
       await fetchInitialData();
       closeEditOrderModal();
     } catch (error) {
@@ -161,7 +161,7 @@ const PedidosList = () => {
 
   const generateReceipt = async (order) => {
     try {
-      const details = await pedidosService.getDetallesPedido(order.id_pedido);
+      const details = await pedidosService.getOrderDetails(order.id_pedido);
       const receiptWindow = window.open('', '_blank');
       const receiptContent = `
         <!DOCTYPE html>

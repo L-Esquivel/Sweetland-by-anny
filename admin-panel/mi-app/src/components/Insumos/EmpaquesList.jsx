@@ -22,7 +22,7 @@ const EmpaquesList = () => {
     try {
       setLoading(true);
       setError('');
-      const data = await empaquesService.getEmpaques();
+      const data = await empaquesService.getPackagingCatalog();
       setPackagingItems(data);
     } catch (err) {
       console.error('Error:', err);
@@ -74,9 +74,9 @@ const EmpaquesList = () => {
       }
 
       if (editingItem) {
-        await empaquesService.updateEmpaque(editingItem.id_empaque, payload);
+        await empaquesService.updatePackagingItem(editingItem.id_empaque, payload);
       } else {
-        await empaquesService.createEmpaque(payload);
+        await empaquesService.createPackagingItem(payload);
       }
 
       closeModal();
@@ -90,7 +90,7 @@ const EmpaquesList = () => {
   const handleDelete = async (id) => {
     if (window.confirm('Delete this packaging item from the general catalog?')) {
       try {
-        await empaquesService.deleteEmpaqueCatalogo(id);
+        await empaquesService.deletePackagingFromCatalog(id);
         fetchPackaging();
       } catch (err) {
         console.error('Error deleting packaging:', err);

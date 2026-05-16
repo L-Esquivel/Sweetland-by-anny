@@ -26,7 +26,7 @@ const IngredientesList = () => {
     try {
       setLoading(true);
       setError('');
-      const data = await ingredientesService.getIngredientes();
+      const data = await ingredientesService.getIngredients();
       setIngredients(data);
     } catch (error) {
       console.error('Error loading ingredients:', error);
@@ -92,9 +92,9 @@ const IngredientesList = () => {
       }
 
       if (editingIngredient) {
-        await ingredientesService.updateIngrediente(editingIngredient.id_ingrediente, payload);
+        await ingredientesService.updateIngredient(editingIngredient.id_ingrediente, payload);
       } else {
-        await ingredientesService.createIngrediente(payload);
+        await ingredientesService.createIngredient(payload);
       }
 
       closeModal();
@@ -108,7 +108,7 @@ const IngredientesList = () => {
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this ingredient?')) {
       try {
-        await ingredientesService.deleteIngrediente(id);
+        await ingredientesService.deleteIngredient(id);
         fetchIngredients();
       } catch (error) {
         console.error('Error deleting ingredient:', error);

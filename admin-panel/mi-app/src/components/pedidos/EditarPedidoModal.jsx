@@ -15,7 +15,7 @@ const EditarPedidoModal = ({ pedido, productos, onSubmit, onClose }) => {
 
   const fetchOrderDetails = async () => {
     try {
-      const data = await pedidosService.getDetallesPedido(pedido.id);
+      const data = await pedidosService.getOrderDetails(pedido.id);
       setDetails(data);
     } catch (error) {
       console.error('Error loading details:', error);
@@ -57,7 +57,7 @@ const EditarPedidoModal = ({ pedido, productos, onSubmit, onClose }) => {
     try {
       // If the detail already exists in the DB (has an ID), delete it from the backend
       if (detail.id && !detail.isNew) {
-        await pedidosService.deleteDetallePedido(detail.id);
+        await pedidosService.deleteOrderItem(detail.id);
         console.log('✅ Product removed from DB:', detail.id);
       }
       
@@ -92,7 +92,7 @@ const EditarPedidoModal = ({ pedido, productos, onSubmit, onClose }) => {
       };
 
       console.log('📤 Updating order with data:', orderData);
-      await pedidosService.updatePedido(pedido.id, orderData);
+      await pedidosService.updateOrder(pedido.id, orderData);
       console.log('✅ Order updated successfully');
 
       // 2. Create new details using the alternative endpoint
@@ -101,7 +101,7 @@ const EditarPedidoModal = ({ pedido, productos, onSubmit, onClose }) => {
 
       for (const detail of newDetails) {
         try {
-          await pedidosService.createDetallePedido(pedido.id, {
+          await pedidosService.addOrderItem({
             producto_id: detail.producto_id,
             cantidad: detail.cantidad,
             precio_unitario: detail.precio_unitario,
