@@ -79,12 +79,12 @@ const ProductoForm = ({ producto, onSubmit, onClose }) => {
         if (res.ok) {
           imagenFinal = data.filename; // Esto ahora es la URL de Cloudinary https://...
         } else {
-            setUploadError(data.error || 'Error al subir imagen');
+            setUploadError(data.error || 'Error uploading image');
             setUploading(false);
             return;
         }
-      } catch (err) { 
-          setUploadError('Error de conexión con el servidor');
+      } catch (err) {
+          setUploadError('Server connection error');
           setUploading(false);
           return;
       }
@@ -106,7 +106,7 @@ const ProductoForm = ({ producto, onSubmit, onClose }) => {
         <div className="modal-content shadow-lg border-0" style={{borderRadius: '15px'}}>
           <div className="modal-header bg-primary text-white">
             <h5 className="modal-title fw-bold">
-              {producto ? '✏️ Editar Producto' : '➕ Nuevo Producto'}
+              {producto ? '✏️ Edit Product' : '➕ New Product'}
             </h5>
             <button type="button" className="btn-close btn-close-white" onClick={onClose}></button>
           </div>
@@ -116,25 +116,25 @@ const ProductoForm = ({ producto, onSubmit, onClose }) => {
                 {uploadError && <div className="alert alert-danger">{uploadError}</div>}
               <div className="row g-3">
                 <div className="col-md-8">
-                  <label className="form-label fw-bold">Nombre del Producto *</label>
+                  <label className="form-label fw-bold">Product Name *</label>
                   <input type="text" name="nombre" className="form-control" value={formData.nombre} onChange={handleChange} required />
                 </div>
                 <div className="col-md-4">
-                  <label className="form-label fw-bold">Categoría *</label>
+                  <label className="form-label fw-bold">Category *</label>
                   <select name="categoria" className="form-select" value={formData.categoria} onChange={handleChange}>
-                    <option value="tortas">Tortas</option>
-                    <option value="postres">Postres</option>
-                    <option value="detalles">Detalles</option>
+                    <option value="tortas">Cakes</option>
+                    <option value="postres">Desserts</option>
+                    <option value="detalles">Details</option>
                   </select>
                 </div>
 
                 <div className="col-12">
-                  <label className="form-label fw-bold">Descripción</label>
+                  <label className="form-label fw-bold">Description</label>
                   <textarea name="descripcion" className="form-control" rows="2" value={formData.descripcion} onChange={handleChange} />
                 </div>
 
                 <div className="col-md-6">
-                  <label className="form-label fw-bold">Precio de Venta (COP) *</label>
+                  <label className="form-label fw-bold">Sale Price *</label>
                   <input type="number" name="precio" className="form-control" value={formData.precio} onChange={handleChange} required />
                 </div>
 
@@ -142,11 +142,11 @@ const ProductoForm = ({ producto, onSubmit, onClose }) => {
                   <div className="card bg-light border-0 p-2">
                     <div className="form-check form-switch mt-1">
                       <input className="form-check-input" type="checkbox" name="controla_stock" id="checkStock" checked={formData.controla_stock} onChange={handleChange} />
-                      <label className="form-check-label fw-bold" htmlFor="checkStock">📦 Controlar Inventario</label>
+                      <label className="form-check-label fw-bold" htmlFor="checkStock">📦 Track Inventory</label>
                     </div>
                     {formData.controla_stock && (
                       <div className="mt-2">
-                        <label className="form-label small mb-1">Stock disponible:</label>
+                        <label className="form-label small mb-1">Available stock:</label>
                         <input type="number" name="stock" className="form-control form-control-sm" value={formData.stock} onChange={handleChange} min="0" />
                       </div>
                     )}
@@ -154,26 +154,26 @@ const ProductoForm = ({ producto, onSubmit, onClose }) => {
                 </div>
 
                 <div className="col-12 text-center">
-                  <label className="form-label fw-bold d-block">Imagen del Producto</label>
+                  <label className="form-label fw-bold d-block">Product Image</label>
                   {imagePreview && (
                     <div className="mb-3 position-relative d-inline-block">
                         <img src={imagePreview} alt="Preview" className="img-thumbnail" style={{maxHeight: '180px', borderRadius: '10px'}} />
-                        <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-info">Vista Previa</span>
+                        <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-info">Preview</span>
                     </div>
                   )}
                   <input type="file" className="form-control" onChange={handleFileChange} accept="image/*" />
-                  <small className="text-muted mt-1 d-block">Las imágenes se guardan de forma permanente en Cloudinary ☁️</small>
+                  <small className="text-muted mt-1 d-block">Images are saved permanently on Cloudinary ☁️</small>
                 </div>
               </div>
             </div>
 
             <div className="modal-footer bg-light border-0">
-              <button type="button" className="btn btn-secondary px-4" onClick={onClose}>Cancelar</button>
+              <button type="button" className="btn btn-secondary px-4" onClick={onClose}>Cancel</button>
               <button type="submit" className="btn btn-primary px-4 shadow-sm" disabled={uploading}>
                 {uploading ? (
-                  <><span className="spinner-border spinner-border-sm me-2"></span>Subiendo a la nube...</>
+                  <><span className="spinner-border spinner-border-sm me-2"></span>Uploading to cloud...</>
                 ) : (
-                  <>{producto ? 'Guardar Cambios' : 'Crear Producto'}</>
+                  <>{producto ? 'Save Changes' : 'Create Product'}</>
                 )}
               </button>
             </div>

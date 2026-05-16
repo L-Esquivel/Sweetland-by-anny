@@ -4,81 +4,81 @@ import ProductoForm from './ProductoForm';
 import './ProductosList.css';
 
 const ProductosList = () => {
-  const [productos, setProductos] = useState([]);
+  const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
-  const [editingProducto, setEditingProducto] = useState(null);
+  const [editingProduct, setEditingProduct] = useState(null);
 
-  useEffect(() => { loadProductos(); }, []);
+  useEffect(() => { loadProducts(); }, []);
 
-  const loadProductos = async () => {
+  const loadProducts = async () => {
     try {
-      const data = await productosService.getProductos();
-      setProductos(data);
+      const data = await productosService.getProducts();
+      setProducts(data);
     } catch (error) {
-      console.error('Error cargando productos:', error);
+      console.error('Error loading products:', error);
     } finally {
       setLoading(false);
     }
   };
 
   const handleCreate = () => {
-    setEditingProducto(null);
+    setEditingProduct(null);
     setShowModal(true);
   };
 
   const handleEdit = (producto) => {
-    setEditingProducto(producto);
+    setEditingProduct(producto);
     setShowModal(true);
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm('¿Estás seguro de eliminar este producto?')) {
+    if (window.confirm('Are you sure you want to delete this product?')) {
       try {
-        await productosService.deleteProducto(id);
-        await loadProductos();
+        await productosService.deleteProduct(id);
+        await loadProducts();
       } catch (error) { console.error(error); }
     }
   };
 
   const handleSubmit = async (productoData) => {
     try {
-      if (editingProducto) {
-        await productosService.updateProducto(editingProducto.id_producto, productoData);
+      if (editingProduct) {
+        await productosService.updateProduct(editingProduct.id_producto, productoData);
       } else {
-        await productosService.createProducto(productoData);
+        await productosService.createProduct(productoData);
       }
       setShowModal(false);
-      await loadProductos();
+      await loadProducts();
     } catch (error) { console.error(error); }
   };
 
-  const formatPrecio = (p) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(p);
+  const formatPrice = (p) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 }).format(p || 0);
 
   const renderStockBadge = (producto) => {
     if (!producto.controla_stock) {
       return <span className="badge bg-light text-muted border">N/A</span>;
     }
     
-    let color = "bg-info";
+    let color = "bg-primary";
     if (producto.stock <= 0) color = "bg-danger";
     else if (producto.stock < 5) color = "bg-warning text-dark";
 
     return (
       <span className={`badge ${color} px-3`}>
-        {producto.stock} unidades
+        {producto.stock} units
       </span>
     );
   };
 
-  if (loading) return <div className="text-center p-5"><h4>Cargando catálogo...</h4></div>;
+  if (loading) return <div className="text-center p-5"><h4>Loading catalog...</h4></div>;
 
   return (
     <div className="productos-container">
       <div className="d-flex justify-content-between align-items-center mb-4">
-        <h2 className="mb-0">🎂 Gestión de Productos e Inventario</h2>
+        <h2 className="mb-0">🎂 Product & Inventory Management</h2>
         <button className="btn btn-primary shadow-sm" onClick={handleCreate}>
-          ➕ Nuevo Producto
+          ➕ New Product
         </button>
       </div>
 
@@ -87,19 +87,19 @@ const ProductosList = () => {
           <thead className="table-dark text-center">
             <tr>
               <th>ID</th>
-              <th>Nombre</th>
-              <th>Categoría</th>
-              <th>Precio</th>
-              <th>Stock Actual</th> {/* NUEVA COLUMNA */}
-              <th>Estado</th>
-              <th>Acciones</th>
+              <th>Name</th>
+              <th>Category</th>
+              <th>Price</th>
+              <th>Current Stock</th>
+              <th>Status</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody className="align-middle">
-            {productos.length === 0 ? (
-              <tr><td colSpan="7" className="text-center py-4">No hay productos</td></tr>
+            {products.length === 0 ? (
+              <tr><td colSpan="7" className="text-center py-4">No products yet</td></tr>
             ) : (
-              productos.map(producto => (
+              products.map(producto => (
                 <tr key={producto.id_producto}>
                   <td className="text-center fw-bold text-muted">{producto.id_producto}</td>
                   <td className="fw-semibold">{producto.nombre}</td>
@@ -108,14 +108,14 @@ const ProductosList = () => {
                         {producto.categoria}
                     </span>
                   </td>
-                  <td className="fw-bold text-success text-end">{formatPrecio(producto.precio)}</td>
+                  <td className="fw-bold text-success text-end">{formatPrice(producto.precio)}</td>
                   <td className="text-center">
                     {renderStockBadge(producto)}
                   </td>
                   <td className="text-center">
                     {producto.controla_stock ? 
-                        <span className="text-primary small">📦 Inventario Activo</span> : 
-                        <span className="text-muted small">✨ Personalizado</span>
+                        <span className="text-primary small">📦 Inventory Active</span> : 
+                        <span className="text-muted small">✨ On-Demand</span>
                     }
                   </td>
                   <td className="text-center">
@@ -133,7 +133,7 @@ const ProductosList = () => {
 
       {showModal && (
         <ProductoForm
-          producto={editingProducto}
+          producto={editingProduct}
           onSubmit={handleSubmit}
           onClose={() => setShowModal(false)}
         />
