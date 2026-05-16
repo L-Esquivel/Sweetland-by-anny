@@ -7,7 +7,7 @@ export const modulesService = {
       const response = await fetch(`${API_URL}/`, { credentials: 'include' });
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'No tienes permiso para ver esta sección');
+        throw new Error(errorData.error || 'You do not have permission to view this section');
       }
       return await response.json();
     } catch (error) {
