@@ -7,7 +7,7 @@ export const tenantsService = {
       const response = await fetch(`${API_URL}/`, { credentials: 'include' });
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'No tienes permiso para ver esta sección');
+        throw new Error(errorData.error || 'You do not have permission to view this section');
       }
       return await response.json();
     } catch (error) {
@@ -25,7 +25,7 @@ export const tenantsService = {
       });
       const responseData = await response.json();
       if (!response.ok) {
-        throw new Error(responseData.error || 'Error al crear el tenant');
+        throw new Error(responseData.error || 'Error creating tenant');
       }
       return responseData;
     } catch (error) {
@@ -43,7 +43,7 @@ export const tenantsService = {
       });
       const responseData = await response.json();
       if (!response.ok) {
-        throw new Error(responseData.error || 'Error al actualizar el tenant');
+        throw new Error(responseData.error || 'Error updating tenant');
       }
       return responseData;
     } catch (error) {
@@ -52,9 +52,15 @@ export const tenantsService = {
   },
 
   async deleteTenant(id) {
-    const response = await fetch(`${API_URL}/${id}`, { method: 'DELETE', credentials: 'include' });
-    const responseData = await response.json();
-    if (!response.ok) throw new Error(responseData.error || 'Error al eliminar el tenant');
-    return responseData;
+    try {
+      const response = await fetch(`${API_URL}/${id}`, { method: 'DELETE', credentials: 'include' });
+      const responseData = await response.json();
+      if (!response.ok) {
+        throw new Error(responseData.error || 'Error deleting tenant');
+      }
+      return responseData;
+    } catch (error) {
+      throw error;
+    }
   },
 };
