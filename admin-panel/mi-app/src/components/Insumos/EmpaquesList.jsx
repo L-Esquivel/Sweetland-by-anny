@@ -63,9 +63,15 @@ const EmpaquesList = () => {
     try {
       setError('');
       const payload = {
-        ...formData,
-        precio: parseFloat(formData.precio) || 0
+        nombre: formData.nombre.trim(),
+        descripcion: formData.descripcion,
+        precio: formData.precio === '' ? 0 : parseFloat(formData.precio)
       };
+
+      if (!payload.nombre) {
+        setError('Packaging Name is required.');
+        return;
+      }
 
       if (editingItem) {
         await empaquesService.updateEmpaque(editingItem.id_empaque, payload);
@@ -76,7 +82,7 @@ const EmpaquesList = () => {
       closeModal();
       fetchPackaging();
     } catch (err) {
-      console.error('Error guardando:', err);
+      console.error('Error saving:', err);
       setError(err.message || 'Error saving item');
     }
   };
@@ -87,13 +93,18 @@ const EmpaquesList = () => {
         await empaquesService.deleteEmpaqueCatalogo(id);
         fetchPackaging();
       } catch (err) {
-        alert(err.message);
+        console.error('Error deleting packaging:', err);
+        setError(err.message || 'Could not delete the packaging item');
       }
     }
   };
 
   const formatCurrency = (value) => {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value || 0);
+    if (!value) return '$0.00';
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD'
+    }).format(value);
   };
 
   if (loading) return <div className="text-center p-5"><h5>Loading packaging items...</h5></div>;
@@ -114,41 +125,42 @@ const EmpaquesList = () => {
           <div className="table-responsive">
             <table className="table table-striped table-hover mb-0">
               <thead className="table-dark">
-              <tr>
-                <th>Name</th>
-                <th>Description</th>
-                <th>Base Price</th>
-                <th className="text-center">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {packagingItems.length === 0 ? (
                 <tr>
-                  <td colSpan="4" className="text-center py-4 text-muted">No packaging items in the catalog yet</td>
+                  <th>Name</th>
+                  <th>Description</th>
+                  <th>Base Price</th>
+                  <th className="text-center">Actions</th>
                 </tr>
-              ) : (
-                packagingItems.map(e => (
-                  <tr key={e.id_empaque}>
-                    <td className="fw-semibold">{e.nombre}</td>
-                    <td>{e.descripcion || <span className="text-muted">No description</span>}</td>
-                    <td className="fw-bold text-success">
-                      {formatCurrency(e.precio)}
-                    </td>
-                    <td className="text-center">
-                      <div className="btn-group" role="group">
-                        <button className="btn btn-warning btn-sm me-1" onClick={() => openEditModal(e)}>✏️ Edit</button>
-                        <button className="btn btn-danger btn-sm" onClick={() => handleDelete(e.id_empaque)}>🗑️ Delete</button>
-                      </div>
-                    </td>
+              </thead>
+              <tbody>
+                {packagingItems.length === 0 ? (
+                  <tr>
+                    <td colSpan="4" className="text-center py-4 text-muted">No packaging items in the catalog yet</td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : (
+                  packagingItems.map(e => (
+                    <tr key={e.id_empaque}>
+                      <td className="fw-semibold">{e.nombre}</td>
+                      <td>{e.descripcion || <span className="text-muted">No description</span>}</td>
+                      <td className="fw-bold text-success">
+                        {formatCurrency(e.precio)}
+                      </td>
+                      <td className="text-center">
+                        <div className="btn-group" role="group">
+                          <button className="btn btn-warning btn-sm me-1" onClick={() => openEditModal(e)}>✏️ Edit</button>
+                          <button className="btn btn-danger btn-sm" onClick={() => handleDelete(e.id_empaque)}>🗑️ Delete</button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
-      {/* Modal para Crear/Editar */}
+      {/* Modal for Create/Edit */}
       {showModal && (
         <div className="modal fade show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
           <div className="modal-dialog modal-dialog-centered">
@@ -211,7 +223,7 @@ const EmpaquesList = () => {
                     Cancel
                   </button>
                   <button type="submit" className="btn btn-primary">
-                    {editingItem ? '📝 Update' : '✅ Save'}
+                    {editingItem ? '📝 Update' : '✅ Create'}
                   </button>
                 </div>
               </form>
