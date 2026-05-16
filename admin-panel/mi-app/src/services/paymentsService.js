@@ -5,10 +5,10 @@ export const paymentsService = {
   getPaymentsForTenant: async (tenantId) => {
     try {
       const response = await fetch(`${API_URL}/tenant/${tenantId}`, { credentials: 'include' });
-      if (!response.ok) throw new Error('Error al cargar los pagos');
+      if (!response.ok) throw new Error('Error loading payments');
       return await response.json();
     } catch (error) {
-      console.error('Error en paymentsService.getPaymentsForTenant:', error);
+      console.error('Error in paymentsService.getPaymentsForTenant:', error);
       throw error;
     }
   },
@@ -23,11 +23,11 @@ export const paymentsService = {
       });
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Error al registrar el pago');
+        throw new Error(errorData.error || 'Error registering payment');
       }
       return await response.json();
     } catch (error) {
-      console.error('Error en paymentsService.addPayment:', error);
+      console.error('Error in paymentsService.addPayment:', error);
       throw error;
     }
   },
@@ -40,11 +40,11 @@ export const paymentsService = {
       });
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Error al eliminar el pago');
+        throw new Error(errorData.error || 'Error deleting payment');
       }
       return await response.json();
     } catch (error) {
-      console.error('Error en paymentsService.deletePayment:', error);
+      console.error('Error in paymentsService.deletePayment:', error);
       throw error;
     }
   },
